@@ -4,16 +4,17 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
 import { JWT } from 'next-auth/jwt';
+import { UserRole, UserRoleType } from '@/types/roles';
 
 declare module 'next-auth' {
   interface Session extends DefaultSession {
     user: {
-      role?: string;
+      role?: UserRoleType;
     } & DefaultSession['user']
   }
 
   interface User extends DefaultUser {
-    role?: string;
+    role?: UserRoleType;
   }
 }
 
@@ -48,19 +49,43 @@ const authOptions = {
           .eq('email', credentials?.email)
           .single();
 
-        if (error || !user || !credentials) return null;
+        if (error || !user || !credentials) {
+          console.error('Auth error:', error || 'User or credentials missing');
+          return null;
+        }
+
         const isValid = await bcrypt.compare(credentials.password, user.password_hash);
-        return isValid ? { id: user.id, email: user.email, role: user.role } : null;
+        
+        if (!isValid) {
+          console.warn('Invalid password for user:', credentials.email);
+          return null;
+        }
+
+        // Validar que el rol sea uno de los permitidos
+        if (!Object.values(UserRole).includes(user.role)) {
+          console.error('Invalid role for user:', user.email, user.role);
+          return null;
+        }
+
+        return { 
+          id: user.id, 
+          email: user.email, 
+          role: user.role as UserRoleType 
+        };
       }
     })
   ],
   callbacks: {
     async jwt({ token, user }: { token: JWT; user: any }) {
-      if (user) token.role = user.role;
+      if (user?.role) {
+        token.role = user.role as UserRoleType;
+      }
       return token;
     },
     async session({ session, token }: { session: any; token: JWT }) {
-      session.user.role = token.role;
+      if (token.role) {
+        session.user.role = token.role as UserRoleType;
+      }
       return session;
     }
   },

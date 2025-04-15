@@ -1,4 +1,5 @@
 import { withAuth } from 'next-auth/middleware';
+import { UserRole, UserRoleType } from '@/types/roles';
 
 // Rutas públicas que no requieren autenticación
 const PUBLIC_PATHS = [
@@ -12,12 +13,18 @@ const PUBLIC_PATHS = [
 ];
 
 // Rutas protegidas por rol
-const ROLE_PROTECTED_PATHS = {
-  '/dashboard': ['psicologo', 'admin'],
-  '/api/patients': ['psicologo', 'admin']
+const ROLE_PROTECTED_PATHS: Record<string, UserRoleType[]> = {
+  '/dashboard': [UserRole.PSYCHOLOGIST, UserRole.ADMIN],
+  '/api/patients': [UserRole.PSYCHOLOGIST, UserRole.ADMIN],
+  '/admin': [UserRole.ADMIN],
+  '/reports': [UserRole.PSYCHOLOGIST, UserRole.ADMIN]
 };
 
 export default withAuth({
+  pages: {
+    signIn: '/auth/login',
+    error: '/auth/error'
+  },
   callbacks: {
     authorized: ({ token, req }) => {
       const path = req.nextUrl.pathname;
@@ -36,7 +43,14 @@ export default withAuth({
       // Verificar acceso basado en rol
       for (const [protectedPath, allowedRoles] of Object.entries(ROLE_PROTECTED_PATHS)) {
         if (path.startsWith(protectedPath)) {
-          return allowedRoles.includes(token.role as string);
+          const userRole = token.role as UserRoleType;
+          const hasAccess = allowedRoles.includes(userRole);
+          
+          if (!hasAccess) {
+            console.warn(`Access denied to ${path} for user with role ${userRole}`);
+          }
+          
+          return hasAccess;
         }
       }
 
@@ -54,6 +68,8 @@ export default withAuth({
 export const config = { 
   matcher: [
     '/dashboard/:path*',
+    '/admin/:path*',
+    '/reports/:path*',
     '/api/((?!simple-test|v1/auth|auth|env-check|check-supabase|diagnostic|test).*)'
   ]
 };
