@@ -2,14 +2,17 @@ import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+// Usar clave anu00f3nima para respetar las polu00edticas RLS en lugar de saltarlas con la service key
+const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: false,
     persistSession: false
   }
 });
+
+// Solo para operaciones administrativas se deberiau0301a usar la service key, en un cliente separado
 
 export async function POST(request: Request) {
   console.log('API Route: Received registration request');

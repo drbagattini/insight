@@ -2,14 +2,15 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('API: Missing Supabase configuration. URL:', !!supabaseUrl, 'Key:', !!supabaseServiceKey);
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('API: Missing Supabase configuration. URL:', !!supabaseUrl, 'Key:', !!supabaseAnonKey);
 }
 
-// Cliente Supabase con la service key para bypass de RLS
-const supabase = createClient(supabaseUrl || '', supabaseServiceKey || '', {
+// Cliente Supabase con clave anu00f3nima para respetar las polu00edticas RLS
+// (Los usuarios solo puedan insertar pacientes, no psicu00f3logos o admin)
+const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '', {
   auth: {
     autoRefreshToken: false,
     persistSession: false
