@@ -125,17 +125,8 @@ const authOptions: AuthOptions = {
       return false;
     },
     async jwt({ token, user, account, profile }) {
-      console.log("[next-auth][debug][JWT_CALLBACK] Start");
-      console.log("[next-auth][debug][JWT_CALLBACK] Initial Token:", JSON.stringify(token, null, 2));
-      console.log("[next-auth][debug][JWT_CALLBACK] User:", JSON.stringify(user, null, 2));
-      console.log("[next-auth][debug][JWT_CALLBACK] Account:", JSON.stringify(account, null, 2));
-
-      // Solo ejecutar lógica extendida durante el login inicial con Google
       if (account?.provider === 'google' && user?.email) {
-        console.log("[next-auth][debug][JWT_CALLBACK] Google sign-in detected for:", user.email);
         try {
-          // 1. Verificar si el usuario ya existe en Supabase
-          console.log(`[next-auth][debug][JWT_CALLBACK] Checking if user exists: ${user.email}`);
           const { data: existingUser, error: fetchError } = await supabaseAdmin
             .from('users')
             .select('id, role')
@@ -144,16 +135,13 @@ const authOptions: AuthOptions = {
 
           if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116: No rows found
             console.error('[next-auth][error][JWT_CALLBACK] Error fetching user:', fetchError);
-            // Devolver el token sin rol para evitar acceso no autorizado
             return { ...token, id: user.id }; 
           }
 
           let userId = existingUser?.id;
           let userRole = existingUser?.role;
 
-          // 2. Si el usuario NO existe, intentar crearlo
           if (!existingUser) {
-            console.log(`[next-auth][debug][JWT_CALLBACK] User ${user.email} not found. Attempting to create.`);
             const { data: newUser, error: insertError } = await supabaseAdmin
               .from('users')
               .insert({
@@ -164,12 +152,7 @@ const authOptions: AuthOptions = {
               .single();
 
             if (insertError) {
-              // Podría ser un error de concurrencia si se intenta insertar dos veces rápido
-              // O cualquier otro error de base de datos
-              console.error('[next-auth][error][JWT_CALLBACK] Error creating user:', insertError);
-              // Si el error es por clave duplicada, intentar obtener el usuario de nuevo
               if (insertError.code === '23505') { 
-                console.log(`[next-auth][debug][JWT_CALLBACK] Duplicate key error, likely race condition. Fetching existing user again: ${user.email}`);
                 const { data: userAfterDuplicate, error: fetchAfterDuplicateError } = await supabaseAdmin
                   .from('users')
                   .select('id, role')
@@ -182,49 +165,34 @@ const authOptions: AuthOptions = {
                 userId = userAfterDuplicate?.id;
                 userRole = userAfterDuplicate?.role;
               } else {
-                // Otro error de inserción, devolver token sin rol
                 return { ...token, id: user.id }; 
               }
             } else {
-              console.log("[next-auth][debug][JWT_CALLBACK] New user created with ID:", newUser?.id, "and Role:", newUser?.role);
               userId = newUser?.id;
               userRole = newUser?.role; 
             }
-          } else {
-            console.log(`[next-auth][debug][JWT_CALLBACK] User ${user.email} already exists with ID: ${userId} and Role: ${userRole}`);
           }
 
-          // 3. Añadir id y rol al token si se obtuvieron
           if (userId) token.id = userId as string;
           if (userRole) token.role = userRole.toLowerCase() as UserRoleType;
           else console.warn(`[next-auth][warn][JWT_CALLBACK] Could not determine role for user ${user.email}`);
 
         } catch (error) {
           console.error("[next-auth][error][JWT_CALLBACK] Unexpected error in JWT callback:", error);
-          // Devolver token básico en caso de error inesperado
           return { ...token, id: user.id };
         }
       }
 
-      // Para otros providers o llamadas subsecuentes, solo devolver el token existente
-      console.log("[next-auth][debug][JWT_CALLBACK] Final Token:", JSON.stringify(token, null, 2));
       return token;
     },
     async session({ session, token }) {
-      console.log('[next-auth][debug][SESSION_CALLBACK] Start');
-      console.log('[next-auth][debug][SESSION_CALLBACK] Initial Session:', session);
-      console.log('[next-auth][debug][SESSION_CALLBACK] Token:', token);
-
-      // Asignar información del token a la sesión
       if (token) {
         session.user.id = token.id as string;
         session.user.role = token.role as UserRoleType;
-        // Mantener name y email si existen
         if (token.name) session.user.name = token.name;
         if (token.email) session.user.email = token.email;
       }
 
-      console.log('[next-auth][debug][SESSION_CALLBACK] Final Session:', session);
       return session;
     },
   },
