@@ -125,7 +125,7 @@ const authOptions: AuthOptions = {
       return false;
     },
     async jwt({ token, user, account, profile }) {
-      if (account?.provider === 'google' && user?.email) {
+      if (account && user) {
         try {
           const { data: existingUser, error: fetchError } = await supabaseAdmin
             .from('users')
@@ -181,6 +181,15 @@ const authOptions: AuthOptions = {
           console.error("[next-auth][error][JWT_CALLBACK] Unexpected error in JWT callback:", error);
           return { ...token, id: user.id };
         }
+      } 
+      // Si 'user' existe pero 'account' no, significa que viene del callback 'authorize' (Credentials)
+      else if (user) {
+        // console.log('[next-auth][debug][JWT_CALLBACK] Credentials sign-in detected.');
+        // El objeto 'user' aquí es el que devolvió 'authorize'
+        token.id = user.id;
+        token.role = user.role as UserRoleType; // Asegúrate que el tipo coincida
+        token.email = user.email; // Añadir email al token también puede ser útil
+        // No necesitamos consultar la DB aquí porque 'authorize' ya validó y nos dio los datos
       }
 
       return token;
