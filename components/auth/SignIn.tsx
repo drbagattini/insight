@@ -1,13 +1,54 @@
 'use client';
 import { signIn } from 'next-auth/react';
 import Link from 'next/link';
+import { useState } from 'react';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
 export function SignIn({ providers = ['google', 'credentials'] }: { providers?: string[] }) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [email, setEmail] = useState('');
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
+
+  const handlePasswordReset = async () => {
+    if (!supabase) {
+      setMessage({ type: 'error', text: 'Error de configuración del cliente.' });
+      return;
+    }
+    if (!email) {
+      setMessage({ type: 'error', text: 'Por favor, ingresa tu email primero.' });
+      return;
+    }
+    setIsResetting(true);
+    setMessage(null);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/`,
+      });
+      if (error) {
+        console.error('Error al solicitar reseteo:', error.message);
+        setMessage({ type: 'error', text: `Error: ${error.message}` });
+      } else {
+        setMessage({ type: 'success', text: 'Si el email es válido, recibirás un enlace para resetear tu contraseña.' });
+      }
+    } catch (err: any) {
+      console.error('Error inesperado en reseteo:', err);
+      setMessage({ type: 'error', text: `Error inesperado: ${err.message || 'Intentelo de nuevo.'}` });
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   return (
     <div className="auth-container space-y-6 max-w-md w-full mx-auto p-6 bg-white rounded-lg shadow-md">
       {providers.includes('google') && (
         <button
-          onClick={() => signIn('google')}
+          onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
           className="w-full bg-white text-gray-800 border border-gray-300 hover:bg-gray-50 px-4 py-2 rounded-md flex items-center justify-center gap-2 transition-colors"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -22,14 +63,22 @@ export function SignIn({ providers = ['google', 'credentials'] }: { providers?: 
 
       {providers.includes('credentials') && (
         <div className="space-y-6">
-          <form onSubmit={(e) => {
+          <form onSubmit={async (e) => {
             e.preventDefault();
-            const formData = new FormData(e.currentTarget);
-            signIn('credentials', {
-              email: formData.get('email'),
-              password: formData.get('password'),
-              callbackUrl: '/dashboard'
-            });
+            setIsSubmitting(true);
+            try {
+              const formData = new FormData(e.currentTarget);
+              await signIn('credentials', {
+                email: formData.get('email'),
+                password: formData.get('password'),
+                callbackUrl: '/dashboard',
+                redirect: true
+              });
+            } catch (error) {
+              console.error('Error en inicio de sesión:', error);
+            } finally {
+              setIsSubmitting(false);
+            }
           }} className="space-y-4">
             <div>
               <input
@@ -38,6 +87,8 @@ export function SignIn({ providers = ['google', 'credentials'] }: { providers?: 
                 placeholder="Email"
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div>
@@ -49,14 +100,38 @@ export function SignIn({ providers = ['google', 'credentials'] }: { providers?: 
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+            {message && (
+              <div
+                className={`p-3 rounded-md text-sm ${message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
+              >
+                {message.text}
+              </div>
+            )}
             <button
               type="submit"
-              className="w-full bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-md transition-colors"
+              className="w-full bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isSubmitting}
             >
-              Iniciar sesión
+              {isSubmitting ? 'Iniciando sesión...' : 'Iniciar sesión'}
             </button>
           </form>
-          <div className="text-center text-sm">
+          <div className="text-center text-sm flex flex-col items-center">
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault(); // Prevenir navegación por defecto del href
+                if (!isResetting && email) { // Solo ejecutar si no se está reseteando y hay email
+                  handlePasswordReset();
+                }
+              }}
+              // Aplicar clases de estilo y deshabilitado condicionalmente
+              className={`text-blue-600 hover:text-blue-800 transition-colors ${isResetting || !email ? 'opacity-50 cursor-not-allowed' : ''} mb-2`}
+              // Evitar click si está deshabilitado visualmente
+              style={{ pointerEvents: isResetting || !email ? 'none' : 'auto' }}
+              aria-disabled={isResetting || !email}
+            >
+              {isResetting ? 'Enviando...' : '¿Olvidaste tu contraseña?'}
+            </a>
             <Link
               href="/auth/register"
               className="text-blue-600 hover:text-blue-800 transition-colors"

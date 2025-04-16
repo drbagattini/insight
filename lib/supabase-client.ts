@@ -40,7 +40,7 @@ function logSupabaseError(error: any, context: string) {
 }
 
 // Funciones de usuario
-export async function createUser(userData: UserCreateInput): Promise<{ user: User | null; error: Error | null }> {
+export async function createUser(userData: Omit<UserCreateInput, 'password_hash'> & { password?: string }) {
   try {
     console.log('Attempting to create user with data:', {
       ...userData,
@@ -76,32 +76,23 @@ export async function createUser(userData: UserCreateInput): Promise<{ user: Use
       console.log('Client: Response status text:', response.statusText);
       console.log('Client: Response headers:', Object.fromEntries(response.headers.entries()));
 
-      const text = await response.text();
-      console.log('Client: Raw response text:', text);
-
-      if (!text) {
-        throw new Error('Empty response from server');
-      }
-
-      let result;
-      try {
-        result = JSON.parse(text);
-        console.log('Client: Successfully parsed response as JSON:', result);
-      } catch (err) {
-        console.error('Client: Failed to parse response as JSON:', err);
-        console.error('Client: Response content type:', response.headers.get('content-type'));
-        throw new Error(`Error del servidor: ${text.substring(0, 100)}...`);
-      }
+      const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Error al crear usuario');
+        throw new Error(result.error || `HTTP error! status: ${response.status}`);
       }
 
-      console.log('User created successfully:', { userId: result.user.id });
-      return { user: result.user as User, error: null };
+      if (result.userId) {
+        console.log('User created successfully via API:', { userId: result.userId });
+        return { user: { id: result.userId }, error: null }; 
+      } else {
+        console.warn('API response OK but missing userId:', result);
+        throw new Error('Respuesta inesperada del servidor durante el registro.');
+      }
+
     } catch (innerErr) {
-      console.error('Inner error in fetch:', innerErr);
-      throw innerErr; // Re-throw to be caught by outer catch
+      console.error('Error in createUser function:', innerErr);
+      return { user: null, error: innerErr instanceof Error ? innerErr.message : String(innerErr) };
     }
   } catch (err) {
     console.error('Error in createUser:', err);

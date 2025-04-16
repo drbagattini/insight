@@ -1,32 +1,42 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createServiceClient, handleApiError } from '@/app/lib/api-utils';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { Database } from '@/types/database';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('API: Missing Supabase configuration. URL:', !!supabaseUrl, 'Key:', !!supabaseAnonKey);
+// Crear cliente Supabase con service_role key para bypass de RLS
+let supabase: SupabaseClient<Database> | undefined;
+try {
+  supabase = createServiceClient();
+  console.log('API: Cliente Supabase inicializado correctamente');
+} catch (error) {
+  console.error('API: Error al inicializar cliente Supabase:', error);
+  // No lanzar el error aquí, manejar en cada endpoint
 }
-
-// Cliente Supabase con clave anu00f3nima para respetar las polu00edticas RLS
-// (Los usuarios solo puedan insertar pacientes, no psicu00f3logos o admin)
-const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '', {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
-  }
-});
-
-console.log('API: Inicializando la ruta con cliente Supabase');
 
 export async function POST(request: Request) {
   console.log('API: simple-test hit with method: POST');
   
+  if (!supabase) {
+    return handleApiError(new Error('Supabase client not initialized'));
+  }
+
   try {
-    // Intentar parsear el cuerpo de la solicitud
-    const userData = await request.json();
-    console.log('API: Received data:', { ...userData, password_hash: '[REDACTED]' });
-    
+    // Validar y parsear el cuerpo de la solicitud
+    let userData;
+    try {
+      userData = await request.json();
+    } catch (error) {
+      return NextResponse.json({ error: 'Invalid JSON payload' }, { status: 400 });
+    }
+
+    // Validar campos requeridos
+    if (!userData.email || !userData.password_hash) {
+      return NextResponse.json(
+        { error: 'Email y contraseña son requeridos' },
+        { status: 400 }
+      );
+    }
+
     // Verificar si el usuario ya existe
     const { data: existingUser, error: checkError } = await supabase
       .from('users')
@@ -35,30 +45,25 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (checkError) {
-      console.error('API: Error checking existing user:', checkError);
-      return NextResponse.json(
-        { error: 'Error al verificar email' },
-        { status: 500 }
-      );
+      return handleApiError(checkError, 'Error al verificar email');
     }
 
     if (existingUser) {
-      console.log('API: User already exists');
       return NextResponse.json(
         { error: 'Email ya registrado' },
-        { status: 400 }
+        { status: 409 }
       );
     }
 
-    // Crear el usuario
+    // Crear el usuario con rol 'paciente'
     const { data, error } = await supabase
       .from('users')
       .insert([{
         email: userData.email,
         password_hash: userData.password_hash,
-        role: userData.role,
-        first_name: userData.first_name,
-        last_name: userData.last_name,
+        role: 'paciente',
+        first_name: userData.first_name || '',
+        last_name: userData.last_name || '',
         is_active: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -67,40 +72,50 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
-      console.error('API: Error creating user:', error);
-      return NextResponse.json(
-        { error: 'Error al crear usuario: ' + error.message },
-        { status: 500 }
-      );
+      return handleApiError(error, 'Error al crear usuario');
     }
 
     console.log('API: User created successfully with ID:', data.id);
-    return NextResponse.json({ user: data });
+    return NextResponse.json({ 
+      success: true,
+      user: {
+        id: data.id,
+        email: data.email,
+        role: data.role,
+        first_name: data.first_name,
+        last_name: data.last_name
+      }
+    });
+
   } catch (error) {
-    console.error('API: Error processing request:', error);
-    return NextResponse.json(
-      { error: 'Error procesando la solicitud' },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }
 
-// También manejar GET para pruebas manuales
 export async function GET() {
   console.log('API: simple-test hit with method: GET');
+  
+  if (!supabase) {
+    return handleApiError(new Error('Supabase client not initialized'));
+  }
+
   try {
-    const { data, error } = await supabase.from('users').select('count').limit(1);
+    const { data, error } = await supabase
+      .from('users')
+      .select('count')
+      .limit(1);
+
+    if (error) {
+      return handleApiError(error, 'Error al conectar con Supabase');
+    }
+
     return NextResponse.json({
+      success: true,
       message: 'API funcionando correctamente',
-      supabaseConnected: !error,
-      error: error ? error.message : null,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      data
     });
   } catch (error) {
-    return NextResponse.json({
-      message: 'Error al conectar con Supabase',
-      error: error instanceof Error ? error.message : 'Error desconocido',
-      timestamp: new Date().toISOString()
-    }, { status: 500 });
+    return handleApiError(error);
   }
 }

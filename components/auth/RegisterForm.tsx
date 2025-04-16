@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { createUser, hashPassword, checkEmailExists } from '@/lib/supabase-client';
+import { createUser, checkEmailExists } from '@/lib/supabase-client';
 import type { UserCreateInput } from '@/types/user';
 
 export default function RegisterForm() {
@@ -57,33 +57,48 @@ export default function RegisterForm() {
       }
 
       // Preparar datos del usuario
-      const userData: UserCreateInput = {
+      const userData = {
         email,
-        password_hash: await hashPassword(password),
-        role: 'paciente',
+        password: password, // Enviamos la contraseña directamente
+        role: 'paciente', // Rol se puede manejar en backend también vía metadata
         first_name: firstName.trim(),
         last_name: lastName.trim(),
-        is_active: true
+        // is_active ya no es necesario aquí, createUser lo maneja
       };
 
-      // Crear usuario
-      const { user, error: createError } = await createUser(userData);
+      // Crear usuario - Asegurarse que createUser ahora envía esto a la API correcta
+      // y que la API espera 'password'
+      const { user, error: createError } = await createUser(userData as any); // createError is string | Error | null
 
       if (createError) {
         console.error('Error al crear usuario:', createError);
-        if (createError.message.includes('duplicate key')) {
-          setError('Email ya registrado');
-        } else {
-          setError('Error al crear la cuenta. Por favor, intenta de nuevo.');
+
+        // CORREGIDO: Verificar tipo de error antes de acceder a .message
+        let errorMessage = 'Error al crear la cuenta. Por favor, intenta de nuevo.';
+        if (typeof createError === 'string') {
+          if (createError.includes('Email ya registrado') || createError.includes('duplicate key') || createError.includes('already registered')) {
+            errorMessage = 'Email ya registrado';
+          } else {
+            errorMessage = createError; // Usar el mensaje de error string directamente
+          }
+        } else if (createError instanceof Error) {
+          // Si es un objeto Error, verificar su mensaje
+          if (createError.message.includes('Email ya registrado') || createError.message.includes('duplicate key') || createError.message.includes('already registered')) {
+            errorMessage = 'Email ya registrado';
+          } else {
+            errorMessage = createError.message;
+          }
         }
+        setError(errorMessage);
         return;
       }
 
       // Redireccionar al login
       router.push('/auth/login?registered=true');
-    } catch (err) {
-      console.error('Error en registro:', err);
-      setError(err instanceof Error ? err.message : 'Error en registro');
+    } catch (err) { // Este catch maneja errores generales del handleSubmit
+      console.error('Error en registro (catch general):', err);
+      // Asegurar que el error mostrado sea un string
+      setError(err instanceof Error ? err.message : 'Ocurrió un error inesperado');
     } finally {
       setLoading(false);
     }

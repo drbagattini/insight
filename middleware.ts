@@ -1,75 +1,54 @@
-import { withAuth } from 'next-auth/middleware';
-import { UserRole, UserRoleType } from '@/types/roles';
+import { withAuth, NextRequestWithAuth } from 'next-auth/middleware';
+import { NextResponse } from 'next/server';
+import { UserRole } from './types/roles'; // Asegúrate que esta importación es correcta
 
-// Rutas públicas que no requieren autenticación
-const PUBLIC_PATHS = [
-  '/api/simple-test',
-  '/api/v1/auth/register',
-  '/api/test',
-  '/api/auth',
-  '/api/env-check',
-  '/api/check-supabase',
-  '/api/diagnostic'
-];
+export default withAuth(
+  // Función middleware principal (se ejecuta si 'authorized' devuelve true)
+  function middleware(request: NextRequestWithAuth) {
+    const { token } = request.nextauth;
+    const { pathname } = request.nextUrl;
 
-// Rutas protegidas por rol
-const ROLE_PROTECTED_PATHS: Record<string, UserRoleType[]> = {
-  '/dashboard': [UserRole.PSYCHOLOGIST, UserRole.ADMIN],
-  '/api/patients': [UserRole.PSYCHOLOGIST, UserRole.ADMIN],
-  '/admin': [UserRole.ADMIN],
-  '/reports': [UserRole.PSYCHOLOGIST, UserRole.ADMIN]
-};
+    console.log('[Middleware] Running middleware function. Path:', pathname);
+    console.log('[Middleware] Token in middleware function:', token);
 
-export default withAuth({
-  pages: {
-    signIn: '/auth/login',
-    error: '/auth/error'
+    // Redirigir si el rol no coincide con la ruta
+    // TEMPORALMENTE COMENTADO PARA DEBUG
+    // if (pathname.startsWith('/dashboard') && token?.role !== UserRole.PSICOLOGO) {
+    //   console.log(`[Middleware] Role mismatch for /dashboard. Redirecting. Role: ${token?.role}`);
+    //   // Podrías redirigir a una página de error o a la home
+    //   return NextResponse.redirect(new URL('/', request.url));
+    // }
+
+    // Añadir más lógica de redirección si es necesario para otros roles/rutas
+
+    // Si todo está bien, continuar con la solicitud
+    return NextResponse.next();
   },
-  callbacks: {
-    authorized: ({ token, req }) => {
-      const path = req.nextUrl.pathname;
+  // Configuración de withAuth
+  {
+    callbacks: {
+      authorized: ({ token, req }) => {
+        const requestedPath = req.nextUrl.pathname;
+        // Log MUY visible para asegurarnos de que se ejecuta
+        console.log(`\n\n[!!!] Middleware AUTHORIZED Callback Triggered for path: ${requestedPath}\n\n`);
+        console.log(`[!!!] Token received:`, JSON.stringify(token, null, 2));
 
-      // Verificar si la ruta es pública
-      const isPublicPath = PUBLIC_PATHS.some(publicPath => 
-        path.startsWith(publicPath)
-      );
-
-      // Si es una ruta pública, permitir acceso
-      if (isPublicPath) return true;
-
-      // Si no hay token, denegar acceso a rutas protegidas
-      if (!token) return false;
-
-      // Verificar acceso basado en rol
-      for (const [protectedPath, allowedRoles] of Object.entries(ROLE_PROTECTED_PATHS)) {
-        if (path.startsWith(protectedPath)) {
-          const userRole = token.role as UserRoleType;
-          const hasAccess = allowedRoles.includes(userRole);
-          
-          if (!hasAccess) {
-            console.warn(`Access denied to ${path} for user with role ${userRole}`);
-          }
-          
-          return hasAccess;
-        }
-      }
-
-      // Para rutas API no públicas, requerir token
-      if (path.startsWith('/api')) {
-        return !!token;
-      }
-
-      // Por defecto, permitir acceso a usuarios autenticados
-      return true;
-    }
+        // TEMPORAL: Siempre autorizar para diagnosticar
+        console.log(`[!!!] TEMPORARILY AUTHORIZING ALL REQUESTS within authorized callback.\n\n`);
+        return true;
+      },
+    },
+    pages: {
+      signIn: '/auth/login',
+      // error: '/auth/error', // Opcional
+    },
   }
-});
+);
 
-export const config = { 
+// Asegúrate que el matcher cubra todas las rutas que quieres proteger + la página de login
+export const config = {
   matcher: [
-    '/dashboard/:path*',
-    '/admin/:path*',
-    '/reports/:path*',
-    '/api/((?!simple-test|v1/auth|auth|env-check|check-supabase|diagnostic|test).*)'
-  ]
-};
+    // Intenta aplicar a casi todo excepto assets y llamadas recursivas de sesión
+    '/((?!_next/static|_next/image|favicon.ico|api/auth/session).*)'
+  ],
+}
