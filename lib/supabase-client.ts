@@ -51,7 +51,7 @@ export async function createUser(userData: UserCreateInput): Promise<{ user: Use
     console.log('Client: Window location:', window.location.href);
     const baseUrl = window.location.origin;
     console.log('Client: Base URL:', baseUrl);
-    const apiUrl = `/api/simple-test`;  // Usando ruta relativa y la nueva API
+    const apiUrl = `/api/auth/register`;  // Usando ruta relativa y la nueva API
     console.log('Client: Full API URL:', apiUrl);
     console.log('Client: Request data:', { ...userData, password_hash: '[REDACTED]' });
 
