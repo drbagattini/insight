@@ -1,7 +1,12 @@
 import { Database } from './database';
 
 export type Patient = Database['public']['Tables']['patients']['Row'];
-export type NewPatient = Omit<Patient, 'id' | 'created_at' | 'updated_at' | 'unique_code'>;
+export type NewPatient = {
+  name: string;
+  email?: string | null;
+  whatsapp?: string | null;
+  metadata?: Record<string, any>;
+};
 export type PatientUpdate = Partial<NewPatient>;
 
 export interface PatientWithQuestionnaires extends Patient {

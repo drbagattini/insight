@@ -9,9 +9,9 @@ interface PatientFormProps {
 
 export default function PatientForm({ patient, onSubmit, onCancel }: PatientFormProps) {
   const [formData, setFormData] = useState<NewPatient>({
-    full_name: '',
-    email: '',
-    whatsapp: '',
+    name: '',
+    email: null,
+    whatsapp: null,
     metadata: {},
   });
   const [error, setError] = useState<string>('');
@@ -20,9 +20,9 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
   useEffect(() => {
     if (patient) {
       setFormData({
-        full_name: patient.full_name,
-        email: patient.email || '',
-        whatsapp: patient.whatsapp || '',
+        name: patient.name,
+        email: patient.email,
+        whatsapp: patient.whatsapp,
         metadata: patient.metadata || {},
       });
     }
@@ -52,17 +52,17 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
       )}
 
       <div>
-        <label className="block text-sm font-medium mb-1" htmlFor="full_name">
+        <label className="block text-sm font-medium mb-1" htmlFor="name">
           Nombre completo *
         </label>
         <input
-          id="full_name"
+          id="name"
           type="text"
           required
           className="w-full p-2 border rounded"
-          value={formData.full_name}
+          value={formData.name}
           onChange={(e) =>
-            setFormData((prev) => ({ ...prev, full_name: e.target.value }))
+            setFormData((prev) => ({ ...prev, name: e.target.value }))
           }
         />
       </div>
@@ -75,9 +75,9 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
           id="email"
           type="email"
           className="w-full p-2 border rounded"
-          value={formData.email}
+          value={formData.email || ''}
           onChange={(e) =>
-            setFormData((prev) => ({ ...prev, email: e.target.value }))
+            setFormData((prev) => ({ ...prev, email: e.target.value || null }))
           }
         />
       </div>
@@ -90,9 +90,9 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
           id="whatsapp"
           type="tel"
           className="w-full p-2 border rounded"
-          value={formData.whatsapp}
+          value={formData.whatsapp || ''}
           onChange={(e) =>
-            setFormData((prev) => ({ ...prev, whatsapp: e.target.value }))
+            setFormData((prev) => ({ ...prev, whatsapp: e.target.value || null }))
           }
           placeholder="+54 9 11 1234-5678"
         />
