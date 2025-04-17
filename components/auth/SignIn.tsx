@@ -66,16 +66,24 @@ export function SignIn({ providers = ['google', 'credentials'] }: { providers?: 
           <form onSubmit={async (e) => {
             e.preventDefault();
             setIsSubmitting(true);
+            setMessage(null);
+            
             try {
+              // Método simple: usar formulario estándar
               const formData = new FormData(e.currentTarget);
+              const email = formData.get('email') as string;
+              const password = formData.get('password') as string;
+              
               await signIn('credentials', {
-                email: formData.get('email'),
-                password: formData.get('password'),
-                callbackUrl: '/dashboard',
-                redirect: true
+                email,
+                password,
+                callbackUrl: '/dashboard'
               });
+              // Este código normalmente no se ejecuta ya que signIn redirecciona
+              setMessage({ type: 'success', text: 'Redireccionando...' });
             } catch (error) {
               console.error('Error en inicio de sesión:', error);
+              setMessage({ type: 'error', text: 'Error inesperado' });
             } finally {
               setIsSubmitting(false);
             }

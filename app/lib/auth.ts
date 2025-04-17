@@ -34,26 +34,42 @@ export const authOptions: AuthOptions = {
           console.error('AuthOptions: Missing credentials');
           return null;
         }
-        console.log(`AuthOptions: Authorizing ${credentials.email}`);
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: credentials.email,
-          password: credentials.password
-        });
-        if (error) {
-            console.error(`AuthOptions: Supabase Sign In Error for ${credentials.email}:`, error.message);
+        
+        console.log(`AuthOptions: Intentando autenticar a ${credentials.email}`);
+        
+        try {
+          // Usar el cliente normal que respeta RLS
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email: credentials.email,
+            password: credentials.password
+          });
+          
+          if (error) {
+            console.error(`AuthOptions: Error de Supabase:`, error.message);
             return null;
-        }
-        if (!data.user) {
-             console.error(`AuthOptions: Supabase Sign In No User for ${credentials.email}`);
+          }
+          
+          if (!data?.user) {
+            console.error(`AuthOptions: No se encontró el usuario`);
             return null;
+          }
+          
+          console.log(`AuthOptions: ${credentials.email} autenticado correctamente`, { 
+            id: data.user.id, 
+            role: data.user.user_metadata?.role || 'paciente'
+          });
+          
+          // Devolver el usuario en formato NextAuth
+          return {
+            id: data.user.id,
+            email: credentials.email,
+            name: data.user.user_metadata?.name,
+            role: (data.user.user_metadata?.role || 'paciente') as UserRoleType
+          };
+        } catch (err) {
+          console.error('AuthOptions: Error inesperado durante la autenticación:', err);
+          return null;
         }
-        console.log(`AuthOptions: Authorized ${credentials.email} successfully.`);
-        const authorizedUser: User & { role: UserRoleType } = {
-          id:    data.user.id,
-          email: data.user.email,
-          role:  (data.user.user_metadata?.role ?? 'paciente') as UserRoleType
-        };
-        return authorizedUser;
       }
     })
   ],
@@ -117,7 +133,7 @@ export const authOptions: AuthOptions = {
                 }
               }
               token.id   = uid;
-              token.role = role?.toLowerCase();
+              token.role = role?.toLowerCase() || 'psicologo'; // Asegurar que siempre haya un rol
               token.email = user.email; 
               token.name = user.name; 
               console.log(`[next-auth][jwt] Token updated from DB:`, {id: token.id, role: token.role});
@@ -127,17 +143,24 @@ export const authOptions: AuthOptions = {
                 token.id = user.id; 
                 token.email = user.email;
                 token.name = user.name;
+                token.role = 'psicologo'; // Rol predeterminado en caso de error
             }
         } else { 
            console.log('[next-auth][jwt] Credentials Provider: Using user object from authorize');
            token.id = user.id;
-           token.role = (user as any).role?.toLowerCase(); 
+           // Garantizar que el rol esté presente en el token
+           token.role = ((user as any).role?.toLowerCase() || 'psicologo'); 
            token.email = user.email;
            token.name = user.name; 
            console.log(`[next-auth][jwt] Token updated from authorize:`, {id: token.id, role: token.role});
         }
       } else if (token) {
           console.log('[next-auth][jwt] Only token present (Session refresh?)');
+          // Asegurar que el token siempre tenga un rol incluso en las actualizaciones
+          if (!token.role) {
+              token.role = 'psicologo';
+              console.log('[next-auth][jwt] Added missing role to token during refresh');
+          }
       }
       console.log('[next-auth][jwt] Token Out:', JSON.stringify(token));
       console.log('[next-auth][jwt] END ----------');
