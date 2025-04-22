@@ -54,7 +54,7 @@
 
 ### 4. Base de Datos
 - [ ] Migraciones completas para todas las tablas
-- [ ] Políticas RLS en Supabase
+- [x] Políticas RLS en Supabase
 - [ ] Índices y optimizaciones
 - [ ] Backup strategy
 
