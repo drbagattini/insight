@@ -18,7 +18,7 @@ const { createClient } = require('@supabase/supabase-js');
 
 // Usar las variables del archivo temporal
 const supabaseUrl = 'https://ctrncyswjdvckozsosnv.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN0cm5jeXN3amR2Y2tvenNvc252Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0MTIwODcsImV4cCI6MjA1OTk4ODA4N30.t0eOvRz2ktJOJpsWDJ95YSADClAxfTMtoAE6mTPS1s0';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFub24iLCJpYXQiOjE3NDQ4OTc3MjMsImV4cCI6MjA2MDQ3MzcyM30.4jd9vtos9MPcZ_KdC4hxPDqgnwSFCbV6BUtZ76k5dM0';
 
 // Crear cliente de Supabase con la clave anónima correcta
 const anonClient = createClient(supabaseUrl, supabaseAnonKey, {

@@ -1,10 +1,11 @@
-import { supabase } from '@/lib/supabase-client';
+import { createSupabaseClient } from '@/utils/supabase';
 import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   try {
     const { email } = await req.json();
     
+    const supabase = createSupabaseClient();
     const { data, error } = await supabase
       .from('users')
       .select('id')

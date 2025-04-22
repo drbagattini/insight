@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase-client';
+import { createServiceClient } from '@/app/lib/api-utils';
 
 export async function POST(request: Request) {
   try {
@@ -12,6 +12,7 @@ export async function POST(request: Request) {
       );
     }
 
+    const supabase = createServiceClient();
     // Verificar si el email ya está registrado
     const { data: existingUser, error: checkError } = await supabase
       .from('users')

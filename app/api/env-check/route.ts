@@ -5,8 +5,8 @@ export async function GET() {
     status: 'checking',
     supabase: {
       url: process.env.NEXT_PUBLIC_SUPABASE_URL || 'not set',
-      hasServiceKey: !!process.env.SUPABASE_SERVICE_KEY,
-      serviceKeyLength: process.env.SUPABASE_SERVICE_KEY?.length || 0
+      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY || !!process.env.SUPABASE_SERVICE_KEY,
+      serviceKeyLength: (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || '').length
     }
   };
 

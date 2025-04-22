@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { createUser, checkEmailExists } from '@/lib/supabase-client';
+import { createUser, checkEmailExists } from '@/app/lib/userAPI';
 import type { UserCreateInput } from '@/types/user';
 
 export default function RegisterForm() {

@@ -26,6 +26,17 @@
 - [ ] Protección de rutas basada en roles
 - [ ] Implementar logout
 - [ ] Recuperación de contraseña
+- [ ] **[Incidente] Restaurar verificación estricta de roles en middleware tras troubleshooting de login**
+    - Durante el troubleshooting de problemas de login de pacientes, se desactivó temporalmente la verificación estricta de roles en el middleware para permitir el acceso a `/dashboard` y aislar el problema.
+    - **Hipótesis:** El fallo estaba relacionado con la asignación incorrecta del campo `role` en el JWT generado por NextAuth, especialmente en el flujo de login por credenciales. Si el token no contiene el rol correcto, el middleware bloquea el acceso.
+    - El flujo de Google OAuth y credenciales tienen diferencias en cómo se construye el objeto usuario y el token resultante. Los pacientes recibían el rol `paciente` y eran bloqueados para `/dashboard`, reservado a `psicologo` y `admin`.
+    - **Tareas:**
+        - Restaurar la verificación estricta de roles en el middleware.
+        - Confirmar que el JWT siempre contiene el campo `role` correcto tras login (Google y credenciales).
+        - Documentar el flujo de autenticación y manejo de roles.
+        - Agregar tests automáticos para validar login y autorización de roles.
+    - Mantener logs de debugging hasta confirmar robustez del flujo.
+    - Revisar redundancias en asignación de roles entre callbacks de NextAuth y la base de datos.
 
 ### 2. Gestión de Usuarios
 - [ ] Panel de administración de usuarios

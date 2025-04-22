@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase-client';
+import { createSupabaseClient } from '@/utils/supabase';
 
 export async function GET() {
   try {
+    const supabase = createSupabaseClient();
     // Verificar la estructura de la tabla users
     const { data: tableInfo, error: tableError } = await supabase
       .from('users')
