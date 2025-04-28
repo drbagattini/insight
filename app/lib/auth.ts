@@ -46,7 +46,25 @@ export const authOptions: AuthOptions = {
           
           if (error) {
             console.error(`AuthOptions: Error de Supabase:`, error.message);
-            return null;
+            // Diferenciar si el email existe o la contraseña es inválida
+            let code = 'EmailNotFound';
+            try {
+              const { data: userExists, error: fetchErr } = await supabaseAdmin
+                .from('users')
+                .select('id')
+                .eq('email', credentials.email)
+                .single();
+              if (fetchErr && fetchErr.code === 'PGRST116') {
+                // Email no registrado
+                code = 'EmailNotFound';
+              } else {
+                // Usuario existe, contraseña incorrecta
+                code = 'InvalidPassword';
+              }
+            } catch (err) {
+              console.error('AuthOptions: Error verificando email:', err);
+            }
+            throw new Error(code);
           }
           
           if (!data?.user) {

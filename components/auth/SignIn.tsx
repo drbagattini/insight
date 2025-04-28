@@ -1,7 +1,7 @@
 'use client';
 import { signIn } from 'next-auth/react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -9,11 +9,31 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
-export function SignIn({ providers = ['google', 'credentials'] }: { providers?: string[] }) {
+type SignInProps = {
+  providers?: string[];
+  error?: string;
+};
+
+export function SignIn({ providers = ['google', 'credentials'], error }: SignInProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isResetting, setIsResetting] = useState(false);
+
+  // Map NextAuth error codes to user-friendly messages
+  const errorMessages: Record<string, string> = {
+    CredentialsSignin: 'Credenciales inválidas. Inténtalo de nuevo.',
+    EmailNotFound: 'Email no encontrado. Por favor regístrate o verifica tu email.',
+    InvalidPassword: 'Contraseña incorrecta. Intenta de nuevo.',
+    default: 'Error desconocido de autenticación.'
+  };
+
+  // Show error coming from query string once on mount
+  useEffect(() => {
+    if (error) {
+      setMessage({ type: 'error', text: errorMessages[error] ?? errorMessages.default });
+    }
+  }, [error]);
 
   const handlePasswordReset = async () => {
     if (!supabase) {
