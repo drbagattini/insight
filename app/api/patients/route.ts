@@ -21,6 +21,15 @@ const newPatientSchema = z.object({
   metadata: z.record(z.unknown()).optional().default({}),
 });
 
+// Función para calcular la próxima fecha de envío según frecuencia
+function calcularProximoEnvio(frecuencia: string): string {
+  const nextDate = new Date();
+  if (frecuencia === 'semanal') nextDate.setDate(nextDate.getDate() + 7);
+  else if (frecuencia === 'mensual') nextDate.setMonth(nextDate.getMonth() + 1);
+  else if (frecuencia === 'trimestral') nextDate.setMonth(nextDate.getMonth() + 3);
+  return nextDate.toISOString();
+}
+
 //// ---------- GET ----------
 export async function GET() {
   // 1) Obtener sesión y verificar autorización
@@ -62,7 +71,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Insertar paciente con service role key y filtro manual
-  const { data, error } = await supabaseAdmin
+  const { data: paciente, error: pacienteError } = await supabaseAdmin
     .from("patients")
     .insert({
       psychologist_id: psicologoId,
@@ -74,10 +83,45 @@ export async function POST(req: NextRequest) {
     .select("*")
     .single();
 
-  if (error) {
-    console.error("[POST /api/patients]", error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (pacienteError || !paciente) {
+    console.error("[POST /api/patients]", pacienteError?.message);
+    return NextResponse.json({ error: pacienteError?.message }, { status: 500 });
   }
 
-  return NextResponse.json(data, { status: 201 });
+  // Obtener el ID del cuestionario WHO-5
+  const { data: cuestionario, error: cuestionarioError } = await supabaseAdmin
+    .from("cuestionarios")
+    .select("id")
+    .eq("codigo", "WHO-5")
+    .single();
+
+  if (cuestionarioError) {
+    console.warn("[POST /api/patients] No se encontró el cuestionario WHO-5:", cuestionarioError.message);
+    // Continuamos aunque no se encuentre el cuestionario
+  } else if (cuestionario) {
+    // Extraer preferencias de cuestionario del metadata
+    const preferencias = parsed.data.metadata?.preferencias_cuestionario as { canal: string; frecuencia: string } | undefined;
+    const canal = preferencias?.canal || 'email';
+    const frecuencia = preferencias?.frecuencia || 'mensual';
+    
+    // Programar el envío del cuestionario
+    const proximo_envio = calcularProximoEnvio(frecuencia);
+    
+    const { error: scheduleError } = await supabaseAdmin
+      .from("envios_programados")
+      .insert({
+        paciente_id: paciente.id,
+        cuestionario_id: cuestionario.id,
+        canal,
+        frecuencia,
+        proximo_envio
+      });
+
+    if (scheduleError) {
+      console.error("[POST /api/patients] Error al programar cuestionario:", scheduleError.message);
+      // No fallamos la creación del paciente si falla la programación
+    }
+  }
+
+  return NextResponse.json(paciente, { status: 201 });
 }

@@ -12,18 +12,32 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
     name: '',
     email: null,
     whatsapp: null,
-    metadata: {},
+    metadata: {
+      preferencias_cuestionario: {
+        canal: 'email',
+        frecuencia: 'mensual'
+      }
+    },
   });
   const [error, setError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (patient) {
+      // Asegurarse de preservar las preferencias de cuestionario si existen
+      const preferencias = patient.metadata?.preferencias_cuestionario || {
+        canal: 'email',
+        frecuencia: 'mensual'
+      };
+      
       setFormData({
         name: patient.name,
         email: patient.email,
         whatsapp: patient.whatsapp,
-        metadata: patient.metadata || {},
+        metadata: {
+          ...patient.metadata,
+          preferencias_cuestionario: preferencias
+        },
       });
     }
   }, [patient]);
@@ -96,6 +110,63 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
           }
           placeholder="+54 9 11 1234-5678"
         />
+      </div>
+
+      <div className="border-t pt-4 mt-4">
+        <h3 className="font-medium mb-3">Preferencias de Cuestionario WHO-5</h3>
+        
+        <div className="mb-3">
+          <label className="block text-sm font-medium mb-1" htmlFor="canal">
+            Canal de envío
+          </label>
+          <select
+            id="canal"
+            className="w-full p-2 border rounded"
+            value={(formData.metadata?.preferencias_cuestionario as any)?.canal || 'email'}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                metadata: {
+                  ...prev.metadata,
+                  preferencias_cuestionario: {
+                    ...(prev.metadata?.preferencias_cuestionario || {}),
+                    canal: e.target.value
+                  }
+                }
+              }))
+            }
+          >
+            <option value="email">Email</option>
+            <option value="whatsapp">WhatsApp</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1" htmlFor="frecuencia">
+            Frecuencia
+          </label>
+          <select
+            id="frecuencia"
+            className="w-full p-2 border rounded"
+            value={(formData.metadata?.preferencias_cuestionario as any)?.frecuencia || 'mensual'}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                metadata: {
+                  ...prev.metadata,
+                  preferencias_cuestionario: {
+                    ...(prev.metadata?.preferencias_cuestionario || {}),
+                    frecuencia: e.target.value
+                  }
+                }
+              }))
+            }
+          >
+            <option value="semanal">Semanal</option>
+            <option value="mensual">Mensual</option>
+            <option value="trimestral">Trimestral</option>
+          </select>
+        </div>
       </div>
 
       <div className="flex justify-end space-x-2 pt-4">

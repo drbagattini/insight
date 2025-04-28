@@ -49,8 +49,27 @@ export default function PatientsPage() {
   const handleDelete = (patient: Patient) => {
     console.log('Eliminar paciente', patient.id);
   };
-  const handleSendQuestionnaire = (patient: Patient) => {
-    console.log('Enviar cuestionario a', patient.id);
+  const handleSendQuestionnaire = async (patient: Patient) => {
+    try {
+      const res = await fetch('/api/cuestionarios/enviar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pacienteId: patient.id }),
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        alert(`Error: ${data.error || 'Error al enviar cuestionario'}`);
+        return;
+      }
+      
+      alert(`Cuestionario enviado exitosamente.
+Link: ${data.link}`);
+    } catch (err) {
+      console.error('Error al enviar cuestionario:', err);
+      alert('Error al enviar cuestionario');
+    }
   };
 
   return (
