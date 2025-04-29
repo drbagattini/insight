@@ -14,6 +14,7 @@ export default function PatientsPage() {
   const [editingPatient, setEditingPatient] = useState<Patient | undefined>(undefined);
   const [showModal, setShowModal] = useState(false);
   const [modalLink, setModalLink] = useState('');
+  const [deletePatient, setDeletePatient] = useState<Patient | null>(null);
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -49,8 +50,26 @@ export default function PatientsPage() {
     setEditingPatient(patient);
     setShowForm(true);
   };
+  // Muestra modal interno para confirmar eliminación
   const handleDelete = (patient: Patient) => {
-    console.log('Eliminar paciente', patient.id);
+    setDeletePatient(patient);
+  };
+
+  // Confirmar y ejecutar borrado
+  const confirmDelete = async () => {
+    if (!deletePatient) return;
+    try {
+      const res = await fetch(`/api/patients/${deletePatient.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Error al eliminar paciente');
+      }
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS });
+      setDeletePatient(null);
+    } catch (error) {
+      console.error('Error eliminando paciente:', error);
+      alert((error as Error).message || 'Error al eliminar paciente');
+    }
   };
   const handleSendQuestionnaire = async (patient: Patient) => {
     try {
@@ -114,6 +133,20 @@ export default function PatientsPage() {
             >
               Cerrar
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmación de borrado */}
+      {deletePatient && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg w-full max-w-md p-6">
+            <h2 className="text-lg font-semibold mb-4">Confirmar eliminación</h2>
+            <p className="mb-6">¿Seguro que deseas eliminar al paciente {deletePatient.name}?</p>
+            <div className="flex justify-end space-x-2">
+              <button onClick={() => setDeletePatient(null)} className="px-4 py-2 bg-gray-300 text-gray-700 rounded">Cancelar</button>
+              <button onClick={confirmDelete} className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">Eliminar</button>
+            </div>
           </div>
         </div>
       )}
