@@ -222,15 +222,10 @@ export default function CuestionarioPage() {
           {linkInfo.cuestionario.items.map((pregunta) => {
             const valor = respuestas[pregunta.id];
             const thumbWidth = 32;
-            const maxValor = 5;
-            let fillWidth = '0px';
-            if (valor === 0) {
-              fillWidth = '0px';
-            } else if (valor === maxValor) {
-              fillWidth = '100%';
-            } else {
-              fillWidth = `calc(${(valor/maxValor)*100}% + ${thumbWidth/2}px)`;
-            }
+            const max = 5;
+            const fillWidth = valor === 0
+              ? '0px'
+              : `calc((${valor}/${max})*(100% - ${thumbWidth}px) + ${thumbWidth/2}px)`;
             const sliderColor = [
               '#FF0000', // 0
               '#FF6600', // 1
