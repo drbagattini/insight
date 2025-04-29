@@ -221,9 +221,16 @@ export default function CuestionarioPage() {
 
           {linkInfo.cuestionario.items.map((pregunta) => {
             const valor = respuestas[pregunta.id];
-            // Precisión: para valor 0, barra 0px; para >0, suma mitad del thumb
             const thumbWidth = 32;
-            const fillWidth = valor === 0 ? '0px' : `calc(${(valor/6)*100}% + ${thumbWidth/2}px)`;
+            const maxValor = 5;
+            let fillWidth = '0px';
+            if (valor === 0) {
+              fillWidth = '0px';
+            } else if (valor === maxValor) {
+              fillWidth = '100%';
+            } else {
+              fillWidth = `calc(${(valor/maxValor)*100}% + ${thumbWidth/2}px)`;
+            }
             const sliderColor = [
               '#FF0000', // 0
               '#FF6600', // 1
@@ -256,7 +263,7 @@ export default function CuestionarioPage() {
                       <input
                         type="range"
                         min={0}
-                        max={6}
+                        max={5}
                         step={1}
                         value={valor}
                         aria-label={pregunta.texto}
