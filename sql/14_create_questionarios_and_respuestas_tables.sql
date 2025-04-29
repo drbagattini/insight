@@ -25,7 +25,7 @@ INSERT INTO public.cuestionarios (codigo, titulo, descripcion, items)
 VALUES (
   'WHO-5',
   'Índice de Bienestar WHO-5',
-  'WHO (Bienestar) Indice de Bienestar (versión 1998). 5 preguntas con escala 0-5, puntuación total *4 para 0-100.',
+  '',
   '[
     {"id": 1, "texto": "Me he sentido alegre y de buen humor"},
     {"id": 2, "texto": "Me he sentido tranquilo y relajado"},

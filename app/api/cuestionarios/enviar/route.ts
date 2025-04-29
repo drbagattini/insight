@@ -102,8 +102,8 @@ export async function POST(req: NextRequest) {
   }
 
   // 9) Construir la URL pública
-  const baseUrl = process.env.NEXTAUTH_URL || req.nextUrl.origin;
-  const linkPublico = `${baseUrl}/cuestionario/${link.token}`;
+  const { origin } = new URL(req.url);
+  const linkPublico = `${origin}/cuestionario/${link.token}`;
 
   // 10) Enviar el cuestionario por el canal seleccionado
   try {

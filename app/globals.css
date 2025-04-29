@@ -12,6 +12,52 @@
   --font-mono: var(--font-geist-mono);
 }
 
+.slider-thumb-custom::-webkit-slider-thumb {
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  background: #2563eb;
+  border-radius: 50%;
+  border: 4px solid #fff;
+  box-shadow: 0 1px 10px rgba(0,0,0,0.18);
+  transition: box-shadow 0.2s;
+  position: relative;
+  z-index: 3;
+  margin-top: -2px; /* ajuste ultra-fino: baja el thumb para centrarlo perfectamente */
+}
+.slider-thumb-custom:focus::-webkit-slider-thumb {
+  box-shadow: 0 0 0 6px rgba(37,99,235,0.15);
+}
+.slider-thumb-custom::-moz-range-thumb {
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  background: #2563eb;
+  border-radius: 50%;
+  border: 4px solid #fff;
+  box-shadow: 0 1px 10px rgba(0,0,0,0.18);
+  transition: box-shadow 0.2s;
+  position: relative;
+  z-index: 3;
+  margin-top: -14px;
+}
+.slider-thumb-custom:focus::-moz-range-thumb {
+  box-shadow: 0 0 0 6px rgba(37,99,235,0.15);
+}
+.slider-thumb-custom::-ms-thumb {
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  background: #2563eb;
+  border-radius: 50%;
+  border: 4px solid #fff;
+  box-shadow: 0 1px 10px rgba(0,0,0,0.18);
+  transition: box-shadow 0.2s;
+  position: relative;
+  z-index: 3;
+  margin-top: -14px;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;

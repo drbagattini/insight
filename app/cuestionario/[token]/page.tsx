@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
+import { SliderThumb } from "../SliderThumb";
 
 type Pregunta = {
   id: number;
@@ -23,8 +24,13 @@ type LinkInfo = {
   expirado: boolean;
 };
 
-export default function CuestionarioPage({ params }: { params: { token: string } }) {
+export default function CuestionarioPage() {
   const router = useRouter();
+  const params = useParams<{ token: string }>();
+  if (!params?.token) {
+    return <div className="min-h-screen flex items-center justify-center"><p className="text-red-500">Token no proporcionado</p></div>;
+  }
+  const token = params.token;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [linkInfo, setLinkInfo] = useState<LinkInfo | null>(null);
@@ -32,11 +38,38 @@ export default function CuestionarioPage({ params }: { params: { token: string }
   const [enviando, setEnviando] = useState(false);
   const [completado, setCompletado] = useState(false);
 
+  // Labels para el slider de respuestas (0-5)
+  const scaleLabels = [
+    "En ningún momento",
+    "Menos de la mitad del tiempo",
+    "Más de la mitad del tiempo",
+    "La mayor parte del tiempo",
+    "Casi todo el tiempo",
+    "Todo el tiempo",
+  ];
+
+  // Colores para el slider (de menos a más bienestar)
+  const sliderColors = [
+    "#ef4444", // rojo
+    "#f59e42", // naranja
+    "#fbbf24", // amarillo
+    "#34d399", // verde claro
+    "#10b981", // verde medio
+    "#2563eb", // azul
+  ];
+
+  // Estado para feedback visual
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Verifica si todas las preguntas fueron respondidas (no null ni undefined)
+  const allAnswered = linkInfo && Object.values(respuestas).every((v) => v !== undefined && v !== null);
+
   // Cargar información del cuestionario
   useEffect(() => {
     async function cargarCuestionario() {
       try {
-        const res = await fetch(`/api/cuestionarios/verificar/${params.token}`);
+        const res = await fetch(`/api/cuestionarios/verificar/${token}`);
         const data = await res.json();
 
         if (!res.ok) {
@@ -61,7 +94,7 @@ export default function CuestionarioPage({ params }: { params: { token: string }
     }
 
     cargarCuestionario();
-  }, [params.token]);
+  }, [token]);
 
   // Manejar cambio en respuestas
   const handleRespuestaChange = (preguntaId: number, valor: number) => {
@@ -86,7 +119,7 @@ export default function CuestionarioPage({ params }: { params: { token: string }
       // Calcular puntuación total (para WHO-5 es la suma * 4)
       const puntuacionTotal = Object.values(respuestas).reduce((sum, val) => sum + val, 0) * 4;
 
-      const res = await fetch(`/api/cuestionarios/responder/${params.token}`, {
+      const res = await fetch(`/api/cuestionarios/responder/${token}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -178,54 +211,86 @@ export default function CuestionarioPage({ params }: { params: { token: string }
   return (
     <div className="min-h-screen py-8 px-4">
       <div className="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow-md">
-        <h1 className="text-2xl font-bold mb-2">{linkInfo.cuestionario.titulo}</h1>
-        <p className="mb-6 text-gray-600">{linkInfo.cuestionario.descripcion}</p>
-        
-        <div className="mb-6">
-          <p className="font-medium">Paciente: {linkInfo.pacienteNombre}</p>
-        </div>
+        <h1 className="text-3xl font-bold mb-4 tracking-wide uppercase">CUESTIONARIO DE BIENESTAR</h1>
+        <p className="font-bold text-lg mb-6">{linkInfo.pacienteNombre}</p>
+        <p className="mb-8 text-gray-700 text-lg">
+          El cuestionario de bienestar de la OMS (WHO-5), es un instrumento de autoinforme que mide el bienestar mental. Por favor, indique para estas cinco afirmaciones cuál define mejor cómo se ha sentido usted durante las últimas dos semanas. Observe que cifras mayores significan mayor bienestar.
+        </p>
 
-        <div className="space-y-6">
-          <p className="font-medium">Durante las últimas dos semanas...</p>
-          
-          {linkInfo.cuestionario.items.map((pregunta) => (
-            <div key={pregunta.id} className="border-b pb-4">
-              <p className="mb-3">{pregunta.texto}</p>
-              <div className="grid grid-cols-6 gap-2 text-center text-sm">
-                <div></div>
-                <div>Todo el tiempo</div>
-                <div>La mayor parte del tiempo</div>
-                <div>Más de la mitad del tiempo</div>
-                <div>Menos de la mitad del tiempo</div>
-                <div>En ningún momento</div>
+        <div className="space-y-12">
 
-                <div className="font-medium">Valor:</div>
-                {[5, 4, 3, 2, 1, 0].map((valor) => (
-                  <div key={valor}>
-                    <input
-                      type="radio"
-                      id={`p${pregunta.id}-${valor}`}
-                      name={`pregunta-${pregunta.id}`}
-                      checked={respuestas[pregunta.id] === valor}
-                      onChange={() => handleRespuestaChange(pregunta.id, valor)}
-                      className="mr-2"
-                    />
-                    <label htmlFor={`p${pregunta.id}-${valor}`}>{valor}</label>
+          {linkInfo.cuestionario.items.map((pregunta) => {
+            const valor = respuestas[pregunta.id];
+            // Precisión: para valor 0, barra 0px; para >0, suma mitad del thumb
+            const thumbWidth = 32;
+            const fillWidth = valor === 0 ? '0px' : `calc(${(valor/6)*100}% + ${thumbWidth/2}px)`;
+            const sliderColor = [
+              '#FF0000', // 0
+              '#FF6600', // 1
+              '#FFCC00', // 2
+              '#CCFF00', // 3
+              '#66FF00', // 4
+              '#33CC33', // 5
+              '#00AA00', // 6
+            ][valor];
+            return (
+              <div key={pregunta.id} className="mb-8 p-6 bg-white rounded-xl shadow border border-gray-100 transition-transform hover:shadow-lg">
+                <p className="text-lg font-bold mb-8 text-gray-800">{pregunta.texto}</p>
+                <div className="relative flex flex-col items-center">
+                  <div className="flex justify-between w-full px-1 mb-2">
+                    <span className="text-gray-700 text-lg font-bold select-none">0</span>
+                    <span className="text-gray-700 text-lg font-bold select-none">5</span>
                   </div>
-                ))}
+                  <div className="relative w-full mb-6">
+                    <div className="relative w-full h-3 flex items-center">
+                      <div
+                        className="absolute left-0 top-1/2 -translate-y-1/2 h-3 rounded-lg"
+                        style={{
+                          width: fillWidth,
+                          background: sliderColor,
+                          zIndex: 1,
+                          transition: 'width 0.3s cubic-bezier(0.4,0,0.2,1)',
+                        }}
+                      />
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-3 bg-gray-200 rounded-lg" style={{zIndex: 0}} />
+                      <input
+                        type="range"
+                        min={0}
+                        max={6}
+                        step={1}
+                        value={valor}
+                        aria-label={pregunta.texto}
+                        onChange={(e) => handleRespuestaChange(pregunta.id, Number(e.target.value))}
+                        className="w-full h-3 appearance-none bg-transparent slider-thumb-custom"
+                        style={{ position: 'relative', zIndex: 2 }}
+                      />
+                    </div>
+                  </div>
+                  <p className="mt-4 text-center text-blue-600 font-semibold text-base">
+                    {scaleLabels[valor]}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
-        <div className="mt-8 flex justify-end">
+        <div className="mt-8 flex flex-col items-center gap-2">
           <button
             onClick={handleSubmit}
-            disabled={enviando}
-            className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
+            disabled={enviando || !allAnswered}
+            className="px-8 py-3 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-lg transition-all"
           >
-            {enviando ? "Enviando..." : "Enviar respuestas"}
+            {enviando ? (
+              <span className="flex items-center gap-2"><span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></span>Enviando...</span>
+            ) : (
+              "Enviar respuestas"
+            )}
           </button>
+          {!allAnswered && (
+            <span className="text-xs text-red-400 mt-1">Por favor, responde todas las preguntas para poder enviar.</span>
+          )}
+          <span className="text-xs text-gray-400 mt-2">Tus respuestas son confidenciales y solo serán vistas por tu profesional de salud.</span>
         </div>
       </div>
     </div>

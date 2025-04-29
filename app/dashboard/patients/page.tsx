@@ -5,12 +5,15 @@ import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import PatientList from '@/components/patients/PatientList';
 import PatientForm from '@/components/patients/PatientForm';
+import LinkModal from '@/components/common/LinkModal';
 import { NewPatient, Patient } from '@/types/patients';
 import { QUERY_KEYS } from '@/lib/constants';
 
 export default function PatientsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingPatient, setEditingPatient] = useState<Patient | undefined>(undefined);
+  const [showModal, setShowModal] = useState(false);
+  const [modalLink, setModalLink] = useState('');
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -64,8 +67,9 @@ export default function PatientsPage() {
         return;
       }
       
-      alert(`Cuestionario enviado exitosamente.
-Link: ${data.link}`);
+      // Mostrar modal con el link copiable
+      setModalLink(data.link);
+      setShowModal(true);
     } catch (err) {
       console.error('Error al enviar cuestionario:', err);
       alert('Error al enviar cuestionario');
@@ -92,6 +96,21 @@ Link: ${data.link}`);
               onSubmit={handleAdd}
               onCancel={() => setShowForm(false)}
             />
+          </div>
+        </div>
+      )}
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg w-full max-w-md p-6">
+            <h2 className="text-lg font-semibold mb-2">Cuestionario enviado exitosamente</h2>
+            <p>Link: <input type="text" value={modalLink} readOnly className="w-full p-2 border border-gray-300" /></p>
+            <button
+              onClick={() => setShowModal(false)}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Cerrar
+            </button>
           </div>
         </div>
       )}
