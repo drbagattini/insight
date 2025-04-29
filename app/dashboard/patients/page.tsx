@@ -137,14 +137,14 @@ export default function PatientsPage() {
         </div>
       )}
 
-      {/* Modal de confirmación de borrado */}
+      {/* Modal pop-up centrado con blur */}
       {deletePatient && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg w-full max-w-md p-6">
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm">
             <h2 className="text-lg font-semibold mb-4">Confirmar eliminación</h2>
-            <p className="mb-6">¿Seguro que deseas eliminar al paciente {deletePatient.name}?</p>
+            <p className="mb-6">¿Seguro que deseas eliminar al paciente <strong>{deletePatient.name}</strong>?</p>
             <div className="flex justify-end space-x-2">
-              <button onClick={() => setDeletePatient(null)} className="px-4 py-2 bg-gray-300 text-gray-700 rounded">Cancelar</button>
+              <button onClick={() => setDeletePatient(null)} className="px-4 py-2 bg-gray-200 rounded">Cancelar</button>
               <button onClick={confirmDelete} className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">Eliminar</button>
             </div>
           </div>
