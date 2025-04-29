@@ -75,6 +75,9 @@ export default function PatientsPage() {
       alert('Error al enviar cuestionario');
     }
   };
+  const handleViewEvolution = (patient: Patient) => {
+    router.push(`/dashboard/patients/${patient.id}`);
+  };
 
   return (
     <div className="p-6">
@@ -119,6 +122,7 @@ export default function PatientsPage() {
         onEdit={handleEdit}
         onDelete={handleDelete}
         onSendQuestionnaire={handleSendQuestionnaire}
+        onViewEvolution={handleViewEvolution}
       />
     </div>
   );

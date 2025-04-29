@@ -13,7 +13,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
+  { name: 'Resumen asistencial', href: '/dashboard', icon: HomeIcon },
   { name: 'Pacientes', href: '/dashboard/patients', icon: UserGroupIcon },
   { name: 'Agregar Paciente', href: '/dashboard/patients/new', icon: UserPlusIcon },
   { name: 'Cuestionarios', href: '/dashboard/questionnaires', icon: ClipboardDocumentListIcon },
