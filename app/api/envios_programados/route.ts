@@ -28,7 +28,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const body = await request.json();
   console.log('envios_programados POST body:', body);
-  let { pacienteId, cuestionarioId, canal, frecuencia, proximoEnvio } = body;
+  const { pacienteId, canal, frecuencia, proximoEnvio } = body;
+  let cuestionarioId = body.cuestionarioId;
   if (!pacienteId || !canal || !frecuencia || !proximoEnvio) {
     return NextResponse.json({ error: 'Campos requeridos faltantes' }, { status: 400 });
   }

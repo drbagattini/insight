@@ -29,6 +29,7 @@ export function SignIn({ providers = ['google', 'credentials'], error }: SignInP
   };
 
   // Show error coming from query string once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (error) {
       setMessage({ type: 'error', text: errorMessages[error] ?? errorMessages.default });
@@ -56,9 +57,9 @@ export function SignIn({ providers = ['google', 'credentials'], error }: SignInP
       } else {
         setMessage({ type: 'success', text: 'Si el email es válido, recibirás un enlace para resetear tu contraseña.' });
       }
-    } catch (err: any) {
-      console.error('Error inesperado en reseteo:', err);
-      setMessage({ type: 'error', text: `Error inesperado: ${err.message || 'Intentelo de nuevo.'}` });
+    } catch (error) {
+      console.error('Error inesperado en reseteo:', error);
+      setMessage({ type: 'error', text: `Error inesperado: ${error instanceof Error ? error.message : 'Intentelo de nuevo.'}` });
     } finally {
       setIsResetting(false);
     }

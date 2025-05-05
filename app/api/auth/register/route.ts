@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { hash } from 'bcryptjs';
 import { UserRole } from '@/types/roles';
 
 // Configuración de Supabase con la service role key
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
       user_metadata: {
         first_name: userData.first_name,
         last_name: userData.last_name,
-        role: UserRole.PSYCHOLOGIST, // Asignar rol en metadata
+        role: UserRole.PSICOLOGO, // Asignar rol en metadata
       },
     });
 
@@ -53,9 +54,27 @@ export async function POST(request: Request) {
     // Éxito - El usuario fue creado en auth.users
     console.log('AUTH API: User created successfully in Supabase Auth with ID:', authData.user.id);
 
-    // *** ELIMINADA LA INSERCIÓN MANUAL EN public.users ***
-    // Si se necesita una tabla 'profiles', usar triggers de Supabase
-    // o crear el perfil aquí DESPUÉS de la creación en Auth (pero es más complejo)
+    // Insertar perfil en public.users para resolver FK patients_psychologist_id_fkey
+    try {
+      const hashedPassword = await hash(userData.password, 10);
+      const { error: insertError } = await supabaseAdmin
+        .from('users')
+        .insert({
+          id: authData.user.id,
+          email: userData.email,
+          password_hash: hashedPassword,
+          role: UserRole.PSICOLOGO,
+          first_name: userData.first_name,
+          last_name: userData.last_name,
+        });
+      if (insertError) {
+        console.error('AUTH API: Error inserting into public.users:', insertError.message);
+        return NextResponse.json({ error: 'Error al crear perfil de usuario' }, { status: 500 });
+      }
+    } catch (err) {
+      console.error('AUTH API: Unexpected error hashing password:', err);
+      return NextResponse.json({ error: 'Error interno al generar hash de contraseña' }, { status: 500 });
+    }
 
     return NextResponse.json({ message: 'Usuario registrado exitosamente', userId: authData.user.id }, { status: 201 }); // 201 Created
 

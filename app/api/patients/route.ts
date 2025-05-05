@@ -63,6 +63,27 @@ export async function POST(req: NextRequest) {
   }
   const psicologoId = session.user.id;
 
+  // Ensure legacy psychologists have profile record to satisfy FK constraint
+  try {
+    const { error: profileError } = await supabaseAdmin
+      .from('users')
+      .upsert({
+        id: psicologoId,
+        email: session.user.email ?? '',
+        password_hash: '', // placeholder for legacy users
+        role: session.user.role,
+        first_name: session.user.name ?? '',
+        last_name: '',
+      }, { onConflict: ['id'] });
+    if (profileError && profileError.code !== '23505') {
+      console.error('[POST /api/patients] Error ensuring profile exists:', profileError.message);
+      return NextResponse.json({ error: 'Error interno al verificar perfil' }, { status: 500 });
+    }
+  } catch (err) {
+    console.error('[POST /api/patients] Unexpected error ensuring profile exists:', err);
+    return NextResponse.json({ error: 'Error interno verificando perfil' }, { status: 500 });
+  }
+
   // 2) Validar body
   const body = await req.json();
   const parsed = newPatientSchema.safeParse(body);

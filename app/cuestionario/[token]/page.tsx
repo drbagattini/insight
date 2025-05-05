@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { SliderThumb } from "../SliderThumb";
 
 type Pregunta = {
   id: number;
@@ -27,10 +26,16 @@ type LinkInfo = {
 export default function CuestionarioPage() {
   const router = useRouter();
   const params = useParams<{ token: string }>();
-  if (!params?.token) {
-    return <div className="min-h-screen flex items-center justify-center"><p className="text-red-500">Token no proporcionado</p></div>;
+  const token = params?.token;
+
+  if (!token) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-red-500">Token no proporcionado</p>
+      </div>
+    );
   }
-  const token = params.token;
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [linkInfo, setLinkInfo] = useState<LinkInfo | null>(null);
@@ -48,25 +53,14 @@ export default function CuestionarioPage() {
     "Todo el tiempo",
   ];
 
-  // Colores para el slider (de menos a más bienestar)
-  const sliderColors = [
-    "#ef4444", // rojo
-    "#f59e42", // naranja
-    "#fbbf24", // amarillo
-    "#34d399", // verde claro
-    "#10b981", // verde medio
-    "#2563eb", // azul
-  ];
-
   // Estado para feedback visual
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
   // Verifica si todas las preguntas fueron respondidas (no null ni undefined)
   const allAnswered = linkInfo && Object.values(respuestas).every((v) => v !== undefined && v !== null);
 
   // Cargar información del cuestionario
   useEffect(() => {
+    if (!token) return;
+
     async function cargarCuestionario() {
       try {
         const res = await fetch(`/api/cuestionarios/verificar/${token}`);

@@ -16,7 +16,7 @@ export async function GET() {
     }
 
     // Verificar que la tabla se creó correctamente
-    const { data: tableInfo, error: checkError } = await supabase
+    const { error: checkError } = await supabase
       .from('users')
       .select('*')
       .limit(1);

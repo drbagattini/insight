@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import NextAuth, { type Session, type User } from 'next-auth';
 import { UserRoleType } from '@/types/roles';
 import { authOptions } from '@/app/lib/auth';
