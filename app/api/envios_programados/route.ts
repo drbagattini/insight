@@ -9,10 +9,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Paciente ID no proporcionado' }, { status: 400 });
   }
 
-  // Unir con cuestionarios para traer el campo `codigo` y fecha de creación
-  const { data, error } = await supabaseAdmin
+  const { data: schedules, error } = await supabaseAdmin
     .from('envios_programados')
-    .select('*, cuestionarios(codigo), creado_en')
+    .select('*, cuestionarios(codigo)')
     .eq('paciente_id', pacienteId)
     .order('proximo_envio', { ascending: true });
 
@@ -21,7 +20,36 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(data);
+  const enriched = await Promise.all(
+    schedules.map(async (send) => {
+      let lastSent: string | null = null;
+      let respondido = false;
+      try {
+        const { data: respList, error: respError } = await supabaseAdmin
+          .from('respuestas')
+          .select('enviado_en')
+          .eq('paciente_id', pacienteId)
+          .eq('cuestionario_id', send.cuestionario_id)
+          .order('enviado_en', { ascending: false })
+          .limit(1);
+        if (respError) {
+          console.error('Error al obtener respuestas para envío', send.id, respError);
+        } else if (respList && respList.length > 0) {
+          lastSent = respList[0].enviado_en;
+          respondido = true;
+        }
+      } catch (e) {
+        console.error('Error inesperado al obtener respuestas para envío', send.id, e);
+      }
+      return {
+        ...send,
+        lastSent,
+        respondido,
+      };
+    })
+  );
+
+  return NextResponse.json(enriched);
 }
 
 // POST: crear un nuevo envío programado
