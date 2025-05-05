@@ -13,6 +13,7 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
     email: null,
     whatsapp: null,
     metadata: {
+      cuestionario_id: '',
       preferencias_cuestionario: {
         canal: 'email',
         frecuencia: 'mensual'
@@ -21,6 +22,25 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
   });
   const [error, setError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [questionarios, setQuestionarios] = useState<{ id: string; titulo: string }[]>([]);
+
+  useEffect(() => {
+    fetch('/api/cuestionarios')
+      .then(res => res.json())
+      .then((data: any[]) => {
+        setQuestionarios(data);
+        if (data.length) {
+          setFormData(prev => ({
+            ...prev,
+            metadata: {
+              ...(prev.metadata as any),
+              cuestionario_id: prev.metadata?.cuestionario_id || data[0].id
+            }
+          }));
+        }
+      })
+      .catch(err => console.error('Error fetching cuestionarios:', err));
+  }, []);
 
   useEffect(() => {
     if (patient) {
@@ -113,8 +133,34 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
       </div>
 
       <div className="border-t pt-4 mt-4">
-        <h3 className="font-medium mb-3">Preferencias de Cuestionario WHO-5</h3>
+        <h3 className="font-medium mb-3">Preferencias de Cuestionario</h3>
         
+        <div className="mb-3">
+          <label className="block text-sm font-medium mb-1" htmlFor="cuestionario">
+            Cuestionario *
+          </label>
+          <select
+            id="cuestionario"
+            required
+            className="w-full p-2 border rounded"
+            value={(formData.metadata as any).cuestionario_id || ''}
+            onChange={e =>
+              setFormData(prev => ({
+                ...prev,
+                metadata: {
+                  ...(prev.metadata as any),
+                  cuestionario_id: e.target.value
+                }
+              }))
+            }
+          >
+            <option value="" disabled>Selecciona un cuestionario</option>
+            {questionarios.map(q => (
+              <option key={q.id} value={q.id}>{q.titulo}</option>
+            ))}
+          </select>
+        </div>
+
         <div className="mb-3">
           <label className="block text-sm font-medium mb-1" htmlFor="canal">
             Canal de envío
