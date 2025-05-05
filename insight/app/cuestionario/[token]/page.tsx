@@ -1,0 +1,294 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
+
+type Pregunta = {
+  id: number;
+  texto: string;
+};
+
+type Cuestionario = {
+  id: string;
+  titulo: string;
+  descripcion: string;
+  items: Pregunta[];
+};
+
+type LinkInfo = {
+  pacienteId: string;
+  pacienteNombre: string;
+  cuestionarioId: string;
+  cuestionario: Cuestionario;
+  expirado: boolean;
+};
+
+export default function CuestionarioPage() {
+  const router = useRouter();
+  const params = useParams<{ token: string }>();
+  const token = params?.token;
+
+  if (!token) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-red-500">Token no proporcionado</p>
+      </div>
+    );
+  }
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [linkInfo, setLinkInfo] = useState<LinkInfo | null>(null);
+  const [respuestas, setRespuestas] = useState<Record<number, number>>({});
+  const [enviando, setEnviando] = useState(false);
+  const [completado, setCompletado] = useState(false);
+
+  // Labels para el slider de respuestas (0-5)
+  const scaleLabels = [
+    "En ningún momento",
+    "Menos de la mitad del tiempo",
+    "Más de la mitad del tiempo",
+    "La mayor parte del tiempo",
+    "Casi todo el tiempo",
+    "Todo el tiempo",
+  ];
+
+  // Estado para feedback visual
+  // Verifica si todas las preguntas fueron respondidas (no null ni undefined)
+  const allAnswered = linkInfo && Object.values(respuestas).every((v) => v !== undefined && v !== null);
+
+  // Cargar información del cuestionario
+  useEffect(() => {
+    if (!token) return;
+
+    async function cargarCuestionario() {
+      try {
+        const res = await fetch(`/api/cuestionarios/verificar/${token}`);
+        const data = await res.json();
+
+        if (!res.ok) {
+          setError(data.error || "Error al cargar el cuestionario");
+          return;
+        }
+
+        setLinkInfo(data);
+        
+        // Inicializar respuestas
+        const respuestasIniciales: Record<number, number> = {};
+        data.cuestionario.items.forEach((item: Pregunta) => {
+          respuestasIniciales[item.id] = 0; // Valor por defecto
+        });
+        setRespuestas(respuestasIniciales);
+      } catch (err) {
+        setError("Error al cargar el cuestionario");
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    cargarCuestionario();
+  }, [token]);
+
+  // Manejar cambio en respuestas
+  const handleRespuestaChange = (preguntaId: number, valor: number) => {
+    setRespuestas((prev) => ({
+      ...prev,
+      [preguntaId]: valor,
+    }));
+  };
+
+  // Enviar respuestas
+  const handleSubmit = async () => {
+    if (!linkInfo) return;
+
+    setEnviando(true);
+    try {
+      // Convertir respuestas a formato esperado
+      const respuestasArray = Object.entries(respuestas).map(([id, valor]) => ({
+        pregunta_id: parseInt(id),
+        valor,
+      }));
+
+      // Calcular puntuación total (para WHO-5 es la suma * 4)
+      const puntuacionTotal = Object.values(respuestas).reduce((sum, val) => sum + val, 0) * 4;
+
+      const res = await fetch(`/api/cuestionarios/responder/${token}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          respuestas: respuestasArray,
+          puntuacion: puntuacionTotal,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Error al enviar respuestas");
+      }
+
+      setCompletado(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al enviar respuestas");
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  // Renderizar estados de carga y error
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center p-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p>Cargando cuestionario...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center p-8 max-w-md">
+          <div className="text-red-500 text-5xl mb-4">⚠️</div>
+          <h1 className="text-2xl font-bold mb-4">Error</h1>
+          <p className="mb-6">{error}</p>
+          <button
+            onClick={() => router.push("/")}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Volver al inicio
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (completado) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center p-8 max-w-md">
+          <div className="text-green-500 text-5xl mb-4">✅</div>
+          <h1 className="text-2xl font-bold mb-4">Gracias por tu tiempo.</h1>
+          <p className="mb-6">Tus respuestas fueron registradas correctamente y serán recibidas por tu profesional.</p>
+          <button
+            onClick={() => window.location.href = "https://centrouno.edu.uy/"}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Volver al sitio de Centro UNO
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!linkInfo || linkInfo.expirado) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center p-8 max-w-md">
+          <div className="text-yellow-500 text-5xl mb-4">⏱️</div>
+          <h1 className="text-2xl font-bold mb-4">Enlace expirado o inválido</h1>
+          <p className="mb-6">Este enlace ya no es válido o ha expirado.</p>
+          <button
+            onClick={() => router.push("/")}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Volver al inicio
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen py-8 px-4">
+      <div className="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow-md">
+        <h1 className="text-3xl font-bold mb-4 tracking-wide uppercase">CUESTIONARIO DE BIENESTAR</h1>
+        <p className="font-bold text-lg mb-6">{linkInfo.pacienteNombre}</p>
+        <p className="mb-8 text-gray-700 text-lg">
+          El cuestionario de bienestar de la OMS (WHO-5), es un instrumento de autoinforme que mide el bienestar mental. Por favor, indique para estas cinco afirmaciones cuál define mejor cómo se ha sentido usted durante las últimas dos semanas. Observe que cifras mayores significan mayor bienestar.
+        </p>
+
+        <div className="space-y-12">
+
+          {linkInfo.cuestionario.items.map((pregunta) => {
+            const valor = respuestas[pregunta.id];
+            const thumbWidth = 32;
+            const max = 5;
+            const fillWidth = valor === 0
+              ? '0px'
+              : `calc((${valor}/${max})*(100% - ${thumbWidth}px) + ${thumbWidth/2}px)`;
+            const sliderColor = [
+              '#FF0000', // 0
+              '#FF6600', // 1
+              '#FFCC00', // 2
+              '#CCFF00', // 3
+              '#66FF00', // 4
+              '#33CC33', // 5
+              '#00AA00', // 6
+            ][valor];
+            return (
+              <div key={pregunta.id} className="mb-8 p-6 bg-white rounded-xl shadow border border-gray-100 transition-transform hover:shadow-lg">
+                <p className="text-lg font-bold mb-8 text-gray-800">{pregunta.texto}</p>
+                <div className="relative flex flex-col items-center">
+                  <div className="flex justify-between w-full px-1 mb-2">
+                    <span className="text-gray-700 text-lg font-bold select-none">0</span>
+                    <span className="text-gray-700 text-lg font-bold select-none">5</span>
+                  </div>
+                  <div className="relative w-full mb-6">
+                    <div className="relative w-full h-3 flex items-center">
+                      <div
+                        className="absolute left-0 top-1/2 -translate-y-1/2 h-3 rounded-lg"
+                        style={{
+                          width: fillWidth,
+                          background: sliderColor,
+                          zIndex: 1,
+                          transition: 'width 0.3s cubic-bezier(0.4,0,0.2,1)',
+                        }}
+                      />
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-3 bg-gray-200 rounded-lg" style={{zIndex: 0}} />
+                      <input
+                        type="range"
+                        min={0}
+                        max={5}
+                        step={1}
+                        value={valor}
+                        aria-label={pregunta.texto}
+                        onChange={(e) => handleRespuestaChange(pregunta.id, Number(e.target.value))}
+                        className="w-full h-3 appearance-none bg-transparent slider-thumb-custom"
+                        style={{ position: 'relative', zIndex: 2 }}
+                      />
+                    </div>
+                  </div>
+                  <p className="mt-4 text-center text-blue-600 font-semibold text-base">
+                    {scaleLabels[valor]}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-8 flex flex-col items-center gap-2">
+          <button
+            onClick={handleSubmit}
+            disabled={enviando || !allAnswered}
+            className="px-8 py-3 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-lg transition-all"
+          >
+            {enviando ? (
+              <span className="flex items-center gap-2"><span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></span>Enviando...</span>
+            ) : (
+              "Enviar respuestas"
+            )}
+          </button>
+          {!allAnswered && (
+            <span className="text-xs text-red-400 mt-1">Por favor, responde todas las preguntas para poder enviar.</span>
+          )}
+          <span className="text-xs text-gray-400 mt-2">Tus respuestas son confidenciales y solo serán vistas por tu profesional de salud.</span>
+        </div>
+      </div>
+    </div>
+  );
+}
