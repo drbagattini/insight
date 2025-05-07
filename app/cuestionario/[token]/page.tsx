@@ -171,13 +171,13 @@ export default function CuestionarioPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center p-8 max-w-md">
           <div className="text-green-500 text-5xl mb-4">✅</div>
-          <h1 className="text-2xl font-bold mb-4">¡Gracias por completar el cuestionario!</h1>
-          <p className="mb-6">Tus respuestas han sido registradas correctamente.</p>
+          <h1 className="text-2xl font-bold mb-4">Gracias por tu tiempo.</h1>
+          <p className="mb-6">Tus respuestas fueron registradas correctamente y serán recibidas por tu profesional.</p>
           <button
-            onClick={() => router.push("/")}
+            onClick={() => window.location.href = "https://centrouno.edu.uy/"}
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
           >
-            Volver al inicio
+            Volver al sitio de Centro UNO
           </button>
         </div>
       </div>
