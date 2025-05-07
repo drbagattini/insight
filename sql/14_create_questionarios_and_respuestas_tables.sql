@@ -85,3 +85,4 @@ ALTER TABLE public.links_cuestionario ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.respuestas ENABLE ROW LEVEL SECURITY;
 
 -- NOTA: Políticas RLS se configurarán en migraciones posteriores según roles y contexto.
+`
