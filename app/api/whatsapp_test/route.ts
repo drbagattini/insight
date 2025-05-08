@@ -24,8 +24,21 @@ export async function GET(request: NextRequest) {
         body: JSON.stringify({
           messaging_product: 'whatsapp',
           to,
-          type: 'text',
-          text: { body: 'Este es un mensaje de prueba desde Insight.' },
+          type: 'template',
+          template: {
+            name: 'cuestionario_bienestar',
+            language: { code: 'es_UY' },
+            components: [
+              {
+                type: 'body',
+                parameters: [
+                  { type: 'text', text: 'Test Usuario' },
+                  { type: 'text', text: 'WHO-5' },
+                  { type: 'text', text: 'https://tasty-worlds-strive.loca.lt/cuestionario/testtoken' }
+                ]
+              }
+            ]
+          },
         }),
       }
     );

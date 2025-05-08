@@ -3,9 +3,9 @@ import { supabaseAdmin } from '@/app/lib/supabaseAdmin';
 
 export async function GET(
   request: Request,
-  { params }: { params: { pacienteId: string } }
+  { params }: { params: Promise<{ pacienteId: string }> }
 ) {
-  const pacienteId = params.pacienteId;
+  const { pacienteId } = await params;
   if (!pacienteId) {
     return NextResponse.json({ error: 'pacienteId no proporcionado' }, { status: 400 });
   }

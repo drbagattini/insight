@@ -150,7 +150,7 @@ export default function PatientEvolutionPage() {
       const res = await fetch('/api/cuestionarios/enviar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pacienteId: patientId, cuestionarioId: send.cuestionario_id }),
+        body: JSON.stringify({ pacienteId: patientId, cuestionarioId: send.cuestionario_id, canal: send.canal }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al enviar');
@@ -191,7 +191,7 @@ export default function PatientEvolutionPage() {
       const sendRes = await fetch('/api/cuestionarios/enviar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pacienteId: patientId, cuestionarioId: newCuestionarioId }),
+        body: JSON.stringify({ pacienteId: patientId, cuestionarioId: newCuestionarioId, canal: newCanal }),
       });
       const sendData = await sendRes.json();
       if (!sendRes.ok) throw new Error(sendData.error || 'Error al enviar primer cuestionario');

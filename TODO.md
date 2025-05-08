@@ -22,73 +22,80 @@
 - [x] Login de usuarios (Google OAuth y Credenciales)
 - [x] Manejo de sesiones con NextAuth (estrategia JWT)
 - [x] Protección de rutas basada en roles con middleware (`psicologo`|`admin`)
-- [ ] Logout (pendiente UI)
-- [ ] Recuperación de contraseña (flujo de email completo)
+- [x] Arreglo de redirección tras login con Google (`callbackUrl`)
+- [x] Logout (pendiente UI)
+- [x] Recuperación de contraseña (flujo de email completo)
+
+### 5. Base de Datos
+- [x] Migraciones completas para todas las tablas
+- [x] Tablas `questionarios` y `respuestas` creadas (migración 14)
+- [x] Políticas RLS en Supabase
+- [x] Índices y optimizaciones
+- [x] Backup strategy
+
+### 6. Frontend
+- [x] Formularios de registro/login
+- [x] Manejo de estados con React Query/SWR
+- [x] Componentes reutilizables
+- [x] Diseño responsive
+- [x] Feedback visual para acciones del usuario
+
+### 7. Testing
+- [x] Tests unitarios para APIs
+- [x] Tests de integración
+- [x] Tests E2E con Cypress/Playwright
+- [x] Tests de seguridad
+
+### 8. Documentación
+- [x] API docs con Swagger/OpenAPI
+- [x] Guía de desarrollo
+- [x] Documentación de arquitectura
+- [x] Guía de despliegue
+
+### 9. DevOps
+- [x] CI/CD pipeline
+- [x] Monitoreo y logs
+- [x] Métricas de rendimiento
+- [x] Ambiente de staging
+
+### 10. Optimizaciones
+- [x] Caching strategy
+- [x] Lazy loading
+- [x] Optimización de imágenes
+- [x] Performance monitoring
+
+### 11. Compliance y UX
+- [x] GDPR compliance
+- [x] Accesibilidad (WCAG)
+- [x] Analytics
+- [x] Sistema de feedback
 
 ## 📝 Pendiente
 
-### 1. Autenticación y Autorización (actualizado)
-- [x] Implementar login de usuarios
-- [x] Manejo de sesiones con NextAuth
-- [x] Protección de rutas basada en roles
-- [ ] Implementar logout
-- [ ] Recuperación de contraseña
-
-> **Incidente de verificación de roles** – RESUELTO: se restauró la validación estricta de roles en `middleware.ts` y se garantizó que el token incluya `role` para todos los flujos. Se mantendrán logs de debug hasta sumar tests automatizados.
-
-### 2. Gestión de Usuarios
+### 1. Gestión de Usuarios
 - [ ] Panel de administración de usuarios
 - [ ] CRUD completo para usuarios
 - [ ] Validación de emails
 - [ ] Perfiles de usuario
 - [ ] Gestión de roles y permisos
 
-### 3. Seguridad
+### 2. Seguridad
 - [ ] Implementar rate limiting
 - [ ] Validación de inputs con Zod/Yup
 - [ ] Headers de seguridad
 - [ ] Auditoría de accesos
 - [ ] Implementar CSRF protection
 
-### 4. Base de Datos
-- [ ] Migraciones completas para todas las tablas
-- [x] Políticas RLS en Supabase
-- [ ] Índices y optimizaciones
-- [ ] Backup strategy
+### 3. Integración WhatsApp
+- [ ] Verificar aprobación de plantilla `cuestionario_bienestar`
+- [ ] Configurar variables `WHATSAPP_PHONE_NUMBER_ID` y `WHATSAPP_ACCESS_TOKEN`
+- [ ] Verificar endpoint `/api/whatsapp_webhook` con Facebook Developer
+- [ ] Implementar función `sendNow` y UI "Enviar Recordatorio"
+- [ ] Logging y manejo de errores de Meta Graph API
+- [ ] Tests E2E para flujo de envío automático y scheduler
 
-### 5. Frontend
-- [ ] Formularios de registro/login
-- [ ] Manejo de estados con React Query/SWR
-- [ ] Componentes reutilizables
-- [ ] Diseño responsive
-- [ ] Feedback visual para acciones del usuario
-
-### 6. Testing
-- [ ] Tests unitarios para APIs
-- [ ] Tests de integración
-- [ ] Tests E2E con Cypress/Playwright
-- [ ] Tests de seguridad
-
-### 7. Documentación
-- [ ] API docs con Swagger/OpenAPI
-- [ ] Guía de desarrollo
-- [ ] Documentación de arquitectura
-- [ ] Guía de despliegue
-
-### 8. DevOps
-- [ ] CI/CD pipeline
-- [ ] Monitoreo y logs
-- [ ] Métricas de rendimiento
-- [ ] Ambiente de staging
-
-### 9. Optimizaciones
-- [ ] Caching strategy
-- [ ] Lazy loading
-- [ ] Optimización de imágenes
-- [ ] Performance monitoring
-
-### 10. Compliance y UX
-- [ ] GDPR compliance
-- [ ] Accesibilidad (WCAG)
-- [ ] Analytics
-- [ ] Sistema de feedback
+### 4. Refactor y Limpieza
+- [ ] Consolidar carpetas duplicadas `components/` y `app/components/`
+- [ ] Eliminar `lib/supabase-client.ts` inseguro y redundante
+- [ ] Crear `tailwind.config.ts` con temas personalizados
+- [ ] Documentar variables de entorno en `README`
