@@ -6,11 +6,10 @@ import { QUERY_KEYS } from '@/lib/constants';
 interface PatientListProps {
   onEdit: (patient: Patient) => void;
   onDelete: (patient: Patient) => void;
-  onSendQuestionnaire: (patient: Patient) => void;
   onViewEvolution: (patient: Patient) => void;
 }
 
-export default function PatientList({ onEdit, onDelete, onSendQuestionnaire, onViewEvolution }: PatientListProps) {
+export default function PatientList({ onEdit, onDelete, onViewEvolution }: PatientListProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
   const { data: patients = [], isLoading, error } = useQuery<Patient[]>({
@@ -74,28 +73,22 @@ export default function PatientList({ onEdit, onDelete, onSendQuestionnaire, onV
                 </div>
                 <div className="flex space-x-2">
                   <button
-                    onClick={() => onSendQuestionnaire(patient)}
-                    className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+                    onClick={() => onViewEvolution(patient)}
+                    className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600"
                   >
-                    Enviar Cuestionario
+                    Ver Evolución
                   </button>
                   <button
                     onClick={() => onEdit(patient)}
                     className="px-3 py-1 text-sm bg-gray-500 text-white rounded hover:bg-gray-600"
                   >
-                    Editar
+                    Editar Paciente
                   </button>
                   <button
                     onClick={() => onDelete(patient)}
                     className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
                   >
                     Eliminar
-                  </button>
-                  <button
-                    onClick={() => onViewEvolution(patient)}
-                    className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600"
-                  >
-                    Ver Evolución
                   </button>
                 </div>
               </div>
