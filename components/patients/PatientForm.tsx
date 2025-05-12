@@ -19,6 +19,7 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
         frecuencia: 'mensual'
       },
       sendInitial: true,
+      whatsappConsent: false
     },
   });
   const [error, setError] = useState<string>('');
@@ -59,6 +60,7 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
           ...patient.metadata,
           preferencias_cuestionario: preferencias,
           sendInitial: patient.metadata?.sendInitial || true,
+          whatsappConsent: patient.metadata?.whatsappConsent || false,
         },
       });
     }
@@ -132,6 +134,26 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
           }
           placeholder="+54 9 11 1234-5678"
         />
+      </div>
+      <div className="mb-3 flex items-center">
+        <input
+          id="whatsappConsent"
+          type="checkbox"
+          className="mr-2 h-4 w-4 text-blue-600 border-gray-300 rounded"
+          checked={(formData.metadata as any).whatsappConsent || false}
+          onChange={(e) =>
+            setFormData((prev) => ({
+              ...prev,
+              metadata: {
+                ...(prev.metadata as any),
+                whatsappConsent: e.target.checked,
+              },
+            }))
+          }
+        />
+        <label htmlFor="whatsappConsent" className="text-sm text-gray-700">
+          He obtenido el consentimiento del paciente para enviarle notificaciones por WhatsApp
+        </label>
       </div>
 
       <div className="border-t pt-4 mt-4">

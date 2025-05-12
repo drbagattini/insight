@@ -241,6 +241,10 @@ export async function POST(req: NextRequest) {
   if (canal === "whatsapp" && !paciente.whatsapp) {
     return NextResponse.json({ error: "El paciente no tiene WhatsApp registrado" }, { status: 400 });
   }
+  // 6.b) Validar consentimiento de WhatsApp
+  if (canal === "whatsapp" && !(paciente.metadata?.whatsappConsent === true)) {
+    return NextResponse.json({ error: "El paciente no autorizó recibir notificaciones por WhatsApp" }, { status: 400 });
+  }
 
   // 7) Generar token y fecha de expiración
   const { token, expiracion } = generarTokenYExpiracion();
