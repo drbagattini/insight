@@ -17,7 +17,8 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
       preferencias_cuestionario: {
         canal: 'email',
         frecuencia: 'mensual'
-      }
+      },
+      sendInitial: true,
     },
   });
   const [error, setError] = useState<string>('');
@@ -56,7 +57,8 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
         whatsapp: patient.whatsapp,
         metadata: {
           ...patient.metadata,
-          preferencias_cuestionario: preferencias
+          preferencias_cuestionario: preferencias,
+          sendInitial: patient.metadata?.sendInitial || true,
         },
       });
     }
@@ -212,6 +214,26 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
             <option value="mensual">Mensual</option>
             <option value="trimestral">Trimestral</option>
           </select>
+        </div>
+        <div className="mb-3 flex items-center">
+          <input
+            id="sendInitial"
+            type="checkbox"
+            className="mr-2"
+            checked={(formData.metadata as any).sendInitial}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                metadata: {
+                  ...prev.metadata,
+                  sendInitial: e.target.checked
+                }
+              }))
+            }
+          />
+          <label htmlFor="sendInitial" className="text-sm font-medium">
+            Enviar cuestionario inmediatamente
+          </label>
         </div>
       </div>
 

@@ -19,6 +19,7 @@ const newPatientSchema = z.object({
   email: z.string().email().optional(),
   whatsapp: z.string().optional(),
   metadata: z.record(z.unknown()).optional().default({}),
+  sendInitial: z.boolean().optional().default(true),
 });
 
 // Función para calcular la próxima fecha de envío según frecuencia
@@ -74,7 +75,7 @@ export async function POST(req: NextRequest) {
         role: session.user.role,
         first_name: session.user.name ?? '',
         last_name: '',
-      }, { onConflict: ['id'] });
+      }, { onConflict: 'id' });
     if (profileError && profileError.code !== '23505') {
       console.error('[POST /api/patients] Error ensuring profile exists:', profileError.message);
       return NextResponse.json({ error: 'Error interno al verificar perfil' }, { status: 500 });
@@ -86,10 +87,13 @@ export async function POST(req: NextRequest) {
 
   // 2) Validar body
   const body = await req.json();
+  console.log('POST /api/patients body:', body);
   const parsed = newPatientSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
+
+  const { sendInitial } = parsed.data;
 
   // Insertar paciente con service role key y filtro manual
   const { data: paciente, error: pacienteError } = await supabaseAdmin
@@ -108,6 +112,7 @@ export async function POST(req: NextRequest) {
     console.error("[POST /api/patients]", pacienteError?.message);
     return NextResponse.json({ error: pacienteError?.message }, { status: 500 });
   }
+  console.log('Paciente creado:', paciente);
 
   // Obtener el ID del cuestionario WHO-5
   const { data: cuestionario, error: cuestionarioError } = await supabaseAdmin
@@ -138,11 +143,41 @@ export async function POST(req: NextRequest) {
         proximo_envio
       });
 
+    console.log('Envio programado:', { pacienteId: paciente.id, cuestionarioId: cuestionario.id, canal, frecuencia, proximo_envio });
     if (scheduleError) {
       console.error("[POST /api/patients] Error al programar cuestionario:", scheduleError.message);
       // No fallamos la creación del paciente si falla la programación
     }
   }
 
-  return NextResponse.json(paciente, { status: 201 });
+  // Preparar payload de respuesta
+  let responsePayload: any = { paciente };
+  // Determinar canal para el envío inicial
+  const metadataAny = parsed.data.metadata as any;
+  const canalToSend = metadataAny.preferencias_cuestionario?.canal || 'email';
+  // Envío inicial si se solicitó
+  if (sendInitial) {
+    try {
+      const origin = new URL(req.url).origin;
+      const sendRes = await fetch(`${origin}/api/cuestionarios/enviar`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cookie': req.headers.get('cookie') || ''
+        },
+        body: JSON.stringify({ pacienteId: paciente.id, cuestionarioId: cuestionario?.id, canal: canalToSend }),
+      });
+      const sendData = await sendRes.json();
+      if (sendRes.ok) {
+        console.log('Primer envío realizado:', sendData);
+        responsePayload.link = sendData.link;
+      } else {
+        console.error('Error en primer envío:', sendData);
+      }
+    } catch (error) {
+      console.error('Error al realizar primer envío:', error);
+    }
+  }
+
+  return NextResponse.json(responsePayload, { status: 201 });
 }

@@ -52,6 +52,7 @@ async function enviarCuestionarioPorCanal(
   linkPublico: string
 ) {
   if (canal === 'email' && email) {
+    console.log('Enviando email:', { to: email, plantilla: nombreCuestionario, link: linkPublico });
     if (brevoTransporter) {
       await brevoTransporter.sendMail({
         from: `"Insight | Centro UNO" <${process.env.EMAIL_SENDER ?? process.env.BREVO_SMTP_USER}>`,
@@ -67,6 +68,7 @@ async function enviarCuestionarioPorCanal(
           <p style="margin-bottom: 0;">El equipo de Insight</p>
         `
       });
+      console.log('Email enviado con éxito a', email);
     } else {
       console.error('Brevo transporter no está configurado. No se pudo enviar email.');
     }
@@ -110,6 +112,7 @@ async function enviarCuestionarioPorCanal(
               sub_type: 'url',
               index: '0',
               parameters: [
+                // Send only the questionnaire ID as the single parameter for the button URL
                 { type: 'text', text: linkPublico.split('/').pop() || '' }
               ]
             }
@@ -159,6 +162,9 @@ async function enviarCuestionarioPorCanal(
   return true;
 }
 
+// Exportar la función para pruebas
+export { enviarCuestionarioPorCanal };
+
 export async function POST(req: NextRequest) {
   // 1) Verificar sesión y autorización
   const session = await getServerSession(authOptions);
@@ -169,10 +175,12 @@ export async function POST(req: NextRequest) {
 
   // 2) Validar body
   const body = await req.json();
+  console.log('POST /api/cuestionarios/enviar body:', body);
   const parsed = enviarCuestionarioSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
+  console.log('Valores para enviarCuestionarioPorCanal:', parsed.data);
 
   // 3) Verificar que el paciente pertenezca al psicólogo
   const { data: paciente, error: pacienteError } = await supabaseAdmin
@@ -254,7 +262,10 @@ export async function POST(req: NextRequest) {
   }
 
   // 9) Construir la URL pública
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin;
+  const baseUrl = process.env.NODE_ENV !== 'production'
+    ? new URL(req.url).origin
+    : process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin;
+  console.log('Computed baseUrl:', baseUrl);
   const linkPublico = `${baseUrl}/cuestionario/${link.token}`;
 
   // 10) Enviar el cuestionario por el canal seleccionado

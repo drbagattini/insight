@@ -6,6 +6,7 @@ export type NewPatient = {
   email?: string | null;
   whatsapp?: string | null;
   metadata?: Record<string, any>;
+  sendInitial?: boolean;
 };
 export type PatientUpdate = Partial<NewPatient>;
 
