@@ -20,6 +20,10 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
+import { format } from 'date-fns';
+import Link from 'next/link';
 
 // Registrar componentes de Chart.js
 ChartJS.register(
@@ -70,6 +74,18 @@ export default function DashboardPage() {
     }
   };
 
+  const { data: upcoming = [], isLoading: loadingUpcoming } = useQuery<any[]>({
+    queryKey: ['upcoming'],
+    queryFn: async () => {
+      const now = new Date().toISOString();
+      const end = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      const res = await axios.get('/api/appointments', { params: { start: now, end } });
+      return (res.data as any[])
+        .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+        .slice(0, 5);
+    },
+  });
+
   return (
     <div className="space-y-6">
       {/* Estadísticas */}
@@ -102,6 +118,27 @@ export default function DashboardPage() {
         <div className="h-64">
           <Line data={whoData} options={{ maintainAspectRatio: false }} />
         </div>
+      </div>
+
+      {/* Próximas 5 citas */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-medium text-gray-900 mb-4">Próximas 5 citas</h2>
+        {loadingUpcoming ? (
+          <p>Cargando...</p>
+        ) : (
+          <ul className="space-y-2">
+            {upcoming.map((ev: any) => (
+              <li key={ev.id} className="flex justify-between">
+                <Link href={`/dashboard/patients/${ev.paciente_id}`} className="text-blue-600 hover:underline">
+                  {ev.title}
+                </Link>
+                <span className="text-gray-500">
+                  {format(new Date(ev.start_time), 'PPpp')}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* Acciones Rápidas */}

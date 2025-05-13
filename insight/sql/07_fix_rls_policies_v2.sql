@@ -56,11 +56,12 @@ USING (
     (SELECT role FROM public.users WHERE id = auth.uid()) = 'admin'
 );
 
--- Creamos una vista segura para acceso anónimo
-CREATE OR REPLACE VIEW public.anonymous_patient_view AS
+-- Recrear la vista anónima con SECURITY INVOKER para evitar SECURITY DEFINER
+DROP VIEW IF EXISTS public.anonymous_patient_view;
+CREATE VIEW public.anonymous_patient_view WITH (security_invoker = true) AS
 SELECT
     id,
-    full_name,
+    name,
     unique_code,
     active
 FROM public.patients
