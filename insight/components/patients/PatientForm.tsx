@@ -9,21 +9,59 @@ interface PatientFormProps {
 
 export default function PatientForm({ patient, onSubmit, onCancel }: PatientFormProps) {
   const [formData, setFormData] = useState<NewPatient>({
-    full_name: '',
-    email: '',
-    whatsapp: '',
-    metadata: {},
+    name: '',
+    email: null,
+    whatsapp: null,
+    metadata: {
+      cuestionario_id: '',
+      preferencias_cuestionario: {
+        canal: 'email',
+        frecuencia: 'mensual'
+      },
+      sendInitial: true,
+      whatsappConsent: false
+    },
   });
   const [error, setError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [questionarios, setQuestionarios] = useState<{ id: string; titulo: string }[]>([]);
+
+  useEffect(() => {
+    fetch('/api/cuestionarios')
+      .then(res => res.json())
+      .then((data: any[]) => {
+        setQuestionarios(data);
+        if (data.length) {
+          setFormData(prev => ({
+            ...prev,
+            metadata: {
+              ...(prev.metadata as any),
+              cuestionario_id: prev.metadata?.cuestionario_id || data[0].id
+            }
+          }));
+        }
+      })
+      .catch(err => console.error('Error fetching cuestionarios:', err));
+  }, []);
 
   useEffect(() => {
     if (patient) {
+      // Asegurarse de preservar las preferencias de cuestionario si existen
+      const preferencias = patient.metadata?.preferencias_cuestionario || {
+        canal: 'email',
+        frecuencia: 'mensual'
+      };
+      
       setFormData({
-        full_name: patient.full_name,
-        email: patient.email || '',
-        whatsapp: patient.whatsapp || '',
-        metadata: patient.metadata || {},
+        name: patient.name,
+        email: patient.email,
+        whatsapp: patient.whatsapp,
+        metadata: {
+          ...patient.metadata,
+          preferencias_cuestionario: preferencias,
+          sendInitial: patient.metadata?.sendInitial || true,
+          whatsappConsent: patient.metadata?.whatsappConsent || false,
+        },
       });
     }
   }, [patient]);
@@ -52,17 +90,17 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
       )}
 
       <div>
-        <label className="block text-sm font-medium mb-1" htmlFor="full_name">
+        <label className="block text-sm font-medium mb-1" htmlFor="name">
           Nombre completo *
         </label>
         <input
-          id="full_name"
+          id="name"
           type="text"
           required
           className="w-full p-2 border rounded"
-          value={formData.full_name}
+          value={formData.name}
           onChange={(e) =>
-            setFormData((prev) => ({ ...prev, full_name: e.target.value }))
+            setFormData((prev) => ({ ...prev, name: e.target.value }))
           }
         />
       </div>
@@ -75,9 +113,9 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
           id="email"
           type="email"
           className="w-full p-2 border rounded"
-          value={formData.email}
+          value={formData.email || ''}
           onChange={(e) =>
-            setFormData((prev) => ({ ...prev, email: e.target.value }))
+            setFormData((prev) => ({ ...prev, email: e.target.value || null }))
           }
         />
       </div>
@@ -90,12 +128,135 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
           id="whatsapp"
           type="tel"
           className="w-full p-2 border rounded"
-          value={formData.whatsapp}
+          value={formData.whatsapp || ''}
           onChange={(e) =>
-            setFormData((prev) => ({ ...prev, whatsapp: e.target.value }))
+            setFormData((prev) => ({ ...prev, whatsapp: e.target.value || null }))
           }
           placeholder="+54 9 11 1234-5678"
         />
+      </div>
+      <div className="mb-3 flex items-center">
+        <input
+          id="whatsappConsent"
+          type="checkbox"
+          className="mr-2 h-4 w-4 text-blue-600 border-gray-300 rounded"
+          checked={(formData.metadata as any).whatsappConsent || false}
+          onChange={(e) =>
+            setFormData((prev) => ({
+              ...prev,
+              metadata: {
+                ...(prev.metadata as any),
+                whatsappConsent: e.target.checked,
+              },
+            }))
+          }
+        />
+        <label htmlFor="whatsappConsent" className="text-sm text-gray-700">
+          He obtenido el consentimiento del paciente para enviarle notificaciones por WhatsApp
+        </label>
+      </div>
+
+      <div className="border-t pt-4 mt-4">
+        <h3 className="font-medium mb-3">Preferencias de Cuestionario</h3>
+        
+        <div className="mb-3">
+          <label className="block text-sm font-medium mb-1" htmlFor="cuestionario">
+            Cuestionario *
+          </label>
+          <select
+            id="cuestionario"
+            required
+            className="w-full p-2 border rounded"
+            value={(formData.metadata as any).cuestionario_id || ''}
+            onChange={e =>
+              setFormData(prev => ({
+                ...prev,
+                metadata: {
+                  ...(prev.metadata as any),
+                  cuestionario_id: e.target.value
+                }
+              }))
+            }
+          >
+            <option value="" disabled>Selecciona un cuestionario</option>
+            {questionarios.map(q => (
+              <option key={q.id} value={q.id}>{q.titulo}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="mb-3">
+          <label className="block text-sm font-medium mb-1" htmlFor="canal">
+            Canal de envío
+          </label>
+          <select
+            id="canal"
+            className="w-full p-2 border rounded"
+            value={(formData.metadata?.preferencias_cuestionario as any)?.canal || 'email'}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                metadata: {
+                  ...prev.metadata,
+                  preferencias_cuestionario: {
+                    ...(prev.metadata?.preferencias_cuestionario || {}),
+                    canal: e.target.value
+                  }
+                }
+              }))
+            }
+          >
+            <option value="email">Email</option>
+            <option value="whatsapp">WhatsApp</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1" htmlFor="frecuencia">
+            Frecuencia
+          </label>
+          <select
+            id="frecuencia"
+            className="w-full p-2 border rounded"
+            value={(formData.metadata?.preferencias_cuestionario as any)?.frecuencia || 'mensual'}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                metadata: {
+                  ...prev.metadata,
+                  preferencias_cuestionario: {
+                    ...(prev.metadata?.preferencias_cuestionario || {}),
+                    frecuencia: e.target.value
+                  }
+                }
+              }))
+            }
+          >
+            <option value="semanal">Semanal</option>
+            <option value="mensual">Mensual</option>
+            <option value="trimestral">Trimestral</option>
+          </select>
+        </div>
+        <div className="mb-3 flex items-center">
+          <input
+            id="sendInitial"
+            type="checkbox"
+            className="mr-2"
+            checked={(formData.metadata as any).sendInitial}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                metadata: {
+                  ...prev.metadata,
+                  sendInitial: e.target.checked
+                }
+              }))
+            }
+          />
+          <label htmlFor="sendInitial" className="text-sm font-medium">
+            Enviar cuestionario inmediatamente
+          </label>
+        </div>
       </div>
 
       <div className="flex justify-end space-x-2 pt-4">

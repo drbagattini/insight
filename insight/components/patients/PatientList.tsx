@@ -1,18 +1,19 @@
 import { useState } from 'react';
 import { Patient } from '@/types/patients';
 import { useQuery } from '@tanstack/react-query';
+import { QUERY_KEYS } from '@/lib/constants';
 
 interface PatientListProps {
   onEdit: (patient: Patient) => void;
   onDelete: (patient: Patient) => void;
-  onSendQuestionnaire: (patient: Patient) => void;
+  onViewEvolution: (patient: Patient) => void;
 }
 
-export default function PatientList({ onEdit, onDelete, onSendQuestionnaire }: PatientListProps) {
+export default function PatientList({ onEdit, onDelete, onViewEvolution }: PatientListProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
   const { data: patients = [], isLoading, error } = useQuery<Patient[]>({
-    queryKey: ['patients'],
+    queryKey: QUERY_KEYS.PATIENTS,
     queryFn: async () => {
       const response = await fetch('/api/patients');
       if (!response.ok) {
@@ -22,11 +23,15 @@ export default function PatientList({ onEdit, onDelete, onSendQuestionnaire }: P
     }
   });
 
-  const filteredPatients = patients.filter(patient =>
-    patient.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    patient.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    patient.whatsapp?.includes(searchTerm)
-  );
+  // Filtrar pacientes solo si hay término de búsqueda
+  const filteredPatients = searchTerm
+    ? patients.filter(patient => {
+        const nameMatch = patient.name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false;
+        const emailMatch = patient.email?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false;
+        const whatsappMatch = patient.whatsapp?.includes(searchTerm) ?? false;
+        return nameMatch || emailMatch || whatsappMatch;
+      })
+    : patients;
 
   if (isLoading) return <div className="p-4">Cargando pacientes...</div>;
   if (error) return <div className="p-4 text-red-500">Error: {(error as Error).message}</div>;
@@ -58,7 +63,7 @@ export default function PatientList({ onEdit, onDelete, onSendQuestionnaire }: P
             >
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="font-medium">{patient.full_name}</h3>
+                  <h3 className="font-medium">{patient.name || 'Sin nombre'}</h3>
                   {patient.email && (
                     <p className="text-sm text-gray-600">{patient.email}</p>
                   )}
@@ -68,16 +73,16 @@ export default function PatientList({ onEdit, onDelete, onSendQuestionnaire }: P
                 </div>
                 <div className="flex space-x-2">
                   <button
-                    onClick={() => onSendQuestionnaire(patient)}
-                    className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+                    onClick={() => onViewEvolution(patient)}
+                    className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600"
                   >
-                    Enviar Cuestionario
+                    Ver Evolución
                   </button>
                   <button
                     onClick={() => onEdit(patient)}
                     className="px-3 py-1 text-sm bg-gray-500 text-white rounded hover:bg-gray-600"
                   >
-                    Editar
+                    Editar Paciente
                   </button>
                   <button
                     onClick={() => onDelete(patient)}

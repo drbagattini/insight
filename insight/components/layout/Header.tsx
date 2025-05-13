@@ -1,16 +1,27 @@
+'use client';
+
 import { Fragment } from 'react';
 import { Menu, Transition } from '@headlessui/react';
 import { UserCircleIcon } from '@heroicons/react/24/outline';
-import { signOut, useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
+import { usePathname } from 'next/navigation';
 
 export default function Header() {
   const { data: session } = useSession();
+  const pathname = usePathname();
+  let headerTitle = 'Dashboard';
+  if (pathname) {
+    if (pathname === '/dashboard') headerTitle = 'Resumen asistencial';
+    else if (pathname.startsWith('/dashboard/patients/') && pathname.split('/').length === 4) headerTitle = 'Seguimiento clínico';
+    else if (pathname.startsWith('/dashboard/patients')) headerTitle = 'Pacientes';
+    else if (pathname === '/dashboard/calendar') headerTitle = 'Agenda';
+  }
 
   return (
     <header className="bg-white border-b">
       <div className="flex items-center justify-between h-16 px-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">{headerTitle}</h1>
         </div>
 
         <Menu as="div" className="relative">
