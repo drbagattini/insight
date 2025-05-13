@@ -77,8 +77,9 @@ export async function POST(req: NextRequest) {
         last_name: '',
       }, { onConflict: 'id' });
     if (profileError && profileError.code !== '23505') {
-      console.error('[POST /api/patients] Error ensuring profile exists:', profileError.message);
-      return NextResponse.json({ error: 'Error interno al verificar perfil' }, { status: 500 });
+      console.error('[POST /api/patients] Error ensuring profile exists:', profileError);
+      const profileMsg = profileError.message || profileError.code || 'Error interno al verificar perfil';
+      return NextResponse.json({ error: profileMsg }, { status: 500 });
     }
   } catch (err) {
     console.error('[POST /api/patients] Unexpected error ensuring profile exists:', err);
@@ -109,8 +110,9 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (pacienteError || !paciente) {
-    console.error("[POST /api/patients]", pacienteError?.message);
-    return NextResponse.json({ error: pacienteError?.message }, { status: 500 });
+    console.error('[POST /api/patients] Error inserting patient:', pacienteError);
+    const errMsg = pacienteError?.message || pacienteError?.code || JSON.stringify(pacienteError) || 'Error interno al crear paciente';
+    return NextResponse.json({ error: errMsg }, { status: 500 });
   }
   console.log('Paciente creado:', paciente);
 
