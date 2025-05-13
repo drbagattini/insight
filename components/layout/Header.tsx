@@ -10,9 +10,12 @@ export default function Header() {
   const { data: session } = useSession();
   const pathname = usePathname();
   let headerTitle = 'Dashboard';
-  if (pathname === '/dashboard') headerTitle = 'Resumen asistencial';
-  else if (pathname.startsWith('/dashboard/patients/') && pathname.split('/').length === 4) headerTitle = 'Seguimiento clínico';
-  else if (pathname.startsWith('/dashboard/patients')) headerTitle = 'Pacientes';
+  if (pathname) {
+    if (pathname === '/dashboard') headerTitle = 'Resumen asistencial';
+    else if (pathname.startsWith('/dashboard/patients/') && pathname.split('/').length === 4) headerTitle = 'Seguimiento clínico';
+    else if (pathname.startsWith('/dashboard/patients')) headerTitle = 'Pacientes';
+    else if (pathname === '/dashboard/calendar') headerTitle = 'Agenda';
+  }
 
   return (
     <header className="bg-white border-b">

@@ -1,9 +1,10 @@
 import GoogleProvider      from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { compare }         from 'bcryptjs'; 
+// // // import { comrptjs'; // un// un// unusedusedused
 import { createClient }    from '@supabase/supabase-js';
 import { AuthOptions, User, Account, Profile } from 'next-auth'; 
 import { UserRoleType } from '@/types/roles';
+import { SupabaseAdapter } from "@next-auth/supabase-adapter";
 
 const supabaseUrl  = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const anonKey      = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -15,6 +16,7 @@ const supabaseAdmin = createClient(supabaseUrl, serviceKey, {
 });
 
 export const authOptions: AuthOptions = {
+  adapter: SupabaseAdapter({ url: supabaseUrl, secret: serviceKey }),
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -92,96 +94,25 @@ export const authOptions: AuthOptions = {
     })
   ],
   callbacks: {
-    async jwt({ token, user, account }) {
-       console.log('[next-auth][jwt] START --------');
-       console.log('[next-auth][jwt] Token In:', JSON.stringify(token));
-       console.log('[next-auth][jwt] User In:', JSON.stringify(user));
-       console.log('[next-auth][jwt] Account In:', JSON.stringify(account));
-      if (account && user) {
-          console.log('[next-auth][jwt] Account & User present (OAuth Flow or initial Credentials)');
-        if (account.provider !== 'credentials') { 
-          console.log(`[next-auth][jwt] OAuth Provider: ${account.provider}`);
-           try {
-              console.log(`[next-auth][jwt] Looking for user ${user.email} in DB`);
-              const { data: existing, error: fetchErr } = await supabaseAdmin
-                .from('users')
-                .select('id, role')
-                .eq('email', user.email!)
-                .single();
-              
-              if (fetchErr && fetchErr.code !== 'PGRST116') { 
-                   console.error('[next-auth][jwt] Error fetching user:', fetchErr);
-                   throw fetchErr;
-              }
-
-              let uid  = existing?.id;
-              let role = existing?.role;
-              console.log(`[next-auth][jwt] Existing user found?`, existing ? 'Yes' : 'No');
-
-              if (!existing) {
-                console.log(`[next-auth][jwt] Creating user ${user.email} in DB`);
-                const { data: created, error: insertErr } = await supabaseAdmin
-                  .from('users')
-                  .insert({ email: user.email!, role:'psicologo' }) 
-                  .select('id, role')
-                  .single();
-                
-                if (insertErr) {
-                    console.error('[next-auth][jwt] Error inserting user:', insertErr);
-                    if (insertErr.code === '23505') { 
-                       console.log('[next-auth][jwt] Duplicate user detected, re-fetching...');
-                       const { data: refetched, error: refetchErr } = await supabaseAdmin
-                          .from('users')
-                          .select('id, role')
-                          .eq('email', user.email!)
-                          .single();
-                       if(refetchErr) {
-                           console.error('[next-auth][jwt] Error re-fetching user:', refetchErr);
-                           throw refetchErr;
-                       }
-                       uid = refetched?.id;
-                       role = refetched?.role;
-                    } else {
-                       throw insertErr;
-                    }
-                } else {
-                    uid  = created?.id;
-                    role = created?.role;
-                    console.log(`[next-auth][jwt] User created:`, {uid, role});
-                }
-              }
-              token.id   = uid;
-              token.role = role?.toLowerCase() || 'psicologo'; // Asegurar que siempre haya un rol
-              token.email = user.email; 
-              token.name = user.name; 
-              console.log(`[next-auth][jwt] Token updated from DB:`, {id: token.id, role: token.role});
-
-            } catch(err) { 
-                console.error("[next-auth][jwt] Error during DB check/insert:", err);
-                token.id = user.id; 
-                token.email = user.email;
-                token.name = user.name;
-                token.role = 'psicologo'; // Rol predeterminado en caso de error
-            }
-        } else { 
-           console.log('[next-auth][jwt] Credentials Provider: Using user object from authorize');
-           token.id = user.id;
-           // Garantizar que el rol esté presente en el token
-           token.role = ((user as any).role?.toLowerCase() || 'psicologo'); 
-           token.email = user.email;
-           token.name = user.name; 
-           console.log(`[next-auth][jwt] Token updated from authorize:`, {id: token.id, role: token.role});
+    async jwt({ token, user }) {
+      // Upsert into public.users to satisfy appointments FK
+      if (user) {
+        try {
+          await supabaseAdmin
+            .from('users')
+            .upsert(
+              { id: user.id, email: user.email!, role: user.role || 'paciente' },
+              { onConflict: 'id' }
+            );
+        } catch (err) {
+          console.error('Error upserting public user:', err);
         }
-      } else if (token) {
-          console.log('[next-auth][jwt] Only token present (Session refresh?)');
-          // Asegurar que el token siempre tenga un rol incluso en las actualizaciones
-          if (!token.role) {
-              token.role = 'psicologo';
-              console.log('[next-auth][jwt] Added missing role to token during refresh');
-          }
+        // Set token fields
+        token.id = user.id;
+        token.email = user.email;
+        token.name = user.name;
+        token.role = (user.role ?? 'paciente') as UserRoleType;
       }
-      console.log('[next-auth][jwt] Token Out:', JSON.stringify(token));
-      console.log('[next-auth][jwt] END ----------');
       return token;
     },
     async session({ session, token }) {
