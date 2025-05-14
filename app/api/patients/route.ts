@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/lib/auth";
 
 // Cliente Supabase admin (usar service role key)
+console.log('[POST /api/patients] ServiceRoleKey loaded?', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest) {
 
   // Ensure legacy psychologists have profile record to satisfy FK constraint
   try {
-    const { error: profileError } = await supabaseAdmin
+    const upsertResponse = await supabaseAdmin
       .from('users')
       .upsert({
         id: psicologoId,
@@ -76,11 +77,18 @@ export async function POST(req: NextRequest) {
         first_name: session.user.name ?? '',
         last_name: '',
       }, { onConflict: 'id' });
+    console.log('[POST /api/patients] Upsert response:', upsertResponse);
+    const profileError = upsertResponse.error;
     if (profileError && profileError.code !== '23505') {
       console.error('[POST /api/patients] Error ensuring profile exists:', profileError);
       const profileMsg = profileError.message || profileError.code || 'Error interno al verificar perfil';
       return NextResponse.json({ error: profileMsg }, { status: 500 });
     }
+    const { data: checkUser, error: checkErr } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('id', psicologoId);
+    console.log('[POST /api/patients] User exists after upsert:', { checkUser, checkErr });
   } catch (err) {
     console.error('[POST /api/patients] Unexpected error ensuring profile exists:', err);
     return NextResponse.json({ error: 'Error interno verificando perfil' }, { status: 500 });
