@@ -22,13 +22,14 @@ export default function CalendarView() {
   const [selectedDateInfo, setSelectedDateInfo] = useState<DateSelectArg | null>(null);
   const queryClient = useQueryClient();
 
-  const handleSaveAppointment = async (appointmentData: { title: string; start: string; end: string }) => {
+  const handleSaveAppointment = async (appointmentData: { title: string; start: string; end: string; paciente_id: string; rrule: string | null }) => {
     try {
       await axios.post('/api/appointments', {
         title: appointmentData.title,
         start_time: appointmentData.start, // Asegúrate que el formato es ISOString o el esperado por tu API
         end_time: appointmentData.end,     // Asegúrate que el formato es ISOString o el esperado por tu API
-        // paciente_id: 'ID_DEL_PACIENTE_SELECCIONADO', // TODO: Implementar selector de paciente
+        paciente_id: appointmentData.paciente_id,
+        rrule: appointmentData.rrule,
       });
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       setIsModalOpen(false); // Cierra el modal en éxito

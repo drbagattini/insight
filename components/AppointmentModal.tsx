@@ -12,7 +12,7 @@ interface AppointmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedDateInfo: DateSelectArg | null;
-  onSave: (appointmentData: { title: string; start: string; end: string; paciente_id: string }) => void;
+  onSave: (appointmentData: { title: string; start: string; end: string; paciente_id: string; rrule: string | null }) => void;
 }
 
 export default function AppointmentModal({
@@ -29,6 +29,8 @@ export default function AppointmentModal({
   const [newPatientName, setNewPatientName] = useState('');
   const [newPatientEmail, setNewPatientEmail] = useState('');
   const [newPatientWhatsapp, setNewPatientWhatsapp] = useState('');
+  // Recurrence state
+  const [recurrenceOption, setRecurrenceOption] = useState<'none'|'daily'|'weekly'|'biweekly'|'monthly'>('none');
 
   useEffect(() => {
     // Reset title when modal is reopened with new selection or closed
@@ -41,11 +43,22 @@ export default function AppointmentModal({
 
   const handleSubmit = () => {
     if (title.trim() && selectedDateInfo && selectedPatientId) {
+      // Compute RRULE string based on recurrence option
+      let rruleStr: string | null = null;
+      if (recurrenceOption !== 'none') {
+        switch (recurrenceOption) {
+          case 'daily': rruleStr = 'RRULE:FREQ=DAILY;INTERVAL=1'; break;
+          case 'weekly': rruleStr = 'RRULE:FREQ=WEEKLY;INTERVAL=1'; break;
+          case 'biweekly': rruleStr = 'RRULE:FREQ=WEEKLY;INTERVAL=2'; break;
+          case 'monthly': rruleStr = 'RRULE:FREQ=MONTHLY;INTERVAL=1'; break;
+        }
+      }
       onSave({
         title: title.trim(),
         start: selectedDateInfo.startStr,
         end: selectedDateInfo.endStr,
         paciente_id: selectedPatientId,
+        rrule: rruleStr,
       });
       onClose(); // Close modal after save
     }
@@ -165,6 +178,21 @@ export default function AppointmentModal({
                           value={title}
                           onChange={(e) => setTitle(e.target.value)}
                         />
+                      </div>
+                      {/* Recurrence selector */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Repetición</label>
+                        <select
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                          value={recurrenceOption}
+                          onChange={e => setRecurrenceOption(e.target.value as any)}
+                        >
+                          <option value="none">Ninguna</option>
+                          <option value="daily">Diaria</option>
+                          <option value="weekly">Semanal</option>
+                          <option value="biweekly">Quincenal</option>
+                          <option value="monthly">Mensual</option>
+                        </select>
                       </div>
                       <div>
                         <p className="text-sm text-gray-600">

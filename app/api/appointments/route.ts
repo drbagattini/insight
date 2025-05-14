@@ -3,11 +3,22 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/lib/auth';
 import { createClient } from '@supabase/supabase-js';
 import { RRule } from 'rrule';
+import { z } from 'zod';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+// Schema de validación para citas
+const appointmentSchema = z.object({
+  paciente_id: z.string().uuid().optional(),
+  title: z.string().min(1, 'Título requerido'),
+  start_time: z.string().min(1, 'Fecha de inicio requerida'),
+  end_time: z.string().min(1, 'Fecha de fin requerida'),
+  rrule: z.string().regex(/^RRULE:FREQ=(DAILY|WEEKLY|MONTHLY);INTERVAL=\d+$/, 'Formato de RRULE inválido').optional().nullable(),
+  metadata: z.record(z.unknown()).optional().default({}),
+});
 
 // GET: list appointments in a date range and expand recurring events
 export async function GET(request: Request) {
@@ -54,9 +65,12 @@ export async function GET(request: Request) {
   const all = [...(nonRec || [])];
   recMasters?.forEach((master: any) => {
     try {
-      const rule = RRule.fromString(`DTSTART:${new Date(master.start_time).toISOString()}\n${master.rrule}`);
+      // Parse RRULE y asignar dtstart correctamente
+      const opts = RRule.parseString(master.rrule!);
+      opts.dtstart = new Date(master.start_time);
+      const rule = new RRule(opts);
+      const dur = new Date(master.end_time).getTime() - new Date(master.start_time).getTime();
       rule.between(startDate, endDate, true).forEach((dt: Date) => {
-        const dur = new Date(master.end_time).getTime() - new Date(master.start_time).getTime();
         all.push({
           ...master,
           id: `${master.id}_${dt.toISOString()}`,
@@ -80,25 +94,28 @@ export async function POST(request: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const { paciente_id, title, start_time, end_time, rrule, metadata } = await request.json();
-  if (!start_time || !end_time) {
-    return NextResponse.json({ error: 'Start and end required' }, { status: 400 });
+
+  // Validación de datos de entrada
+  const body = await request.json();
+  const parsed = appointmentSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
-  if (!paciente_id && !title) {
-    return NextResponse.json({ error: 'Paciente or title required' }, { status: 400 });
-  }
+  const { paciente_id, title, start_time, end_time, rrule, metadata } = parsed.data;
 
   const appointmentPayload: any = {
     user_id: session.user.id,
     title,
     start_time,
     end_time,
-    rrule,
     metadata: metadata || {},
   };
 
   if (paciente_id) {
     appointmentPayload.paciente_id = paciente_id;
+  }
+  if (rrule) {
+    appointmentPayload.rrule = rrule;
   }
 
   const { data, error } = await supabase
