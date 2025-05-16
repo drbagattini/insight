@@ -103,6 +103,51 @@ const googleCalendarStyles = `
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  
+  /* Ajustes para la vista de mes */
+  .fc-daygrid-day-frame {
+    min-height: 80px !important;
+    max-height: 120px !important;
+    overflow: hidden;
+  }
+  
+  .fc-daygrid-day-events {
+    margin: 0;
+    max-height: 90px;
+    overflow: hidden;
+  }
+  
+  .fc-daygrid-day-top {
+    padding: 2px 4px;
+    position: relative;
+  }
+  
+  .fc-daygrid-day-number {
+    font-size: 0.85em;
+    padding: 2px;
+  }
+  
+  .fc-daygrid-event {
+    margin: 1px 1px;
+    padding: 0 2px;
+    font-size: 0.75em;
+    line-height: 1.2;
+  }
+  
+  .fc .fc-daygrid-day.fc-day-today {
+    background-color: #f0f7ff;
+  }
+  
+  .fc-daygrid-more-link {
+    font-size: 0.75em;
+    padding: 1px 3px;
+    margin-left: 2px;
+  }
+  
+  .fc-daygrid-event-harness {
+    max-height: 20px;
+    overflow: hidden;
+  }
 `;
 
 export default function CalendarView() {
@@ -241,6 +286,17 @@ export default function CalendarView() {
         }}
         titleFormat={{ year: 'numeric', month: 'short', day: 'numeric' }}
         dayHeaderFormat={{ weekday: 'short', day: 'numeric' }}
+        dayMaxEvents={3}
+        dayMaxEventRows={3}
+        views={{
+          dayGrid: {
+            dayMaxEventRows: 3,
+            dayMaxEvents: 3,
+          },
+          timeGrid: {
+            dayMaxEventRows: 6
+          }
+        }}
         customButtons={{
           googleCalendar: {
             text: 'Google Calendar', // Quitamos el emoji ya que usamos CSS para el icono
