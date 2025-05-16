@@ -37,12 +37,17 @@ export default function NewPatientModal({ isOpen, onClose, onPatientCreated }: N
       // Ya tenemos el paciente completo desde la API, no necesitamos recargar
       console.log('Paciente creado exitosamente:', newPatient);
       
-      // Notificar al componente padre con el paciente completo
-      // Esto es crítico para que el PatientSelector funcione correctamente
-      onPatientCreated({
+      // Construir un objeto paciente completo para el selector
+      const patientForSelection = {
         id: String(newPatient.id),
-        name: String(newPatient.name)
-      });
+        name: String(newPatient.name || 'Paciente sin nombre')
+      };
+      
+      // Verificar que el objeto es válido antes de devolverlo
+      console.log('Paciente para selección:', patientForSelection);
+      
+      // Notificar al componente padre con el paciente completo
+      onPatientCreated(patientForSelection);
       
       // Cerrar el modal y dar tiempo para que el evento fluya al selector
       setTimeout(() => {

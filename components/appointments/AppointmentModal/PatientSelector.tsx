@@ -86,7 +86,10 @@ export const PatientSelector: React.FC<PatientSelectorProps> = ({
           <div className="relative w-full cursor-default overflow-hidden rounded-lg bg-white dark:bg-gray-700 text-left shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-teal-300 sm:text-sm">
             <Combobox.Input
               className={`w-full border-none py-2 pl-3 pr-10 text-sm leading-5 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 focus:ring-0 ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-              displayValue={(patient: Patient | null) => patient?.name || ''}
+              displayValue={(patient: Patient | null) => {
+                // Asegurar que siempre tengamos un nombre para mostrar
+                return patient && patient.name ? patient.name : '';
+              }}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Buscar paciente..."
             />
@@ -184,28 +187,31 @@ export const PatientSelector: React.FC<PatientSelectorProps> = ({
         onClose={() => setShowNewPatientModal(false)}
         onPatientCreated={async (newPatient) => {
           try {
-            console.log('Paciente creado, actualizando selector:', newPatient);
+            console.log('Paciente creado, aplicando al formulario:', newPatient);
             
-            // Recargar la lista de pacientes desde la API
-            const response = await fetch('/api/patients');
-            const freshPatients = await response.json();
-            setPatients(freshPatients);
+            if (!newPatient || !newPatient.id || !newPatient.name) {
+              console.error('El paciente recibido no es válido:', newPatient);
+              return;
+            }
             
-            // Forzar refresco de la UI antes de continuar
-            await new Promise(resolve => setTimeout(resolve, 100));
+            // Primero actualizar la lista de pacientes
+            await reloadPatients();
             
-            // Seleccionar directamente el paciente recién creado
-            setSelectedPatient(newPatient);
+            // Crear una copia limpia del objeto paciente para evitar inconsistencias
+            const cleanPatient = {
+              id: String(newPatient.id),
+              name: String(newPatient.name)
+            };
             
-            // Limpiar la consulta para que se muestre el paciente seleccionado
+            console.log('Aplicando paciente al selector:', cleanPatient);
+            
+            // Aplicar la selección del paciente
+            setSelectedPatient(cleanPatient);
+            
+            // Limpiar la consulta para mostrar el nombre del paciente
             setQuery('');
-            
-            // Importante: cerrar el modal de pacientes solo después de haber seleccionado
-            setTimeout(() => {
-              console.log('Paciente seleccionado correctamente:', newPatient.name);
-            }, 200);
           } catch (error) {
-            console.error('Error al seleccionar el paciente:', error);
+            console.error('Error al procesar el paciente:', error);
           }
         }}
       />
