@@ -1,27 +1,39 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import NextAuth, { type Session, type User } from 'next-auth';
+import NextAuth, { type Session as NextAuthSessionBase, type User as NextAuthUserBase } from 'next-auth';
+import { type JWT as NextAuthJWTBase } from 'next-auth/jwt';
 import { UserRoleType } from '@/types/roles';
 import { authOptions } from '@/app/lib/auth';
 
-// Tipos extendidos para NextAuth
 declare module 'next-auth' {
-  interface Session {
-    user: {
-      id: string;
-      name?: string | null;
-      email?: string | null;
-      role?: UserRoleType;
-    };
+  interface User extends NextAuthUserBase {
+    id: string; // Sobrescribe o asegura que id siempre es string
+    role?: UserRoleType;
+    // name, email, image son opcionales y vienen de NextAuthUserBase
   }
 
-  interface User {
-    id: string;
-    role?: UserRoleType; // Necesario para que el callback jwt pueda añadirlo
+  interface Session extends NextAuthSessionBase {
+    user: User; // Usa nuestra interfaz User extendida
+    accessToken?: string;
+    error?: string; // Para errores (ej. de refresco de token)
   }
 }
 
-// La definición de authOptions se ha movido a @/app/lib/auth.ts
+declare module 'next-auth/jwt' {
+  interface JWT extends NextAuthJWTBase {
+    id: string; // ID del usuario (de Supabase)
+    role?: UserRoleType;
+    name?: string | null;
+    email?: string | null;
+    
+    // Nuevos campos para Google OAuth tokens (y potencialmente otros providers)
+    accessToken?: string;
+    refreshToken?: string; 
+    accessTokenExpires?: number; // Timestamp de expiración en milisegundos
+    error?: string; // Para manejar errores, ej. durante el refresh del token
+    // picture puede venir de NextAuthJWTBase, no es necesario re-declarar si se extiende
+  }
+}
 
-const handler = NextAuth({ ...authOptions, debug: true }); // Usamos las opciones importadas
+const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };

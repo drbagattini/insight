@@ -126,9 +126,12 @@ export async function GET(request: Request) {
 // POST: create a single or recurring appointment
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  // Ensure session exists, user ID is present, and accessToken is available
+  if (!session?.user?.id || !session.accessToken) {
+    console.error('POST /api/appointments: Unauthorized or missing access token. Session:', session);
+    return NextResponse.json({ error: 'Unauthorized or missing access token for Google Calendar sync.' }, { status: 401 });
   }
+  const accessToken = session.accessToken as string; // We've typed this in NextAuth
 
   // Validación de datos de entrada
   const body = await request.json();
@@ -136,31 +139,133 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
-  const { paciente_id, title, start_time, end_time, rrule, metadata } = parsed.data;
+  const { paciente_id, title: inputTitle, start_time, end_time, rrule, metadata } = parsed.data;
 
-  const appointmentPayload: any = {
+  // Fetch patient's name for Google Calendar title
+  const { data: pacienteData, error: pacienteError } = await supabase
+    .from('patients') // Corrected table name
+    .select('name')
+    .eq('id', paciente_id)
+    .single();
+
+  if (pacienteError || !pacienteData) {
+    console.error(`Error fetching patient ${paciente_id} for Google Calendar title:`, pacienteError);
+    // Not returning an error here, will proceed with a generic title for Google Calendar if patient not found
+    // or handle as preferred. For now, we'll allow appointment creation but log this.
+  }
+  const pacienteNombre = pacienteData?.name || 'Paciente Desconocido';
+  const googleEventSummary = `${pacienteNombre} (Consulta)`;
+
+  // 1. Create appointment in Supabase first
+  const supabaseAppointmentPayload: any = {
     user_id: session.user.id,
-    paciente_id, // Now directly included as it's mandatory
-    title,
+    paciente_id,
+    title: inputTitle || `Cita con ${pacienteNombre}`, // Adjusted Supabase title for consistency, or keep as `Cita Paciente`
     start_time,
     end_time,
     metadata: metadata || {},
+    // google_calendar_event_id will be updated later if Google sync is successful
   };
 
-  // rrule is still optional
   if (rrule) {
-    appointmentPayload.rrule = rrule;
+    supabaseAppointmentPayload.rrule = rrule;
   }
 
-  const { data, error } = await supabase
+  const { data: createdSupabaseAppointment, error: supabaseInsertError } = await supabase
     .from('appointments')
-    .insert([appointmentPayload])
+    .insert([supabaseAppointmentPayload])
     .select()
     .single();
-  if (error) {
-    console.error(error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+
+  if (supabaseInsertError) {
+    console.error('Supabase insert error:', supabaseInsertError);
+    return NextResponse.json({ error: supabaseInsertError.message }, { status: 500 });
   }
 
-  return NextResponse.json(data, { status: 201 });
+  if (!createdSupabaseAppointment) {
+    console.error('Supabase insert did not return data.');
+    return NextResponse.json({ error: 'Failed to create appointment in database.' }, { status: 500 });
+  }
+
+  // 2. Attempt to create event in Google Calendar
+  const googleEventDetails = {
+    summary: googleEventSummary, // Use the dynamically generated summary
+    description: `Cita programada a través de Insight. Paciente ID: ${paciente_id}. Título original en Insight: ${createdSupabaseAppointment.title}`,
+    start: {
+      dateTime: createdSupabaseAppointment.start_time, // ISO string
+      timeZone: 'America/Argentina/Buenos_Aires', // IMPORTANT: Consider making this user-configurable
+    },
+    end: {
+      dateTime: createdSupabaseAppointment.end_time, // ISO string
+      timeZone: 'America/Argentina/Buenos_Aires', // IMPORTANT: Consider making this user-configurable
+    },
+    // If rrule exists, add it to recurrence. Ensure format is compatible.
+    // Google expects an array of RRULE strings.
+    ...(createdSupabaseAppointment.rrule && { recurrence: [createdSupabaseAppointment.rrule] }),
+  };
+
+  try {
+    const googleResponse = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(googleEventDetails),
+      }
+    );
+
+    if (!googleResponse.ok) {
+      const errorData = await googleResponse.json().catch(() => ({ message: 'Failed to parse Google API error JSON' }));
+      console.error(
+        `Google Calendar API error (${googleResponse.status}): Unable to create event. ` +
+        `Details: ${JSON.stringify(errorData)}. ` +
+        `Supabase appointment ${createdSupabaseAppointment.id} created but not synced.`
+      );
+      // Return the Supabase appointment but indicate sync failure (client might handle this)
+      return NextResponse.json({
+        ...createdSupabaseAppointment,
+        google_sync_status: 'failed',
+        google_sync_error: errorData?.error?.message || errorData.message || `Google API Error ${googleResponse.status}`,
+      }, { status: 201 }); // 201 because primary resource (Supabase appt) was created
+    }
+
+    const googleEvent = await googleResponse.json();
+    console.log(`Google Calendar event created: ${googleEvent.id} for Supabase appointment ${createdSupabaseAppointment.id}`);
+
+    // 3. Update Supabase appointment with Google Calendar Event ID
+    const { data: updatedSupabaseAppointment, error: supabaseUpdateError } = await supabase
+      .from('appointments')
+      .update({ google_calendar_event_id: googleEvent.id })
+      .eq('id', createdSupabaseAppointment.id)
+      .select()
+      .single();
+
+    if (supabaseUpdateError) {
+      console.error(
+        `Supabase update error: Failed to save google_calendar_event_id (${googleEvent.id}) ` +
+        `for appointment ${createdSupabaseAppointment.id}. Error: ${supabaseUpdateError.message}`
+      );
+      // Supabase appt created, Google event created, but link failed. Return Google event ID for potential manual fix.
+      return NextResponse.json({
+        ...createdSupabaseAppointment,
+        google_calendar_event_id_unlinked: googleEvent.id, // Indicate it's created in Google but not linked
+        google_sync_status: 'partially_failed_to_link',
+        google_sync_error: `Failed to link Google Event ID in Supabase: ${supabaseUpdateError.message}`,
+      }, { status: 201 });
+    }
+    // Successfully created in Supabase, Google, and linked.
+    return NextResponse.json(updatedSupabaseAppointment, { status: 201 });
+
+  } catch (e: any) {
+    console.error(
+        `Exception during Google Calendar sync process for Supabase appointment ${createdSupabaseAppointment.id}: ${e.message}`
+    );
+    return NextResponse.json({
+        ...createdSupabaseAppointment,
+        google_sync_status: 'failed',
+        google_sync_error: `Exception: ${e.message}`,
+    }, { status: 201 });
+  }
 }
