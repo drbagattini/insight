@@ -130,12 +130,17 @@ export const AppointmentForm: React.FC<AppointmentFormProps> = ({
         <label htmlFor="patient" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           Paciente
         </label>
-        <PatientSelector 
-          selectedPatient={selectedPatient} 
-          setSelectedPatient={setSelectedPatient}
-          isDisabled={isEditing} // Deshabilitar selector en modo edición
-          // onOpenNewPatientModal={onOpenNewPatientModal} 
-        />
+        {isEditing && selectedPatient ? (
+          <div className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+            {selectedPatient.name}
+          </div>
+        ) : (
+          <PatientSelector 
+            selectedPatient={selectedPatient} 
+            setSelectedPatient={setSelectedPatient}
+            // onOpenNewPatientModal={onOpenNewPatientModal} 
+          />
+        )}
         {/* TODO: Add validation message if patient not selected */}
       </div>
 

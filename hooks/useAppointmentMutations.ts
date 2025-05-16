@@ -115,12 +115,13 @@ interface DeleteAppointmentParams {
 }
 
 const deleteAppointmentOnApi = async ({ id, deleteAll = false }: DeleteAppointmentParams): Promise<{ success: boolean }> => {
-  const url = new URL(`/api/appointments/${id}`, window.location.origin);
+  // Construimos la URL manualmente sin usar URL constructor que puede dar problemas
+  let urlPath = `/api/appointments/${id}`;
   if (deleteAll) {
-    url.searchParams.append('deleteAll', 'true');
+    urlPath += '?deleteAll=true';
   }
 
-  const response = await fetch(url.toString(), {
+  const response = await fetch(urlPath, {
     method: 'DELETE',
   });
 

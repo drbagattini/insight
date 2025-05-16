@@ -16,7 +16,8 @@ export interface ModalAppointmentData {
   startTime?: string; // HH:mm
   endTime?: string; // HH:mm
   patient?: Patient | null;
-  // Add other fields like rrule, notes etc. as they are implemented
+  rrule?: string | null; // RRULE para citas recurrentes
+  // Add other fields like notes etc. as they are implemented
 }
 
 interface AppointmentModalProps {
@@ -40,7 +41,10 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
   
   // Estado para el modal de confirmación de eliminación
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteAllSeries, setDeleteAllSeries] = useState(false);
+  const [deleteMode, setDeleteMode] = useState<'single' | 'all'>('single'); // 'single' o 'all'
+  
+  // Determinar si la cita es recurrente
+  const isRecurring = !!appointment?.rrule;
   
   // Estado compuesto para mostrar errores de creación o actualización
   const isSubmitting = isCreatingAppointment || isUpdatingAppointment || isDeletingAppointment;
@@ -86,7 +90,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
     deleteAppointment(
       {
         id: appointment.id,
-        deleteAll: deleteAllSeries
+        deleteAll: deleteMode === 'all'
       },
       {
         onSuccess: () => {
@@ -216,19 +220,40 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
                     ¿Estás seguro de que deseas eliminar esta cita?
                   </p>
                   
-                  {/* Opción para eliminar series recurrentes (a implementar cuando se desarrolle la recurrencia) */}
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="delete-all-series"
-                      checked={deleteAllSeries}
-                      onChange={(e) => setDeleteAllSeries(e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-blue-600"
-                    />
-                    <label htmlFor="delete-all-series" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                      Eliminar todas las citas de esta serie (si es recurrente)
-                    </label>
-                  </div>
+                  {/* Opciones de eliminación - solo visibles para citas recurrentes */}
+                  {isRecurring && (
+                    <div className="mt-3 space-y-2">
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Opciones de eliminación:</p>
+                      
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          id="delete-single"
+                          name="delete-mode"
+                          checked={deleteMode === 'single'}
+                          onChange={() => setDeleteMode('single')}
+                          className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-blue-600"
+                        />
+                        <label htmlFor="delete-single" className="block text-sm text-gray-700 dark:text-gray-300">
+                          Solo esta cita
+                        </label>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          id="delete-all"
+                          name="delete-mode"
+                          checked={deleteMode === 'all'}
+                          onChange={() => setDeleteMode('all')}
+                          className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-blue-600"
+                        />
+                        <label htmlFor="delete-all" className="block text-sm text-gray-700 dark:text-gray-300">
+                          Todas las citas de esta serie
+                        </label>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="mt-6 flex justify-end space-x-3">
                     <button
