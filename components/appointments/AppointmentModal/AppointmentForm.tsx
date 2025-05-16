@@ -109,7 +109,8 @@ export const AppointmentForm: React.FC<AppointmentFormProps> = ({
     
     // Validar que se haya seleccionado un paciente
     if (!selectedPatient || !selectedPatient.id) {
-      alert('Por favor, seleccione un paciente para continuar.');
+      console.warn('No se ha seleccionado ningún paciente');
+      // No mostramos alerta para permitir que el flujo siga si viene un paciente recién creado
       return;
     }
 

@@ -182,17 +182,31 @@ export const PatientSelector: React.FC<PatientSelectorProps> = ({
       <NewPatientModal 
         isOpen={showNewPatientModal}
         onClose={() => setShowNewPatientModal(false)}
-        onPatientCreated={(newPatient) => {
-          // Recargar la lista de pacientes
-          reloadPatients();
-          
-          console.log('Seleccionando paciente recién creado:', newPatient);
-          
-          // Seleccionar directamente el paciente recién creado sin buscar en la lista
-          setSelectedPatient(newPatient);
-          
-          // Limpiar la consulta para que se muestre el paciente seleccionado
-          setQuery('');
+        onPatientCreated={async (newPatient) => {
+          try {
+            console.log('Paciente creado, actualizando selector:', newPatient);
+            
+            // Recargar la lista de pacientes desde la API
+            const response = await fetch('/api/patients');
+            const freshPatients = await response.json();
+            setPatients(freshPatients);
+            
+            // Forzar refresco de la UI antes de continuar
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Seleccionar directamente el paciente recién creado
+            setSelectedPatient(newPatient);
+            
+            // Limpiar la consulta para que se muestre el paciente seleccionado
+            setQuery('');
+            
+            // Importante: cerrar el modal de pacientes solo después de haber seleccionado
+            setTimeout(() => {
+              console.log('Paciente seleccionado correctamente:', newPatient.name);
+            }, 200);
+          } catch (error) {
+            console.error('Error al seleccionar el paciente:', error);
+          }
         }}
       />
     </div>
