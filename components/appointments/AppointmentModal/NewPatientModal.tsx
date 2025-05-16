@@ -26,27 +26,82 @@ export default function NewPatientModal({ isOpen, onClose, onPatientCreated }: N
         body: JSON.stringify(patientData),
       });
 
+      // Si la respuesta no es exitosa, manejar el error
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error?.message || errorData.error || 'Error al crear paciente');
+        let errorMessage = `Error al crear paciente: ${res.status} ${res.statusText}`;
+        
+        try {
+          const errorData = await res.json();
+          errorMessage = errorData?.error?.message || errorData?.error || errorMessage;
+        } catch (e) {
+          // No hacer nada, usar el mensaje por defecto
+        }
+        
+        throw new Error(errorMessage);
       }
-
-      // Obtener el paciente creado
-      const newPatient = await res.json();
       
-      // Ya tenemos el paciente completo desde la API, no necesitamos recargar
-      console.log('Paciente creado exitosamente:', newPatient);
+      // Llegados a este punto, sabemos que la respuesta es exitosa
+      console.log('Paciente creado exitosamente con status:', res.status);
       
-      // Construir un objeto paciente completo para el selector
-      const patientForSelection = {
-        id: String(newPatient.id),
-        name: String(newPatient.name || 'Paciente sin nombre')
+      // Necesitamos obtener el ID del paciente recién creado
+      let patientId = '';
+      
+      try {
+        // Intentar leer el objeto de la respuesta
+        const responseData = await res.json();
+        console.log('Respuesta de API de paciente creado:', responseData);
+        
+        // Si la respuesta tiene un ID, usarlo
+        if (responseData && responseData.id) {
+          patientId = responseData.id;
+        }
+      } catch (error) {
+        // Si hay error al leer JSON, podría ser una respuesta vacía, seguimos con el plan B
+        console.log('No se pudo obtener respuesta JSON completa de la API');
+      }
+      
+      // Si no se pudo obtener ID de la respuesta, hacer petición adicional (Plan B)
+      if (!patientId && patientData.email) {
+        try {
+          // Intentar obtener paciente por su email (que debe ser único)
+          console.log('Buscando paciente recién creado por email:', patientData.email);
+          const searchResponse = await fetch(`/api/patients?email=${encodeURIComponent(patientData.email)}`);
+          const patients = await searchResponse.json();
+          
+          if (patients && Array.isArray(patients) && patients.length > 0 && patients[0].id) {
+            patientId = patients[0].id;
+            console.log('Paciente encontrado por email:', patients[0]);
+          }
+        } catch (searchError) {
+          console.error('Error al buscar paciente por email:', searchError);
+        }
+      }
+      
+      // Si aún no tenemos ID, no podemos continuar
+      if (!patientId) {
+        console.error('Error: No se pudo obtener el ID del paciente creado');
+        setError('Error: Paciente creado pero no se pudo recuperar su identificador');
+        return;
+      }
+      
+      // Crear el objeto paciente con el ID recuperado y el nombre que ya tenemos
+      const newPatient = {
+        id: patientId,
+        name: patientData.name || 'Nuevo paciente' // Asegurarse de tener un valor por defecto
       };
       
-      // Verificar que el objeto es válido antes de devolverlo
-      console.log('Paciente para selección:', patientForSelection);
+      console.log('Objeto paciente creado para selección:', newPatient);
       
-      // Notificar al componente padre con el paciente completo
+      // Crear un objeto simple con solo las propiedades que necesita el selector
+      // Asegurándonos de que sean del tipo correcto
+      const patientForSelection = {
+        id: String(newPatient.id),
+        name: String(newPatient.name)
+      };
+      
+      console.log('Paciente formateado para el selector:', patientForSelection);
+      
+      // Notificar al componente padre con el paciente correctamente formateado
       onPatientCreated(patientForSelection);
       
       // Cerrar el modal y dar tiempo para que el evento fluya al selector

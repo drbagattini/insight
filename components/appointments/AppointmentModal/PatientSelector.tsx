@@ -86,10 +86,7 @@ export const PatientSelector: React.FC<PatientSelectorProps> = ({
           <div className="relative w-full cursor-default overflow-hidden rounded-lg bg-white dark:bg-gray-700 text-left shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-teal-300 sm:text-sm">
             <Combobox.Input
               className={`w-full border-none py-2 pl-3 pr-10 text-sm leading-5 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 focus:ring-0 ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-              displayValue={(patient: Patient | null) => {
-                // Asegurar que siempre tengamos un nombre para mostrar
-                return patient && patient.name ? patient.name : '';
-              }}
+              displayValue={() => selectedPatient?.name || ''}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Buscar paciente..."
             />
@@ -185,34 +182,36 @@ export const PatientSelector: React.FC<PatientSelectorProps> = ({
       <NewPatientModal 
         isOpen={showNewPatientModal}
         onClose={() => setShowNewPatientModal(false)}
-        onPatientCreated={async (newPatient) => {
-          try {
-            console.log('Paciente creado, aplicando al formulario:', newPatient);
-            
-            if (!newPatient || !newPatient.id || !newPatient.name) {
-              console.error('El paciente recibido no es válido:', newPatient);
-              return;
-            }
-            
-            // Primero actualizar la lista de pacientes
-            await reloadPatients();
-            
-            // Crear una copia limpia del objeto paciente para evitar inconsistencias
-            const cleanPatient = {
-              id: String(newPatient.id),
-              name: String(newPatient.name)
-            };
-            
-            console.log('Aplicando paciente al selector:', cleanPatient);
-            
-            // Aplicar la selección del paciente
-            setSelectedPatient(cleanPatient);
-            
-            // Limpiar la consulta para mostrar el nombre del paciente
-            setQuery('');
-          } catch (error) {
-            console.error('Error al procesar el paciente:', error);
+        onPatientCreated={(newPatient) => {
+          // Log para debugging
+          console.log('PatientSelector recibiendo paciente:', newPatient);
+          
+          // Asegurarnos de que el paciente existe y tiene las propiedades necesarias
+          if (!newPatient || typeof newPatient.id === 'undefined' || typeof newPatient.name === 'undefined') {
+            console.error('Datos de paciente incompletos:', newPatient);
+            return;
           }
+          
+          // Crear un objeto de paciente fresco para la selección
+          const patientToSelect = {
+            id: String(newPatient.id),
+            name: String(newPatient.name)
+          };
+          
+          // Aplicar la selección inmediatamente
+          setSelectedPatient(patientToSelect);
+          
+          // Limpiar la consulta para mostrar el nombre seleccionado
+          setQuery('');
+          
+          console.log('Paciente seleccionado correctamente:', patientToSelect.name);
+          
+          // Recargar la lista de pacientes en segundo plano
+          setTimeout(() => {
+            reloadPatients().then(() => {
+              console.log('Lista de pacientes actualizada con éxito');
+            });
+          }, 100);
         }}
       />
     </div>
