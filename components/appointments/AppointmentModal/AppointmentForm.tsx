@@ -16,6 +16,7 @@ interface AppointmentFormProps {
   initialData?: Partial<AppointmentFormData>;
   onSubmit: (data: AppointmentFormData) => void;
   // onOpenNewPatientModal: () => void; // To be passed to PatientSelector
+  isEditing?: boolean; // Determina si estamos editando una cita existente
 }
 
 const today = new Date().toISOString().split('T')[0];
@@ -23,7 +24,8 @@ const today = new Date().toISOString().split('T')[0];
 export const AppointmentForm: React.FC<AppointmentFormProps> = ({ 
   initialData = {},
   onSubmit,
-  // onOpenNewPatientModal 
+  // onOpenNewPatientModal,
+  isEditing = false
 }) => {
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(initialData.patient || null);
   const [date, setDate] = useState<string>(initialData.date || today);
@@ -130,7 +132,8 @@ export const AppointmentForm: React.FC<AppointmentFormProps> = ({
         </label>
         <PatientSelector 
           selectedPatient={selectedPatient} 
-          setSelectedPatient={setSelectedPatient} 
+          setSelectedPatient={setSelectedPatient}
+          isDisabled={isEditing} // Deshabilitar selector en modo edición
           // onOpenNewPatientModal={onOpenNewPatientModal} 
         />
         {/* TODO: Add validation message if patient not selected */}

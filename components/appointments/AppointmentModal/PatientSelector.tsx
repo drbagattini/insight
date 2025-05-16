@@ -15,12 +15,14 @@ interface PatientSelectorProps {
   selectedPatient: Patient | null;
   setSelectedPatient: (patient: Patient | null) => void;
   // onOpenNewPatientModal: () => void; // To be implemented later
+  isDisabled?: boolean; // Deshabilitar selector cuando estamos en modo edición
 }
 
 export const PatientSelector: React.FC<PatientSelectorProps> = ({
   selectedPatient,
   setSelectedPatient,
   // onOpenNewPatientModal,
+  isDisabled = false,
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,11 +68,11 @@ export const PatientSelector: React.FC<PatientSelectorProps> = ({
 
   return (
     <div className="w-full">
-      <Combobox value={selectedPatient} onChange={setSelectedPatient}>
+      <Combobox value={selectedPatient} onChange={setSelectedPatient} disabled={isDisabled}>
         <div className="relative mt-1">
           <div className="relative w-full cursor-default overflow-hidden rounded-lg bg-white dark:bg-gray-700 text-left shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-teal-300 sm:text-sm">
             <Combobox.Input
-              className="w-full border-none py-2 pl-3 pr-10 text-sm leading-5 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 focus:ring-0"
+              className={`w-full border-none py-2 pl-3 pr-10 text-sm leading-5 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 focus:ring-0 ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
               displayValue={(patient: Patient | null) => patient?.name || ''}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Buscar paciente..."
@@ -145,7 +147,7 @@ export const PatientSelector: React.FC<PatientSelectorProps> = ({
               )}
               {/* "Add New Patient" Option */}
               <div 
-                onClick={handleAddNewPatient}
+                onClick={isDisabled ? undefined : handleAddNewPatient}
                 className="relative cursor-pointer select-none py-2 pl-10 pr-4 text-teal-600 hover:bg-teal-50 dark:text-teal-400 dark:hover:bg-gray-600 flex items-center"
               >
                 <UserPlusIcon className="h-5 w-5 mr-2" aria-hidden="true" />

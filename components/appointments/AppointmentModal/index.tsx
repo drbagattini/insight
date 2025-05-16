@@ -1,7 +1,8 @@
 "use client";
 
 import { Dialog, Transition } from '@headlessui/react';
-import { Fragment } from 'react';
+import { Fragment, useState } from 'react';
+import { TrashIcon } from '@heroicons/react/24/outline';
 import AppointmentForm, { AppointmentFormData } from './AppointmentForm'; // Import AppointmentFormData
 import { Patient } from './PatientSelector'; // Assuming Patient type is exported from PatientSelector
 import { useAppointmentMutations } from '../../../hooks/useAppointmentMutations'; // Import the mutation hook
@@ -33,12 +34,17 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
   const isEditing = !!appointment?.id;
   const { 
     createAppointment, isCreatingAppointment, createAppointmentError,
-    updateAppointment, isUpdatingAppointment, updateAppointmentError
+    updateAppointment, isUpdatingAppointment, updateAppointmentError,
+    deleteAppointment, isDeletingAppointment, deleteAppointmentError
   } = useAppointmentMutations();
   
+  // Estado para el modal de confirmación de eliminación
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteAllSeries, setDeleteAllSeries] = useState(false);
+  
   // Estado compuesto para mostrar errores de creación o actualización
-  const isSubmitting = isCreatingAppointment || isUpdatingAppointment;
-  const submissionError = createAppointmentError || updateAppointmentError;
+  const isSubmitting = isCreatingAppointment || isUpdatingAppointment || isDeletingAppointment;
+  const submissionError = createAppointmentError || updateAppointmentError || deleteAppointmentError;
 
   const handleFormSubmit = (data: AppointmentFormData) => {
     if (isEditing && appointment?.id) {
@@ -71,6 +77,29 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
         }
       });
     }
+  };
+  
+  // Función para manejar eliminación de citas
+  const handleDeleteAppointment = () => {
+    if (!appointment?.id) return;
+    
+    deleteAppointment(
+      {
+        id: appointment.id,
+        deleteAll: deleteAllSeries
+      },
+      {
+        onSuccess: () => {
+          console.log('Appointment deleted successfully');
+          setShowDeleteConfirm(false);
+          onClose();
+        },
+        onError: (error) => {
+          console.error('Failed to delete appointment:', error.message);
+          setShowDeleteConfirm(false);
+        }
+      }
+    );
   };
 
   // Prepare initial data for the form, mapping from the appointment prop
@@ -121,6 +150,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
                 <AppointmentForm 
                   initialData={initialFormData}
                   onSubmit={handleFormSubmit} 
+                  isEditing={isEditing}
                   // onOpenNewPatientModal={() => console.log('Open new patient modal from modal')} // Placeholder
                 />
 
@@ -130,30 +160,100 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
                   </div>
                 )}
 
-                <div className="mt-6 flex justify-end space-x-3">
-                  <button
-                    type="button" // Changed to type="button" to prevent form submission by default
-                    className="inline-flex justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-                    onClick={onClose}
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit" // This button will now submit the form with id 'appointment-form-id'
-                    form="appointment-form-id" // Links to the form in AppointmentForm.tsx
-                    className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting 
-                      ? (isEditing ? 'Guardando...' : 'Creando...') 
-                      : (isEditing ? 'Guardar Cambios' : 'Crear Cita')}
-                  </button>
+                <div className="mt-6 flex justify-between w-full">
+                  {isEditing && (
+                    <button
+                      type="button"
+                      className="inline-flex items-center justify-center rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 disabled:opacity-50 dark:border-red-700 dark:bg-transparent dark:text-red-500 dark:hover:bg-red-900/30"
+                      onClick={() => setShowDeleteConfirm(true)}
+                      disabled={isSubmitting}
+                    >
+                      <TrashIcon className="h-4 w-4 mr-2" />
+                      Eliminar
+                    </button>
+                  )}
+                  
+                  <div className={`flex space-x-3 ${isEditing ? 'ml-auto' : ''}`}>
+                    <button
+                      type="button"
+                      className="inline-flex justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                      onClick={onClose}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      form="appointment-form-id"
+                      className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting 
+                        ? (isEditing ? 'Guardando...' : 'Creando...') 
+                        : (isEditing ? 'Guardar Cambios' : 'Crear Cita')}
+                    </button>
+                  </div>
                 </div>
               </Dialog.Panel>
             </Transition.Child>
           </div>
         </div>
       </Dialog>
+
+      {/* Modal de confirmación para eliminar cita */}
+      <Transition appear show={showDeleteConfirm} as={Fragment}>
+        <Dialog as="div" className="relative z-20" onClose={() => !isDeletingAppointment && setShowDeleteConfirm(false)}>
+          <div className="fixed inset-0 bg-black/30 dark:bg-black/50" />
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 p-6 text-left align-middle shadow-xl transition-all">
+                <Dialog.Title className="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">
+                  Confirmar eliminación
+                </Dialog.Title>
+
+                <div className="mt-4 space-y-4">
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    ¿Estás seguro de que deseas eliminar esta cita?
+                  </p>
+                  
+                  {/* Opción para eliminar series recurrentes (a implementar cuando se desarrolle la recurrencia) */}
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="delete-all-series"
+                      checked={deleteAllSeries}
+                      onChange={(e) => setDeleteAllSeries(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-blue-600"
+                    />
+                    <label htmlFor="delete-all-series" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                      Eliminar todas las citas de esta serie (si es recurrente)
+                    </label>
+                  </div>
+
+                  <div className="mt-6 flex justify-end space-x-3">
+                    <button
+                      type="button"
+                      className="inline-flex justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                      onClick={() => setShowDeleteConfirm(false)}
+                      disabled={isDeletingAppointment}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      className="inline-flex justify-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 disabled:opacity-50 dark:bg-red-700 dark:hover:bg-red-800"
+                      onClick={handleDeleteAppointment}
+                      disabled={isDeletingAppointment}
+                    >
+                      {isDeletingAppointment ? 'Eliminando...' : 'Eliminar'}
+                    </button>
+                  </div>
+                </div>
+              </Dialog.Panel>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
     </Transition>
   );
 };
