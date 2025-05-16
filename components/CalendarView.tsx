@@ -4,6 +4,7 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
+import esLocale from '@fullcalendar/core/locales/es';
 import { DateSelectArg, EventClickArg, EventDropArg } from '@fullcalendar/core';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
@@ -82,8 +83,9 @@ export default function CalendarView() {
   }; */
 
   return (
-    <>
-      <FullCalendar
+    <div className="w-full h-full flex flex-col bg-gray-50">
+      <div className="w-full h-full bg-white overflow-hidden flex flex-col">
+        <FullCalendar
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
         initialView="timeGridWeek"
         headerToolbar={{
@@ -91,6 +93,17 @@ export default function CalendarView() {
           center: 'title',
           right: 'dayGridMonth,timeGridWeek,timeGridDay',
         }}
+        customButtons={{}}
+        dayHeaderClassNames={'bg-gray-50 text-gray-700 font-semibold py-2'}
+        locale={esLocale}
+        dayHeaderFormat={{
+          weekday: 'short'
+        }}
+        buttonIcons={{
+          prev: 'chevron-left',
+          next: 'chevron-right',
+        }}
+        dayCellClassNames={'hover:bg-blue-50 transition-colors'}
         slotDuration="00:15:00"
         slotLabelFormat={{
           hour: 'numeric',
@@ -104,7 +117,10 @@ export default function CalendarView() {
           meridiem: 'short'
         }}
         slotLabelInterval="01:00"
-        height="70vh"
+        allDaySlot={false}
+        contentHeight={700}
+        stickyHeaderDates={true}
+        scrollTime="07:00:00"
         slotMinTime="07:00:00"
         slotMaxTime="24:00:00"
         nowIndicator={true}
@@ -302,6 +318,7 @@ export default function CalendarView() {
         }}
         appointment={selectedAppointment || (selectedDateInfo ? mapDateSelectArgToModalData(selectedDateInfo) : null)}
       />
-    </>
+    </div>
+  </div>
   );
 }

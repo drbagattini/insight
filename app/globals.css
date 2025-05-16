@@ -3,13 +3,38 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --calendar-border-color: #e5e7eb;
+  --calendar-highlight-color: #3b82f6;
 }
 
-@theme inline {
+/* Hack para que full calendar ocupe todo el espacio disponible */
+html, body, #__next {
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+.fc {
+  height: 100% !important;
+  min-height: 100% !important;
+  flex-grow: 1;
+}
+
+/* Reducir la altura de las filas/slots de tiempo */
+.fc .fc-timegrid-slot-minor {
+  border-top-style: dotted;
+  border-top-width: 1px;
+  border-top-color: rgba(0, 0, 0, 0.1);
+}
+
+
+/* Variables de diseño */
+:root {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, monospace;
 }
 
 .slider-thumb-custom::-webkit-slider-thumb {
@@ -28,6 +53,38 @@
 .slider-thumb-custom:focus::-webkit-slider-thumb {
   box-shadow: 0 0 0 6px rgba(37,99,235,0.15);
 }
+/* Hack para corregir el spinner en FullCalendar */
+.fc-scroller::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.fc-scroller::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+}
+
+.fc-scroller::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+}
+
+.fc-scroller::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* Media queries para ajustar tamaños en dispositivos pequeños */
+@media (max-width: 768px) {
+  .fc .fc-toolbar {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .fc .fc-toolbar-title {
+    font-size: 1.25rem;
+  }
+}
+
 .slider-thumb-custom::-moz-range-thumb {
   cursor: pointer;
   width: 32px;
