@@ -3,7 +3,7 @@
 import { Fragment, useState, useEffect } from 'react';
 import { Combobox, Transition } from '@headlessui/react';
 import { CheckIcon, ChevronUpDownIcon, UserPlusIcon } from '@heroicons/react/20/solid';
-import Link from 'next/link';
+import NewPatientModal from './NewPatientModal';
 
 // Placeholder Patient type - replace with actual type from your data model
 export interface Patient {
@@ -15,7 +15,6 @@ export interface Patient {
 interface PatientSelectorProps {
   selectedPatient: Patient | null;
   setSelectedPatient: (patient: Patient | null) => void;
-  // onOpenNewPatientModal: () => void; // To be implemented later
   isDisabled?: boolean; // Deshabilitar selector cuando estamos en modo edición
 }
 
@@ -60,8 +59,8 @@ export const PatientSelector: React.FC<PatientSelectorProps> = ({
     fetchPatients();
   }, []);
 
-  // La URL correcta para crear un nuevo paciente
-  const newPatientUrl = '/dashboard/patients';
+  // Estado para controlar la visibilidad del modal de nuevo paciente
+  const [showNewPatientModal, setShowNewPatientModal] = useState(false);
 
   return (
     <div className="w-full">
@@ -148,19 +147,32 @@ export const PatientSelector: React.FC<PatientSelectorProps> = ({
         </div>
       </Combobox>
       
-      {/* Enlace para crear un nuevo paciente debajo del combobox */}
+      {/* Botón para abrir el modal de nuevo paciente */}
       {!isDisabled && (
         <div className="mt-2 text-right">
-          <Link 
-            href={newPatientUrl} 
-            target="_blank"
-            className="text-blue-600 hover:text-blue-800 text-sm font-medium inline-flex items-center"
+          <button
+            type="button" 
+            onClick={() => setShowNewPatientModal(true)}
+            className="text-blue-600 hover:text-blue-800 text-sm font-medium inline-flex items-center bg-transparent border-none cursor-pointer"
           >
             <UserPlusIcon className="h-4 w-4 mr-1" />
             Crear nuevo paciente
-          </Link>
+          </button>
         </div>
       )}
+      
+      {/* Modal para crear nuevo paciente */}
+      <NewPatientModal 
+        isOpen={showNewPatientModal}
+        onClose={() => setShowNewPatientModal(false)}
+        onPatientCreated={(newPatient) => {
+          // Seleccionar automáticamente el paciente recién creado
+          setSelectedPatient({
+            id: newPatient.id,
+            name: newPatient.name
+          });
+        }}
+      />
     </div>
   );
 };
