@@ -103,20 +103,13 @@ export const AppointmentForm: React.FC<AppointmentFormProps> = ({
     e.preventDefault();
     if (timeError) {
       // Prevent submission if there's a time error
-      // Optionally, show a more prominent error message/toast
-      console.error('Cannot submit form due to time validation error.');
+      alert('La hora de fin debe ser posterior a la hora de inicio');
       return;
     }
-    if (!selectedPatient) {
-      // TODO: Add proper validation and user feedback
-      console.error('Patient is required');
-      return;
-    }
-    // Patient is now mandatory
+    
+    // Validar que se haya seleccionado un paciente
     if (!selectedPatient || !selectedPatient.id) {
-      // TODO: Show a user-friendly validation message next to the PatientSelector
-      console.error('Patient selection is required.');
-      alert('Por favor, seleccione un paciente.'); // Temporary alert
+      alert('Por favor, seleccione un paciente para continuar.');
       return;
     }
 

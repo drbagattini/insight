@@ -4,15 +4,18 @@ import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import PatientForm from '../../patients/PatientForm';
 import { Patient, NewPatient } from '@/types/patients';
+import { useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from '@/lib/constants';
 
 interface NewPatientModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onPatientCreated: (patient: Patient) => void;
+  onPatientCreated: (patient: { id: string; name: string }) => void;
 }
 
 export default function NewPatientModal({ isOpen, onClose, onPatientCreated }: NewPatientModalProps) {
   const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const handleSubmit = async (patientData: NewPatient) => {
     try {
@@ -31,11 +34,20 @@ export default function NewPatientModal({ isOpen, onClose, onPatientCreated }: N
       // Obtener el paciente creado
       const newPatient = await res.json();
       
-      // Notificar al componente padre
-      onPatientCreated(newPatient);
+      // Ya tenemos el paciente completo desde la API, no necesitamos recargar
+      console.log('Paciente creado exitosamente:', newPatient);
       
-      // Cerrar el modal
-      onClose();
+      // Notificar al componente padre con el paciente completo
+      // Esto es crítico para que el PatientSelector funcione correctamente
+      onPatientCreated({
+        id: String(newPatient.id),
+        name: String(newPatient.name)
+      });
+      
+      // Cerrar el modal y dar tiempo para que el evento fluya al selector
+      setTimeout(() => {
+        onClose();
+      }, 100);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al crear paciente');
       console.error('Error al crear paciente:', err);

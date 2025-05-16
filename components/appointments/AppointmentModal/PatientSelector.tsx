@@ -27,6 +27,7 @@ export const PatientSelector: React.FC<PatientSelectorProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [showNewPatientModal, setShowNewPatientModal] = useState(false);
 
   const filteredPatients = query === ''
     ? patients
@@ -59,8 +60,24 @@ export const PatientSelector: React.FC<PatientSelectorProps> = ({
     fetchPatients();
   }, []);
 
-  // Estado para controlar la visibilidad del modal de nuevo paciente
-  const [showNewPatientModal, setShowNewPatientModal] = useState(false);
+  // Función para recargar la lista de pacientes
+  const reloadPatients = async () => {
+    try {
+      setIsLoading(true);
+      const res = await fetch('/api/patients');
+      if (!res.ok) throw new Error('Error al cargar pacientes');
+      const data = await res.json();
+      setPatients(data);
+    } catch (error) {
+      console.error('Error loading patients:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    reloadPatients();
+  }, []);
 
   return (
     <div className="w-full">
@@ -166,11 +183,16 @@ export const PatientSelector: React.FC<PatientSelectorProps> = ({
         isOpen={showNewPatientModal}
         onClose={() => setShowNewPatientModal(false)}
         onPatientCreated={(newPatient) => {
-          // Seleccionar automáticamente el paciente recién creado
-          setSelectedPatient({
-            id: newPatient.id,
-            name: newPatient.name
-          });
+          // Recargar la lista de pacientes
+          reloadPatients();
+          
+          console.log('Seleccionando paciente recién creado:', newPatient);
+          
+          // Seleccionar directamente el paciente recién creado sin buscar en la lista
+          setSelectedPatient(newPatient);
+          
+          // Limpiar la consulta para que se muestre el paciente seleccionado
+          setQuery('');
         }}
       />
     </div>
