@@ -61,7 +61,7 @@ export const PatientSelector: React.FC<PatientSelectorProps> = ({
   }, []);
 
   // La URL correcta para crear un nuevo paciente
-  const newPatientUrl = '/patients';
+  const newPatientUrl = '/dashboard/patients';
 
   return (
     <div className="w-full">
@@ -142,11 +142,7 @@ export const PatientSelector: React.FC<PatientSelectorProps> = ({
                   </Combobox.Option>
                 ))
               )}
-              {/* "Add New Patient" Option */}
-              <Link href={newPatientUrl} target="_blank" className="relative py-2 pl-10 pr-4 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 flex items-center select-none">
-                <UserPlusIcon className="h-5 w-5 mr-2" aria-hidden="true" />
-                Crear nuevo paciente
-              </Link>
+              {/* Eliminamos la opción del dropdown */}
             </Combobox.Options>
           </Transition>
         </div>
