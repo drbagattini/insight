@@ -1,29 +1,32 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { AppointmentFormData } from '@/components/appointments/AppointmentModal/AppointmentForm'; // Adjust path as necessary
+import { AppointmentFormData } from '@/components/appointments/AppointmentModal/AppointmentForm';
 
-// Define the expected shape of the data returned by the API after creating an appointment
-// This should match your backend's response. For now, a simple placeholder.
-interface CreatedAppointment {
+// Definir los tipos para las respuestas de la API
+interface Appointment {
   id: string;
   title?: string;
-  patient_id: string;
-  date: string;
+  paciente_id: string;
   start_time: string;
   end_time: string;
-  // Add other fields returned by the API, like rrule, user_id, etc.
+  rrule?: string | null;
+  metadata?: Record<string, unknown>;
+  user_id: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
-// Define the payload for the API
+// Payload común para crear y actualizar
 interface ApiAppointmentPayload {
   title?: string;
-  paciente_id: string; // Cambiado a paciente_id para coincidir con el esquema de la API
-  // date: string; // Date is now part of start_time and end_time
-  start_time: string; // Expected to be ISO string
-  end_time: string;   // Expected to be ISO string
-  // rrule?: string; // Will be added in later stages
+  paciente_id: string;
+  start_time: string;
+  end_time: string;
+  rrule?: string | null;
+  metadata?: Record<string, unknown>;
 }
 
-const createAppointmentOnApi = async (appointmentData: AppointmentFormData): Promise<CreatedAppointment> => {
+// Convertir datos del formulario a formato API
+const mapFormDataToApiPayload = (appointmentData: AppointmentFormData): ApiAppointmentPayload => {
   if (!appointmentData.patient) {
     throw new Error('Patient is required to create an appointment.');
   }
@@ -31,22 +34,21 @@ const createAppointmentOnApi = async (appointmentData: AppointmentFormData): Pro
   const fullStartTime = `${appointmentData.date}T${appointmentData.startTime}:00`;
   const fullEndTime = `${appointmentData.date}T${appointmentData.endTime}:00`;
 
-  // Consider timezone handling if necessary, for now, assuming local times
-  // If your server/Supabase expects UTC, you'll need to convert these.
-  // For simplicity, we're sending them as is, which Supabase typically stores as TIMESTAMPTZ considering the session's timezone or a default.
-
-  const payload: ApiAppointmentPayload = {
+  return {
     title: appointmentData.title,
-    paciente_id: appointmentData.patient.id, // Cambiado a paciente_id para coincidir con el esquema de la API
+    paciente_id: appointmentData.patient.id,
     start_time: new Date(fullStartTime).toISOString(),
     end_time: new Date(fullEndTime).toISOString(),
   };
+};
+
+// Create appointment
+const createAppointmentOnApi = async (appointmentData: AppointmentFormData): Promise<Appointment> => {
+  const payload = mapFormDataToApiPayload(appointmentData);
 
   const response = await fetch('/api/appointments', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
 
@@ -56,16 +58,80 @@ const createAppointmentOnApi = async (appointmentData: AppointmentFormData): Pro
       const errorData = await response.json();
       if (errorData && errorData.errors && Array.isArray(errorData.errors)) {
         // Format Zod errors for better readability
-        errorMessage = errorData.errors.map((err: { path: string[], message: string }) => `${err.path.join('.') || 'general'}: ${err.message}`).join('; ');
-        if (errorData.message) { // Prepend the general message if available
-            errorMessage = `${errorData.message}: ${errorMessage}`;
+        errorMessage = errorData.errors.map((err: { path: string[], message: string }) => 
+          `${err.path.join('.') || 'general'}: ${err.message}`
+        ).join('; ');
+        
+        if (errorData.message) {
+          errorMessage = `${errorData.message}: ${errorMessage}`;
         }
       } else if (errorData && errorData.message) {
         errorMessage = errorData.message;
       }
     } catch (e) {
-      // response.json() failed or errorData was not in the expected format
-      // errorMessage remains the default HTTP status error
+      console.error('Failed to parse JSON error response:', e);
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
+// Update appointment
+interface UpdateAppointmentParams {
+  id: string;
+  data: AppointmentFormData;
+}
+
+const updateAppointmentOnApi = async ({ id, data }: UpdateAppointmentParams): Promise<Appointment> => {
+  const payload = mapFormDataToApiPayload(data);
+
+  const response = await fetch(`/api/appointments/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    let errorMessage = `HTTP error! status: ${response.status}`;
+    try {
+      const errorData = await response.json();
+      if (errorData && errorData.message) {
+        errorMessage = errorData.message;
+      }
+    } catch (e) {
+      console.error('Failed to parse JSON error response:', e);
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
+// Delete appointment
+interface DeleteAppointmentParams {
+  id: string;
+  deleteAll?: boolean;
+}
+
+const deleteAppointmentOnApi = async ({ id, deleteAll = false }: DeleteAppointmentParams): Promise<{ success: boolean }> => {
+  const url = new URL(`/api/appointments/${id}`, window.location.origin);
+  if (deleteAll) {
+    url.searchParams.append('deleteAll', 'true');
+  }
+
+  const response = await fetch(url.toString(), {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    let errorMessage = `HTTP error! status: ${response.status}`;
+    try {
+      const errorData = await response.json();
+      if (errorData && errorData.message) {
+        errorMessage = errorData.message;
+      }
+    } catch (e) {
       console.error('Failed to parse JSON error response:', e);
     }
     throw new Error(errorMessage);
@@ -77,25 +143,59 @@ const createAppointmentOnApi = async (appointmentData: AppointmentFormData): Pro
 export const useAppointmentMutations = () => {
   const queryClient = useQueryClient();
 
-  const createAppointmentMutation = useMutation<CreatedAppointment, Error, AppointmentFormData>(
-    {
-      mutationFn: createAppointmentOnApi,
-      // onSuccess will be handled in ETAPA 2 for optimistic updates
-      // onError can be handled here or in the component using the mutation
-      // For example:
-      // onError: (error) => {
-      //   console.error('Error creating appointment:', error.message);
-      //   // TODO: Show error toast to user
-      // },
-    }
-  );
+  // Crear cita
+  const createAppointmentMutation = useMutation<
+    Appointment, 
+    Error, 
+    AppointmentFormData
+  >({
+    mutationFn: createAppointmentOnApi,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    },
+  });
 
-  // TODO: Add updateAppointmentMutation and deleteAppointmentMutation in later stages
+  // Actualizar cita
+  const updateAppointmentMutation = useMutation<
+    Appointment, 
+    Error, 
+    UpdateAppointmentParams
+  >({
+    mutationFn: updateAppointmentOnApi,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    },
+  });
+
+  // Eliminar cita 
+  const deleteAppointmentMutation = useMutation<
+    { success: boolean }, 
+    Error, 
+    DeleteAppointmentParams
+  >({
+    mutationFn: deleteAppointmentOnApi,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    },
+  });
 
   return {
+    // Create
     createAppointment: createAppointmentMutation.mutate,
-    createAppointmentAsync: createAppointmentMutation.mutateAsync, // if async version is needed
+    createAppointmentAsync: createAppointmentMutation.mutateAsync,
     isCreatingAppointment: createAppointmentMutation.isPending,
     createAppointmentError: createAppointmentMutation.error,
+
+    // Update
+    updateAppointment: updateAppointmentMutation.mutate,
+    updateAppointmentAsync: updateAppointmentMutation.mutateAsync,
+    isUpdatingAppointment: updateAppointmentMutation.isPending,
+    updateAppointmentError: updateAppointmentMutation.error,
+
+    // Delete
+    deleteAppointment: deleteAppointmentMutation.mutate,
+    deleteAppointmentAsync: deleteAppointmentMutation.mutateAsync,
+    isDeletingAppointment: deleteAppointmentMutation.isPending,
+    deleteAppointmentError: deleteAppointmentMutation.error,
   };
 };

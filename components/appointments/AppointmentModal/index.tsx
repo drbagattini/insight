@@ -31,25 +31,43 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
   appointment,
 }) => {
   const isEditing = !!appointment?.id;
-  const { createAppointment, isCreatingAppointment, createAppointmentError } = useAppointmentMutations();
+  const { 
+    createAppointment, isCreatingAppointment, createAppointmentError,
+    updateAppointment, isUpdatingAppointment, updateAppointmentError
+  } = useAppointmentMutations();
+  
+  // Estado compuesto para mostrar errores de creación o actualización
+  const isSubmitting = isCreatingAppointment || isUpdatingAppointment;
+  const submissionError = createAppointmentError || updateAppointmentError;
 
   const handleFormSubmit = (data: AppointmentFormData) => {
-    if (isEditing) {
-      console.log('Updating appointment:', { ...data, id: appointment?.id });
-      // TODO: Call updateAppointment mutation here
-      // For now, just close if editing, as update logic isn't built yet
-      onClose(); 
+    if (isEditing && appointment?.id) {
+      // Actualizar cita existente
+      updateAppointment(
+        { 
+          id: appointment.id,
+          data
+        },
+        {
+          onSuccess: () => {
+            console.log('Appointment updated successfully');
+            onClose();
+          },
+          onError: (error) => {
+            console.error('Failed to update appointment:', error.message);
+            // Error handling is via updateAppointmentError
+          }
+        }
+      );
     } else {
+      // Crear nueva cita
       createAppointment(data, {
         onSuccess: () => {
           console.log('Appointment created successfully');
-          onClose(); // Close modal on successful creation
-          // In ETAPA 2, we'll add queryClient.invalidateQueries(['appointments'])
+          onClose();
         },
         onError: (error) => {
           console.error('Failed to create appointment:', error.message);
-          // Error is already available via createAppointmentError, no need to set local state
-          // Modal will remain open, showing the error message near the submit button
         }
       });
     }
@@ -106,9 +124,9 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
                   // onOpenNewPatientModal={() => console.log('Open new patient modal from modal')} // Placeholder
                 />
 
-                {createAppointmentError && (
+                {submissionError && (
                   <div className="mt-2 text-sm text-red-600 dark:text-red-400">
-                    <p>Error: {createAppointmentError.message}</p>
+                    <p>Error: {submissionError.message}</p>
                   </div>
                 )}
 
@@ -124,9 +142,11 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
                     type="submit" // This button will now submit the form with id 'appointment-form-id'
                     form="appointment-form-id" // Links to the form in AppointmentForm.tsx
                     className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
-                    disabled={isCreatingAppointment}
+                    disabled={isSubmitting}
                   >
-                    {isCreatingAppointment ? (isEditing ? 'Guardando...' : 'Creando...') : (isEditing ? 'Guardar Cambios' : 'Crear Cita')}
+                    {isSubmitting 
+                      ? (isEditing ? 'Guardando...' : 'Creando...') 
+                      : (isEditing ? 'Guardar Cambios' : 'Crear Cita')}
                   </button>
                 </div>
               </Dialog.Panel>

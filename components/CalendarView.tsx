@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -8,7 +8,8 @@ import { DateSelectArg, EventClickArg, EventDropArg } from '@fullcalendar/core';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { formatISO } from 'date-fns';
-import { AppointmentModal, ModalAppointmentData } from './appointments/AppointmentModal'; // Use new modal
+import { AppointmentModal, ModalAppointmentData } from './appointments/AppointmentModal';
+import { useAppointmentMutations } from '@/hooks/useAppointmentMutations'; // Use new modal
 
 interface AppointmentEvent {
   id: string;
@@ -53,7 +54,10 @@ const mapDateSelectArgToModalData = (selectInfo: DateSelectArg): ModalAppointmen
 export default function CalendarView() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDateInfo, setSelectedDateInfo] = useState<DateSelectArg | null>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<ModalAppointmentData | null>(null);
+  const calendarRef = useRef<FullCalendar>(null);
   const queryClient = useQueryClient();
+  const { updateAppointment } = useAppointmentMutations();
 
   // The handleSaveAppointment function is no longer directly needed here, as the new modal handles saving internally.
   // We might bring back parts of it if CalendarView needs to react to save events, e.g., for optimistic updates not handled by React Query's default cache invalidation.
@@ -125,8 +129,36 @@ export default function CalendarView() {
           setIsModalOpen(true);
         }}
         eventClick={(clickInfo: EventClickArg) => {
-          // TODO: Open modal to edit/delete
-          alert(`Editar cita ${clickInfo.event.id}`);
+          // Extraer ID base en caso de ser una instancia de recurrencia
+          const eventId = clickInfo.event.id.includes('_') 
+            ? clickInfo.event.id.split('_')[0] 
+            : clickInfo.event.id;
+          
+          // Preparar los datos para edición
+          const eventData: ModalAppointmentData = {
+            id: eventId,
+            title: clickInfo.event.title || '',
+            // Extraer fecha YYYY-MM-DD del ISO
+            date: new Date(clickInfo.event.start!).toISOString().split('T')[0],
+            // Formatear horas como HH:mm para los select
+            startTime: new Date(clickInfo.event.start!).toLocaleTimeString('en-GB', { 
+              hour: '2-digit', minute: '2-digit', hour12: false 
+            }),
+            endTime: new Date(clickInfo.event.end!).toLocaleTimeString('en-GB', { 
+              hour: '2-digit', minute: '2-digit', hour12: false 
+            }),
+            // Para eventos existentes, necesitamos cargar el paciente desde la API
+          // Por ahora, estamos enviando un objeto patient con el ID básico que será
+          // completado por el AppointmentForm al cargarse
+          patient: clickInfo.event.extendedProps?.paciente_id ? {
+            id: clickInfo.event.extendedProps.paciente_id,
+            name: 'Cargando...' // Esto se actualizará cuando se cargue el paciente completo
+          } : null,
+            // Añadir soporte para rrule cuando se implemente
+          };
+          
+          setSelectedAppointment(eventData);
+          setIsModalOpen(true);
         }}
         eventDrop={async (dropInfo: EventDropArg) => {
           const { id, start, end } = dropInfo.event;
@@ -142,16 +174,15 @@ export default function CalendarView() {
           }
         }}
       />
-      {isModalOpen && selectedDateInfo && (
-        <AppointmentModal
-          isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false);
-            setSelectedDateInfo(null); // Reset selected info on close
-          }}
-          appointment={selectedDateInfo ? mapDateSelectArgToModalData(selectedDateInfo) : null}
-        />
-      )}
+      <AppointmentModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedDateInfo(null);
+          setSelectedAppointment(null);
+        }}
+        appointment={selectedAppointment || (selectedDateInfo ? mapDateSelectArgToModalData(selectedDateInfo) : null)}
+      />
     </>
   );
 }
