@@ -16,6 +16,8 @@ interface AppointmentEvent {
   title: string;
   start_time: string;
   end_time: string;
+  paciente_id?: string;
+  paciente_nombre?: string;
 }
 
 const mapDateSelectArgToModalData = (selectInfo: DateSelectArg): ModalAppointmentData => {
@@ -108,6 +110,104 @@ export default function CalendarView() {
         nowIndicator={true}
         editable
         selectable
+        eventContent={(eventInfo) => {
+          // Extraer nombre del paciente y título de los props extendidos
+          const pacienteNombre = eventInfo.event.extendedProps.pacienteNombre || '';
+          const title = eventInfo.event.title || '';
+          const isRecurring = eventInfo.event.id.includes('_'); // Si el ID contiene '_' es una instancia recurrente
+          
+          // Obtener horas de inicio y fin del evento
+          const startTime = eventInfo.event.start ? eventInfo.event.start.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+          const endTime = eventInfo.event.end ? eventInfo.event.end.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+          const timeRange = startTime && endTime ? `${startTime} - ${endTime}` : '';
+          
+          // Crear elementos para la visualización personalizada
+          const content = document.createElement('div');
+          content.style.width = '100%';
+          content.style.overflow = 'hidden';
+          content.style.padding = '2px';  // Reducir padding general
+          
+          // ORDEN OPTIMIZADO CON TAMAÑOS REDUCIDOS:
+          
+          // 1. Mostrar hora de inicio y fin en la parte superior
+          if (timeRange) {
+            const timeElement = document.createElement('div');
+            timeElement.textContent = timeRange;
+            timeElement.style.fontSize = '0.68rem';  // Aún más reducido
+            timeElement.style.fontWeight = '400';  // Un poco menos de peso
+            timeElement.style.color = '#FFFFFF';
+            timeElement.style.lineHeight = '1.1';
+            timeElement.style.marginBottom = '1px'
+            content.appendChild(timeElement);
+          }
+          
+          // 2. El nombre del paciente en negrita
+          if (pacienteNombre) {
+            const nombreElement = document.createElement('div');
+            nombreElement.innerHTML = `<strong>${pacienteNombre}</strong>`;
+            nombreElement.style.fontSize = '0.82rem';  // Más grande para destacar
+            nombreElement.style.lineHeight = '1.15';  // Un poco más espaciado
+            nombreElement.style.whiteSpace = 'nowrap';
+            nombreElement.style.overflow = 'hidden';
+            nombreElement.style.textOverflow = 'ellipsis';
+            nombreElement.style.color = '#FFFFFF';
+            nombreElement.style.marginBottom = '1px';  // Reducir margen
+            content.appendChild(nombreElement);
+          }
+          
+          // 3. El título opcional debajo (sin negrita)
+          if (title && title !== pacienteNombre) {
+            const titleElement = document.createElement('div');
+            titleElement.textContent = title;
+            titleElement.style.fontSize = '0.75rem';  // Ligeramente más grande
+            titleElement.style.color = '#E6EFFF';
+            titleElement.style.lineHeight = '1.1';
+            titleElement.style.whiteSpace = 'nowrap';
+            titleElement.style.overflow = 'hidden';
+            titleElement.style.textOverflow = 'ellipsis';
+            titleElement.style.marginBottom = '1px';  // Reducir margen
+            content.appendChild(titleElement);
+          }
+          
+          // 4. Indicador de cita única o recurrente AL FINAL (más pequeño)
+          const tipoElement = document.createElement('div');
+          tipoElement.textContent = isRecurring ? 'Recurrente' : 'Cita única';
+          tipoElement.style.fontSize = '0.65rem';
+          tipoElement.style.fontStyle = 'italic';
+          tipoElement.style.fontWeight = '700';  // Negrita (bold)
+          
+          // Usar tonos de blanco para mejor contraste sobre fondo azul con tamaños reducidos
+          if (isRecurring) {
+            // Para citas recurrentes
+            tipoElement.style.color = '#FFFFFF';
+            tipoElement.style.backgroundColor = 'rgba(255,255,255,0.2)';
+            tipoElement.style.padding = '0px 3px';  // Reducir padding
+            tipoElement.style.borderRadius = '3px';  // Reducir borde
+            tipoElement.style.display = 'inline-block';
+          } else {
+            // Para citas únicas
+            tipoElement.style.color = '#F0F9FF';
+            tipoElement.style.backgroundColor = 'rgba(255,255,255,0.15)';
+            tipoElement.style.padding = '0px 3px';  // Reducir padding
+            tipoElement.style.borderRadius = '3px';  // Reducir borde
+            tipoElement.style.display = 'inline-block';
+          }
+          
+          content.appendChild(tipoElement);
+          
+          // Si no hay nombre ni título, mostrar un texto por defecto
+          if (!pacienteNombre && !title) {
+            const defaultText = document.createElement('div');
+            defaultText.textContent = 'Sin asignar';
+            defaultText.style.fontStyle = 'italic';
+            defaultText.style.color = '#FFFFFF';  // Blanco para contraste sobre azul
+            defaultText.style.marginTop = '2px';
+            content.appendChild(defaultText);
+          }
+          
+          // Devolver el contenido personalizado
+          return { domNodes: [content] };
+        }}
         events={async (fetchInfo, successCallback, failureCallback) => {
           try {
             const res = await axios.get<AppointmentEvent[]>(
@@ -118,6 +218,10 @@ export default function CalendarView() {
               title: ev.title,
               start: ev.start_time,
               end: ev.end_time,
+              extendedProps: {
+                pacienteId: ev.paciente_id,
+                pacienteNombre: ev.paciente_nombre,
+              }
             }));
             successCallback(events);
           } catch (err) {

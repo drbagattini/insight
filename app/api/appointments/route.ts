@@ -38,10 +38,16 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Invalid date format' }, { status: 400 });
   }
 
-  // Fetch non-recurring appointments
+  // Fetch non-recurring appointments with patient name
   const { data: nonRec, error: err1 } = await supabase
     .from('appointments')
-    .select('*')
+    .select(`
+      *,
+      pacientes:paciente_id (
+        id,
+        name
+      )
+    `)
     .eq('user_id', session.user.id)
     .is('rrule', null)
     .gte('start_time', startDate.toISOString())
@@ -51,10 +57,16 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: err1.message }, { status: 500 });
   }
 
-  // Fetch recurring master records
+  // Fetch recurring master records with patient name
   const { data: recMasters, error: err2 } = await supabase
     .from('appointments')
-    .select('*')
+    .select(`
+      *,
+      pacientes:paciente_id (
+        id,
+        name
+      )
+    `)
     .eq('user_id', session.user.id)
     .not('rrule', 'is', null);
   if (err2) {
@@ -62,22 +74,45 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: err2.message }, { status: 500 });
   }
 
-  const all = [...(nonRec || [])];
+  // Transformar datos no recurrentes para incluir nombre de paciente como propiedad directa
+  const processedNonRec = (nonRec || []).map((appt: any) => {
+    // Extraer el nombre del paciente de la relación si existe
+    const pacienteNombre = appt.pacientes?.name || '';
+    
+    // Crear una copia limpia del objeto sin la propiedad anidada
+    const { pacientes, ...cleanAppt } = appt;
+    
+    // Devolver el objeto con el nombre del paciente como propiedad directa
+    return {
+      ...cleanAppt,
+      paciente_nombre: pacienteNombre
+    };
+  });
+
+  const all = [...processedNonRec];
+  
+  // Procesar citas recurrentes de manera similar
   recMasters?.forEach((master: any) => {
     try {
+      // Extraer el nombre del paciente
+      const pacienteNombre = master.pacientes?.name || '';
+      const { pacientes, ...cleanMaster } = master;
+      
       // Parse RRULE y asignar dtstart correctamente
-      const opts = RRule.parseString(master.rrule!);
-      opts.dtstart = new Date(master.start_time);
+      const opts = RRule.parseString(cleanMaster.rrule!);
+      opts.dtstart = new Date(cleanMaster.start_time);
       const rule = new RRule(opts);
-      const dur = new Date(master.end_time).getTime() - new Date(master.start_time).getTime();
+      const dur = new Date(cleanMaster.end_time).getTime() - new Date(cleanMaster.start_time).getTime();
+      
       rule.between(startDate, endDate, true).forEach((dt: Date) => {
         all.push({
-          ...master,
-          id: `${master.id}_${dt.toISOString()}`,
+          ...cleanMaster,
+          paciente_nombre: pacienteNombre,
+          id: `${cleanMaster.id}_${dt.toISOString()}`,
           start_time: dt.toISOString(),
           end_time: new Date(dt.getTime() + dur).toISOString(),
           isOccurrence: true,
-          original_master_id: master.id,
+          original_master_id: cleanMaster.id,
         });
       });
     } catch (err) {
