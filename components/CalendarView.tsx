@@ -8,7 +8,7 @@ import { DateSelectArg, EventClickArg, EventDropArg } from '@fullcalendar/core';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { formatISO } from 'date-fns';
-import AppointmentModal from './AppointmentModal';
+import { AppointmentModal, ModalAppointmentData } from './appointments/AppointmentModal'; // Use new modal
 
 interface AppointmentEvent {
   id: string;
@@ -17,28 +17,63 @@ interface AppointmentEvent {
   end_time: string;
 }
 
+const mapDateSelectArgToModalData = (selectInfo: DateSelectArg): ModalAppointmentData => {
+  // Asegurarnos de usar la fecha correcta del evento seleccionado
+  console.log('Date selected from calendar:', selectInfo);
+  const startDate = new Date(selectInfo.start);
+  
+  // Default duration: 45 minutes for new appointments
+  const endDate = new Date(startDate.getTime() + 45 * 60000);
+
+  // Formatear para obtener solo YYYY-MM-DD
+  const formattedDate = startDate.toISOString().split('T')[0];
+  
+  // Formatear horas para obtener HH:mm, asegurando que sean múltiplos de 15 minutos
+  const roundToNearest15Min = (date: Date) => {
+    const minutes = date.getMinutes();
+    const remainder = minutes % 15;
+    if (remainder !== 0) {
+      date.setMinutes(minutes - remainder);
+    }
+    return date;
+  };
+  
+  const roundedStartDate = roundToNearest15Min(new Date(startDate));
+  const roundedEndDate = new Date(roundedStartDate.getTime() + 45 * 60000); // 45 minutos después
+
+  return {
+    // id is undefined for new appointments
+    date: formattedDate,
+    startTime: roundedStartDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }),
+    endTime: roundedEndDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }),
+    // patient and title will be handled by the form itself
+  };
+};
+
 export default function CalendarView() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDateInfo, setSelectedDateInfo] = useState<DateSelectArg | null>(null);
   const queryClient = useQueryClient();
 
-  const handleSaveAppointment = async (appointmentData: { title: string; start: string; end: string; paciente_id: string; rrule: string | null }) => {
+  // The handleSaveAppointment function is no longer directly needed here, as the new modal handles saving internally.
+  // We might bring back parts of it if CalendarView needs to react to save events, e.g., for optimistic updates not handled by React Query's default cache invalidation.
+  // For now, let's comment it out to avoid confusion.
+  /* const handleSaveAppointment = async (appointmentData: { title: string; start: string; end: string; paciente_id: string; rrule: string | null }) => {
     try {
       await axios.post('/api/appointments', {
         title: appointmentData.title,
-        start_time: appointmentData.start, // Asegúrate que el formato es ISOString o el esperado por tu API
-        end_time: appointmentData.end,     // Asegúrate que el formato es ISOString o el esperado por tu API
+        start_time: appointmentData.start, 
+        end_time: appointmentData.end,     
         paciente_id: appointmentData.paciente_id,
         rrule: appointmentData.rrule,
       });
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
-      setIsModalOpen(false); // Cierra el modal en éxito
+      setIsModalOpen(false); 
     } catch (error) {
       console.error('Error al guardar la cita:', error);
       alert('Hubo un error al guardar la cita. Por favor, inténtalo de nuevo.');
-      // Podrías querer mantener el modal abierto o manejar el error de forma más específica
     }
-  };
+  }; */
 
   return (
     <>
@@ -107,12 +142,16 @@ export default function CalendarView() {
           }
         }}
       />
-      <AppointmentModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        selectedDateInfo={selectedDateInfo}
-        onSave={handleSaveAppointment}
-      />
+      {isModalOpen && selectedDateInfo && (
+        <AppointmentModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedDateInfo(null); // Reset selected info on close
+          }}
+          appointment={selectedDateInfo ? mapDateSelectArgToModalData(selectedDateInfo) : null}
+        />
+      )}
     </>
   );
 }

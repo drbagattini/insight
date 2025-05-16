@@ -12,8 +12,8 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // Schema de validación para citas
 const appointmentSchema = z.object({
-  paciente_id: z.string().uuid().optional(),
-  title: z.string().min(1, 'Título requerido'),
+  paciente_id: z.string().uuid('Patient ID debe ser un UUID válido'), // Made mandatory
+  title: z.string().optional(),
   start_time: z.string().min(1, 'Fecha de inicio requerida'),
   end_time: z.string().min(1, 'Fecha de fin requerida'),
   rrule: z.string().regex(/^RRULE:FREQ=(DAILY|WEEKLY|MONTHLY);INTERVAL=\d+$/, 'Formato de RRULE inválido').optional().nullable(),
@@ -105,15 +105,14 @@ export async function POST(request: Request) {
 
   const appointmentPayload: any = {
     user_id: session.user.id,
+    paciente_id, // Now directly included as it's mandatory
     title,
     start_time,
     end_time,
     metadata: metadata || {},
   };
 
-  if (paciente_id) {
-    appointmentPayload.paciente_id = paciente_id;
-  }
+  // rrule is still optional
   if (rrule) {
     appointmentPayload.rrule = rrule;
   }
