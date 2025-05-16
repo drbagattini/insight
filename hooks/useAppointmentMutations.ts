@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { AppointmentFormData } from '@/components/appointments/AppointmentModal/AppointmentForm';
+import { AppointmentFormData, RecurrenceType } from '@/components/appointments/AppointmentModal/AppointmentForm';
 
 // Definir los tipos para las respuestas de la API
 interface Appointment {
@@ -25,6 +25,27 @@ interface ApiAppointmentPayload {
   metadata?: Record<string, unknown>;
 }
 
+/**
+ * Convierte un tipo de recurrencia de la interfaz de usuario a formato RRULE
+ * para almacenamiento en la base de datos
+ */
+const recurrenceTypeToRRule = (recurrenceType: RecurrenceType): string | null => {
+  // Si no hay recurrencia, devuelve null
+  if (recurrenceType === 'none') return null;
+  
+  // Construir string RRULE en formato compatible
+  switch (recurrenceType) {
+    case 'weekly':
+      return 'RRULE:FREQ=WEEKLY;INTERVAL=1';
+    case 'biweekly':
+      return 'RRULE:FREQ=WEEKLY;INTERVAL=2';
+    case 'monthly':
+      return 'RRULE:FREQ=MONTHLY;INTERVAL=1';
+    default:
+      return null;
+  }
+};
+
 // Convertir datos del formulario a formato API
 const mapFormDataToApiPayload = (appointmentData: AppointmentFormData): ApiAppointmentPayload => {
   if (!appointmentData.patient) {
@@ -33,12 +54,16 @@ const mapFormDataToApiPayload = (appointmentData: AppointmentFormData): ApiAppoi
 
   const fullStartTime = `${appointmentData.date}T${appointmentData.startTime}:00`;
   const fullEndTime = `${appointmentData.date}T${appointmentData.endTime}:00`;
+  
+  // Convertir recurrencia a formato RRULE
+  const rrule = recurrenceTypeToRRule(appointmentData.recurrence);
 
   return {
     title: appointmentData.title,
     paciente_id: appointmentData.patient.id,
     start_time: new Date(fullStartTime).toISOString(),
     end_time: new Date(fullEndTime).toISOString(),
+    rrule: rrule,
   };
 };
 

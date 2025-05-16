@@ -3,13 +3,16 @@
 import React, { useState, useEffect } from 'react';
 import PatientSelector, { Patient } from './PatientSelector'; // Assuming Patient type is exported
 
+// Tipo de recurrencia soportado
+export type RecurrenceType = 'none' | 'weekly' | 'biweekly' | 'monthly';
+
 export interface AppointmentFormData {
   patient: Patient | null;
   date: string; // YYYY-MM-DD
   startTime: string; // HH:mm
   endTime: string; // HH:mm
   title?: string;
-  // We will add recurrence fields later
+  recurrence: RecurrenceType; // Tipo de recurrencia
 }
 
 interface AppointmentFormProps {
@@ -32,6 +35,7 @@ export const AppointmentForm: React.FC<AppointmentFormProps> = ({
   const [startTime, setStartTime] = useState<string>(initialData.startTime || '09:00');
   const [endTime, setEndTime] = useState<string>(initialData.endTime || '09:15');
   const [title, setTitle] = useState<string>(initialData.title || '');
+  const [recurrence, setRecurrence] = useState<RecurrenceType>(initialData.recurrence || 'none');
   const [timeError, setTimeError] = useState<string>('');
 
   useEffect(() => {
@@ -42,6 +46,7 @@ export const AppointmentForm: React.FC<AppointmentFormProps> = ({
       setStartTime(initialData.startTime || '09:00');
       setEndTime(initialData.endTime || '09:45');
       setTitle(initialData.title || '');
+      setRecurrence(initialData.recurrence || 'none');
     }
   }, [initialData]);
 
@@ -121,6 +126,7 @@ export const AppointmentForm: React.FC<AppointmentFormProps> = ({
       startTime,
       endTime,
       title,
+      recurrence, // Incluir la recurrencia en el envío del formulario
     });
   };
 
@@ -217,6 +223,27 @@ export const AppointmentForm: React.FC<AppointmentFormProps> = ({
       </div>
       {timeError && (
         <p className="text-sm text-red-600 dark:text-red-400">{timeError}</p>
+      )}
+
+      {/* Opciones de recurrencia - solo visibles al crear una cita nueva */}
+      {!isEditing && (
+        <div>
+          <label htmlFor="recurrence" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Recurrencia
+          </label>
+          <select
+            id="recurrence"
+            name="recurrence"
+            value={recurrence}
+            onChange={(e) => setRecurrence(e.target.value as RecurrenceType)}
+            className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          >
+            <option value="none">Sin recurrencia</option>
+            <option value="weekly">Semanal</option>
+            <option value="biweekly">Quincenal</option>
+            <option value="monthly">Mensual</option>
+          </select>
+        </div>
       )}
 
       {/* Submit button will be part of AppointmentModal/index.tsx to control modal actions */}

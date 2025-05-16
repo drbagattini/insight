@@ -3,6 +3,7 @@
 import { Fragment, useState, useEffect } from 'react';
 import { Combobox, Transition } from '@headlessui/react';
 import { CheckIcon, ChevronUpDownIcon, UserPlusIcon } from '@heroicons/react/20/solid';
+import Link from 'next/link';
 
 // Placeholder Patient type - replace with actual type from your data model
 export interface Patient {
@@ -21,7 +22,6 @@ interface PatientSelectorProps {
 export const PatientSelector: React.FC<PatientSelectorProps> = ({
   selectedPatient,
   setSelectedPatient,
-  // onOpenNewPatientModal,
   isDisabled = false,
 }) => {
   const [isLoading, setIsLoading] = useState(true);
@@ -38,7 +38,6 @@ export const PatientSelector: React.FC<PatientSelectorProps> = ({
           .includes(query.toLowerCase().replace(/\s+/g, ''))
       );
 
-  // TODO: Implement actual patient fetching logic (e.g., using React Query)
   useEffect(() => {
     const fetchPatients = async () => {
       setIsLoading(true);
@@ -61,10 +60,8 @@ export const PatientSelector: React.FC<PatientSelectorProps> = ({
     fetchPatients();
   }, []);
 
-  const handleAddNewPatient = () => {
-    // TODO: Call onOpenNewPatientModal when prop is implemented
-    console.log('Open new patient modal');
-  };
+  // La URL correcta para crear un nuevo paciente
+  const newPatientUrl = '/patients';
 
   return (
     <div className="w-full">
@@ -146,17 +143,28 @@ export const PatientSelector: React.FC<PatientSelectorProps> = ({
                 ))
               )}
               {/* "Add New Patient" Option */}
-              <div 
-                onClick={isDisabled ? undefined : handleAddNewPatient}
-                className="relative cursor-pointer select-none py-2 pl-10 pr-4 text-teal-600 hover:bg-teal-50 dark:text-teal-400 dark:hover:bg-gray-600 flex items-center"
-              >
+              <Link href={newPatientUrl} target="_blank" className="relative py-2 pl-10 pr-4 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 flex items-center select-none">
                 <UserPlusIcon className="h-5 w-5 mr-2" aria-hidden="true" />
                 Crear nuevo paciente
-              </div>
+              </Link>
             </Combobox.Options>
           </Transition>
         </div>
       </Combobox>
+      
+      {/* Enlace para crear un nuevo paciente debajo del combobox */}
+      {!isDisabled && (
+        <div className="mt-2 text-right">
+          <Link 
+            href={newPatientUrl} 
+            target="_blank"
+            className="text-blue-600 hover:text-blue-800 text-sm font-medium inline-flex items-center"
+          >
+            <UserPlusIcon className="h-4 w-4 mr-1" />
+            Crear nuevo paciente
+          </Link>
+        </div>
+      )}
     </div>
   );
 };
