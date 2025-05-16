@@ -220,8 +220,8 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
                     ¿Estás seguro de que deseas eliminar esta cita?
                   </p>
                   
-                  {/* Opciones de eliminación - solo visibles para citas recurrentes */}
-                  {isRecurring && (
+                  {/* Opciones de eliminación - temporalmente habilitadas siempre hasta que la recurrencia esté implementada */}
+                  {true && (
                     <div className="mt-3 space-y-2">
                       <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Opciones de eliminación:</p>
                       

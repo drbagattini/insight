@@ -128,37 +128,52 @@ export default function CalendarView() {
           setSelectedDateInfo(arg);
           setIsModalOpen(true);
         }}
-        eventClick={(clickInfo: EventClickArg) => {
+        eventClick={async (clickInfo: EventClickArg) => {
           // Extraer ID base en caso de ser una instancia de recurrencia
           const eventId = clickInfo.event.id.includes('_') 
             ? clickInfo.event.id.split('_')[0] 
             : clickInfo.event.id;
           
-          // Preparar los datos para edición
-          const eventData: ModalAppointmentData = {
-            id: eventId,
-            title: clickInfo.event.title || '',
-            // Extraer fecha YYYY-MM-DD del ISO
-            date: new Date(clickInfo.event.start!).toISOString().split('T')[0],
-            // Formatear horas como HH:mm para los select
-            startTime: new Date(clickInfo.event.start!).toLocaleTimeString('en-GB', { 
-              hour: '2-digit', minute: '2-digit', hour12: false 
-            }),
-            endTime: new Date(clickInfo.event.end!).toLocaleTimeString('en-GB', { 
-              hour: '2-digit', minute: '2-digit', hour12: false 
-            }),
-            // Para eventos existentes, necesitamos cargar el paciente desde la API
-          // Por ahora, estamos enviando un objeto patient con el ID básico que será
-          // completado por el AppointmentForm al cargarse
-          patient: clickInfo.event.extendedProps?.paciente_id ? {
-            id: clickInfo.event.extendedProps.paciente_id,
-            name: 'Cargando...' // Esto se actualizará cuando se cargue el paciente completo
-          } : null,
-            // Añadir soporte para rrule cuando se implemente
-          };
-          
-          setSelectedAppointment(eventData);
-          setIsModalOpen(true);
+          try {
+            // Obtener la información completa de la cita desde la API
+            const response = await axios.get(`/api/appointments/${eventId}`);
+            const appointmentData = response.data;
+            
+            // Obtener la información del paciente
+            let patientInfo = null;
+            if (appointmentData.paciente_id) {
+              const patientResponse = await axios.get(`/api/patients/${appointmentData.paciente_id}`);
+              patientInfo = patientResponse.data;
+            }
+            
+            // Preparar los datos para edición con información completa
+            const eventData: ModalAppointmentData = {
+              id: eventId,
+              title: clickInfo.event.title || '',
+              // Extraer fecha YYYY-MM-DD del ISO
+              date: new Date(clickInfo.event.start!).toISOString().split('T')[0],
+              // Formatear horas como HH:mm para los select
+              startTime: new Date(clickInfo.event.start!).toLocaleTimeString('en-GB', { 
+                hour: '2-digit', minute: '2-digit', hour12: false 
+              }),
+              endTime: new Date(clickInfo.event.end!).toLocaleTimeString('en-GB', { 
+                hour: '2-digit', minute: '2-digit', hour12: false 
+              }),
+              // Incluir información completa del paciente
+              patient: patientInfo ? {
+                id: patientInfo.id,
+                name: patientInfo.name
+              } : null,
+              // Incluir información de recurrencia
+              rrule: appointmentData.rrule || null
+            };
+            
+            setSelectedAppointment(eventData);
+            setIsModalOpen(true);
+          } catch (error) {
+            console.error('Error al cargar detalles de la cita:', error);
+            alert('Hubo un error al cargar los detalles de la cita.');
+          }
         }}
         eventDrop={async (dropInfo: EventDropArg) => {
           const { id, start, end } = dropInfo.event;
