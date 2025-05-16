@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -9,8 +9,9 @@ import { DateSelectArg, EventClickArg, EventDropArg } from '@fullcalendar/core';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { formatISO } from 'date-fns';
+import { useSession, signIn } from 'next-auth/react';
 import { AppointmentModal, ModalAppointmentData } from './appointments/AppointmentModal';
-import { useAppointmentMutations } from '@/hooks/useAppointmentMutations'; // Use new modal
+import { useAppointmentMutations } from '@/hooks/useAppointmentMutations';
 
 interface AppointmentEvent {
   id: string;
@@ -54,6 +55,56 @@ const mapDateSelectArgToModalData = (selectInfo: DateSelectArg): ModalAppointmen
   };
 };
 
+// Estilos personalizados para los botones de Google Calendar (se aplicaru00e1n mediante JavaScript)
+const googleCalendarStyles = `
+  .fc .fc-button-primary.fc-googleCalendar-button {
+    background-color: #ffffff;
+    border-color: #dadce0;
+    color: #3c4043;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+  }
+  
+  .fc .fc-button-primary.fc-googleCalendar-button:hover {
+    background-color: #f6fafe;
+    border-color: #d2e3fc;
+    color: #174ea6;
+  }
+  
+  .fc .fc-button-primary.fc-googleCalendar-button::before {
+    content: '';
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18px" height="18px"><path fill="none" d="M0 0h24v24H0z"/><path fill="#4285F4" d="M21.56 10.44l-.72.72-6.22 6.22-2.67 1.33c-.5.25-1.11.13-1.44-.33L8.6 16.5a.99.99 0 01.21-1.4l3.7-2.8c.2-.16.38-.28.54-.38l3.14-2.21c.38-.27.63-.83.58-1.25-.06-.42-.1-.77-.64-1.03-.56-.28-1.08-.23-1.62.2l-3.92 2.9c-.21.17-.32.27-.72.27L7.5 10.9c-.39 0-.61-.26-.72-.46-.17-.33-.11-.76.18-1.02l1.7-1.46a5.75 5.75 0 018.65.31c1.03 1.2 1.5 2.75 1.29 4.33-.07.51-.23.97-.48 1.37m-12.95.7l1.98 1.98C10 13.73 9.4 14 9 14l-5.79.95a.59.59 0 01-.23.02c-.12-.01-.45-.09-.64-.33-.15-.2-.21-.45-.17-.7l.78-4.04c.05-.25.23-.46.47-.56A9.21 9.21 0 017.3 8c.77 0 1.55.12 2.31.38.13.05 0 .38-.68 1.04-.82.8-1.12 1.1-1.22 1.22-.1.12-.12.32-.1.5z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+  
+  .fc .fc-button-primary.fc-googleCalendarDisconnect-button {
+    background-color: #ffffff;
+    border-color: #dadce0;
+    color: #666;
+    font-size: 0.8em;
+  }
+  
+  .fc .fc-button-primary.fc-googleCalendarDisconnect-button:hover {
+    background-color: #f8f9fa;
+    border-color: #d2d5d9;
+    color: #ea4335;
+  }
+  
+  /* Ajustar el ancho del botón de desvinculación */
+  .fc-googleCalendarDisconnect-button {
+    max-width: fit-content;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+`;
+
 export default function CalendarView() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDateInfo, setSelectedDateInfo] = useState<DateSelectArg | null>(null);
@@ -61,6 +112,101 @@ export default function CalendarView() {
   const calendarRef = useRef<FullCalendar>(null);
   const queryClient = useQueryClient();
   const { updateAppointment } = useAppointmentMutations();
+  const { data: session } = useSession();
+  
+  // Au00f1adir estilos CSS personalizado al cargar el componente
+  useEffect(() => {
+    // Au00f1adir estilos para los botones de Google Calendar
+    const styleElement = document.createElement('style');
+    styleElement.textContent = googleCalendarStyles;
+    document.head.appendChild(styleElement);
+    
+    // Limpiar al desmontar
+    return () => {
+      styleElement.remove();
+    };
+  }, []);
+  
+  // Estados para la integración con Google Calendar
+  const [isSynced, setIsSynced] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
+  
+  // Verificar si está sincronizado con Google Calendar al cargar
+  useEffect(() => {
+    if (session?.user) {
+      checkSyncStatus();
+    }
+  }, [session]);
+  
+  // Función para verificar el estado de sincronización
+  const checkSyncStatus = async () => {
+    try {
+      const response = await fetch('/api/sync/google-calendar/status');
+      const data = await response.json();
+      
+      if (response.ok) {
+        setIsSynced(data.status === 'connected');
+      } else {
+        console.error('Error al verificar estado de sincronización:', data.error);
+        setIsSynced(false);
+      }
+    } catch (error) {
+      console.error('Error al verificar estado de sincronización:', error);
+      setIsSynced(false);
+    }
+  };
+  
+  // Función para conectar con Google Calendar
+  const handleConnectGoogleCalendar = async () => {
+    if (!session?.user) {
+      alert('Debe iniciar sesión para sincronizar con Google Calendar');
+      return;
+    }
+    
+    try {
+      setIsConnecting(true);
+      
+      // Iniciar flujo OAuth para conectar
+      const result = await signIn('google', { 
+        redirect: true, // Cambiado a true para redireccionar a Google y completar la autenticación
+        callbackUrl: window.location.href 
+      });
+      
+      // No hacemos nada más aquí porque el usuario será redirigido a Google
+      // La verificación del estado se hará cuando regrese después de la autenticación
+    } catch (error: any) {
+      console.error('Error durante la conexión con Google Calendar:', error);
+      setIsConnecting(false); // Solo desactivamos si hay un error
+    }
+  };
+  
+  // Función para desvincular Google Calendar
+  const handleDisconnectGoogleCalendar = async () => {
+    if (!session?.user) return;
+    
+    try {
+      setIsDisconnecting(true);
+      
+      const response = await fetch('/api/sync/google-calendar/desync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al desvincular Google Calendar');
+      }
+      
+      setIsSynced(false);
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    } catch (error: any) {
+      console.error('Error durante la desvinculación:', error);
+    } finally {
+      setIsDisconnecting(false);
+    }
+  };
 
   // The handleSaveAppointment function is no longer directly needed here, as the new modal handles saving internally.
   // We might bring back parts of it if CalendarView needs to react to save events, e.g., for optimistic updates not handled by React Query's default cache invalidation.
@@ -83,22 +229,39 @@ export default function CalendarView() {
   }; */
 
   return (
-    <div className="w-full h-screen p-4 flex flex-col bg-gray-50">
-      <div className="w-full h-full bg-white rounded-lg shadow-sm overflow-hidden flex flex-col">
+    <div className="w-full h-full flex flex-col bg-gray-50">
+      <div className="w-full h-full bg-white overflow-hidden flex flex-col">
         <FullCalendar
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
         initialView="timeGridWeek"
         headerToolbar={{
-          left: 'prev,next today',
+          left: 'dayGridMonth,timeGridWeek,timeGridDay today prev,next',
           center: 'title',
-          right: 'dayGridMonth,timeGridWeek,timeGridDay',
+          right: isSynced ? 'googleCalendarDisconnect' : 'googleCalendar'
         }}
-        customButtons={{}}
+        titleFormat={{ year: 'numeric', month: 'short', day: 'numeric' }}
+        dayHeaderFormat={{ weekday: 'short', day: 'numeric' }}
+        customButtons={{
+          googleCalendar: {
+            text: 'Google Calendar', // Quitamos el emoji ya que usamos CSS para el icono
+            click: function() {
+              if (!isConnecting) {
+                handleConnectGoogleCalendar();
+              }
+            }
+          },
+          googleCalendarDisconnect: {
+            text: 'Desvincular Google',
+            click: function() {
+              if (!isDisconnecting) {
+                handleDisconnectGoogleCalendar();
+              }
+            }
+          }
+        }}
         dayHeaderClassNames={'bg-gray-50 text-gray-700 font-semibold py-2'}
         locale={esLocale}
-        dayHeaderFormat={{
-          weekday: 'short'
-        }}
+        // El formato de cabecera de día ya está definido arriba
         buttonIcons={{
           prev: 'chevron-left',
           next: 'chevron-right',
@@ -118,7 +281,7 @@ export default function CalendarView() {
         }}
         slotLabelInterval="01:00"
         allDaySlot={false}
-        contentHeight={650}
+        contentHeight={700}
         stickyHeaderDates={true}
         scrollTime="07:00:00"
         slotMinTime="07:00:00"
