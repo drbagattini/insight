@@ -165,19 +165,23 @@ export const authOptions: AuthOptions = {
       // Esta lógica de upsert se ejecuta después del login/conexión inicial
       // y también en subsecuentes llamadas a getSession/useSession si el token JWT se usa.
       // Es importante asegurar que el `token.id` (que debe ser el Supabase user ID) esté disponible.
-      if (token.id && token.email) { //Asegurar que tenemos id y email para el upsert
+      // El SupabaseAdapter ya debería haber manejado la creación/actualización del usuario (id, email).
+      // Este bloque es para asegurar que campos adicionales como 'role' estén sincronizados si es necesario.
+      // Reemplazamos el upsert anterior que causaba conflictos de 'email' por un update más específico para 'role'.
+      if (token.id && typeof token.role === 'string') { // Asegurarse que token.id existe y token.role es un string
         try {
-          const { error: upsertError } = await supabaseAdmin
-            .from('users')
-            .upsert(
-              { id: token.id, email: token.email, role: token.role || 'paciente' }, 
-              { onConflict: 'id' }
-            );
-            if (upsertError) {
-                console.error('Error upserting public user in JWT callback:', upsertError);
-            }
+          // console.log(`[JWT Callback] Attempting to update role for user ID: ${token.id} to role: ${token.role}`);
+          const { error: updateError } = await supabaseAdmin
+            .from('users') // Asumiendo que esta es tu tabla pública de usuarios
+            .update({ role: token.role })
+            .eq('id', token.id as string);
+
+          if (updateError) {
+            // Esto podría ocurrir si el usuario (token.id) no se encuentra, o hay un problema de RLS/permisos.
+            console.error(`[JWT Callback] Error updating role for user ID ${token.id}:`, updateError);
+          }
         } catch (err) {
-          console.error('Exception during upsert public user in JWT callback:', err);
+          console.error(`[JWT Callback] Exception during role update for user ID ${token.id}:`, err);
         }
       }
 
