@@ -57,16 +57,16 @@ const mapDateSelectArgToModalData = (selectInfo: DateSelectArg): ModalAppointmen
 
 // Estilos personalizados para el calendario
 const calendarStyles = `
-  /* Nombres de días en las columnas de la vista mensual */
-  .fc-col-header-cell.fc-day-mon .fc-col-header-cell-cushion::before { content: 'Lunes'; }
-  .fc-col-header-cell.fc-day-tue .fc-col-header-cell-cushion::before { content: 'Martes'; }
-  .fc-col-header-cell.fc-day-wed .fc-col-header-cell-cushion::before { content: 'Miércoles'; }
-  .fc-col-header-cell.fc-day-thu .fc-col-header-cell-cushion::before { content: 'Jueves'; }
-  .fc-col-header-cell.fc-day-fri .fc-col-header-cell-cushion::before { content: 'Viernes'; }
-  .fc-col-header-cell.fc-day-sat .fc-col-header-cell-cushion::before { content: 'Sábado'; }
-  .fc-col-header-cell.fc-day-sun .fc-col-header-cell-cushion::before { content: 'Domingo'; }
+  /* Nombres de días en las columnas de la vista mensual - SOLO en vista mensual */
+  .fc-dayGridMonth-view .fc-col-header-cell.fc-day-mon .fc-col-header-cell-cushion::before { content: 'Lunes'; }
+  .fc-dayGridMonth-view .fc-col-header-cell.fc-day-tue .fc-col-header-cell-cushion::before { content: 'Martes'; }
+  .fc-dayGridMonth-view .fc-col-header-cell.fc-day-wed .fc-col-header-cell-cushion::before { content: 'Miércoles'; }
+  .fc-dayGridMonth-view .fc-col-header-cell.fc-day-thu .fc-col-header-cell-cushion::before { content: 'Jueves'; }
+  .fc-dayGridMonth-view .fc-col-header-cell.fc-day-fri .fc-col-header-cell-cushion::before { content: 'Viernes'; }
+  .fc-dayGridMonth-view .fc-col-header-cell.fc-day-sat .fc-col-header-cell-cushion::before { content: 'Sábado'; }
+  .fc-dayGridMonth-view .fc-col-header-cell.fc-day-sun .fc-col-header-cell-cushion::before { content: 'Domingo'; }
   
-  /* Ocultar texto original y mostrar nuestros nombres personalizados */
+  /* Ocultar texto original SOLO en la vista mensual */
   .fc-dayGridMonth-view .fc-col-header-cell-cushion {
     font-size: 0;
     padding: 8px 4px;
@@ -75,10 +75,12 @@ const calendarStyles = `
     display: block;
   }
   
+  /* Mostrar los nombres personalizados SOLO en la vista mensual */
   .fc-dayGridMonth-view .fc-col-header-cell-cushion::before {
     font-size: 0.95rem;
     color: #374151;
     font-weight: 600;
+    display: inline-block;
   }
   
   /* Estilos para los encabezados de día en la vista de mes */
@@ -113,10 +115,14 @@ const calendarStyles = `
     font-size: 14px;
     font-weight: 500;
     letter-spacing: 0.25px;
-    display: flex;
+    /* Usar flexbox para alinear el contenido */
+    display: inline-flex;
     align-items: center;
     justify-content: center; /* Centrar texto horizontalmente */
     text-align: center;     /* Asegurar que el texto esté centrado */
+    /* Garantizar que el texto sea visible y centrado */
+    white-space: nowrap;
+    overflow: hidden;
   }
 
   .fc .fc-button-primary.fc-googleCalendar-button:hover {
@@ -137,10 +143,13 @@ const calendarStyles = `
     font-weight: 500;
     letter-spacing: 0.25px;
     height: 36px;
-    display: flex;
+    /* Mismo estilo que el botón de Google Calendar */
+    display: inline-flex;
     align-items: center;
-    justify-content: center; /* Centrar texto horizontalmente */
-    text-align: center;     /* Asegurar que el texto esté centrado */
+    justify-content: center;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
   }
 
   .fc .fc-button-primary.fc-googleCalendarDisconnect-button:hover {
