@@ -55,8 +55,94 @@ const mapDateSelectArgToModalData = (selectInfo: DateSelectArg): ModalAppointmen
   };
 };
 
-// Estilos personalizados para los botones de Google Calendar (se aplicaru00e1n mediante JavaScript)
-const googleCalendarStyles = `
+// Estilos personalizados para el calendario
+const calendarStyles = `
+  /* Estilos para los encabezados de día en la vista de mes */
+  .fc-dayGridMonth-view .fc-col-header-cell {
+    padding: 6px 0;
+    background-color: #f5f7f9;
+    border-bottom: 1px solid #e1e7eb;
+  }
+  
+  .fc-dayGridMonth-view .fc-col-header-cell-cushion {
+    padding: 8px 4px;
+    width: 100%;
+    text-align: center;
+    display: block;
+    color: #374151;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  
+  /* Estilo para los días de la semana */
+  .fc-weekday-only {
+    display: block;
+    text-align: center;
+    width: 100%;
+    padding: 0 2px;
+  }
+  
+  /* Eliminar el borde gris en las celdas vacías */
+  .fc-dayGridMonth-view .fc-day-other {
+    background-color: #f9fafc;
+  }
+  
+  /* Estilos para los botones de Google Calendar */
+  .fc .fc-button-primary.fc-googleCalendar-button {
+    background-color: #ffffff;
+    border-color: #dadce0;
+    color: #3c4043;
+    font-family: 'Google Sans', Roboto, Arial, sans-serif;
+    box-shadow: 0 1px 2px rgba(60, 64, 67, 0.3);
+    height: 36px;
+    padding: 0 16px;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.25px;
+    display: flex;
+    align-items: center;
+  }
+
+  .fc .fc-button-primary.fc-googleCalendar-button:hover {
+    background-color: #f6f6f6;
+    border-color: #dadce0;
+    color: #202124;
+    box-shadow: 0 1px 3px rgba(60, 64, 67, 0.4);
+  }
+
+  .fc .fc-button-primary.fc-googleCalendarDisconnect-button {
+    background-color: #fce8e8;
+    border-color: #fadede;
+    color: #d93025;
+    font-family: 'Google Sans', Roboto, Arial, sans-serif;
+    box-shadow: 0 1px 2px rgba(60, 64, 67, 0.1);
+    padding: 0 16px;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.25px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+  }
+
+  .fc .fc-button-primary.fc-googleCalendarDisconnect-button:hover {
+    background-color: #fad9d9;
+    color: #d93025;
+  }
+  
+  /* Ocultar el número del día en la vista de mes */
+  .fc-dayGridMonth-view .fc-col-header-cell-cushion {
+    display: inline-block;
+  }
+  
+  .fc-dayGridMonth-view .fc-col-header-cell-cushion::after {
+    content: attr(data-short-weekday);
+  }
+  
+  .fc-dayGridMonth-view .fc-col-header-cell-cushion span {
+    display: none;
+  }
+  
   .fc .fc-button-primary.fc-googleCalendar-button {
     background-color: #ffffff;
     border-color: #dadce0;
@@ -159,16 +245,15 @@ export default function CalendarView() {
   const { updateAppointment } = useAppointmentMutations();
   const { data: session } = useSession();
   
-  // Au00f1adir estilos CSS personalizado al cargar el componente
+  // Aplicar estilos personalizados para el calendario y botones
   useEffect(() => {
-    // Au00f1adir estilos para los botones de Google Calendar
+    // Aplicar estilos personalizados para el calendario y botones
     const styleElement = document.createElement('style');
-    styleElement.textContent = googleCalendarStyles;
+    styleElement.innerHTML = calendarStyles;
     document.head.appendChild(styleElement);
-    
-    // Limpiar al desmontar
+
     return () => {
-      styleElement.remove();
+      document.head.removeChild(styleElement);
     };
   }, []);
   
@@ -285,7 +370,24 @@ export default function CalendarView() {
           right: isSynced ? 'googleCalendarDisconnect' : 'googleCalendar'
         }}
         titleFormat={{ year: 'numeric', month: 'short', day: 'numeric' }}
-        dayHeaderFormat={{ weekday: 'short', day: 'numeric' }}
+        // Formato para la cabecera de días
+        // Personalizar el contenido de las cabeceras de día según la vista
+        dayHeaderContent={({date, view}) => {
+          // Para la vista de mes, mostrar el nombre completo del día (lunes, martes, etc.)
+          if (view.type === 'dayGridMonth') {
+            const weekday = date.toLocaleDateString('es-ES', {weekday: 'long'});
+            // Primera letra en mayúscula, resto en minúsculas
+            const formattedWeekday = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+            return <span className="fc-weekday-only">{formattedWeekday}</span>;
+          }
+          // Para otras vistas (semana, día) mantiene el formato por defecto
+          return (
+            <>
+              {date.toLocaleDateString('es-ES', {weekday: 'short'})} {date.getDate()}
+            </>
+          );
+        }}
+        // Se elimina dayHeaderFormat para evitar conflicto con dayHeaderContent
         dayMaxEvents={3}
         dayMaxEventRows={3}
         views={{
