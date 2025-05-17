@@ -372,18 +372,23 @@ export default function CalendarView() {
         titleFormat={{ year: 'numeric', month: 'short', day: 'numeric' }}
         // Formato para la cabecera de días
         // Personalizar el contenido de las cabeceras de día según la vista
-        dayHeaderContent={({date, view}) => {
+        dayHeaderContent={(args) => {
+          // Asegurarse de tener un objeto date válido para trabajar
+          if (!args.date) return null;
+          
           // Para la vista de mes, mostrar el nombre completo del día (lunes, martes, etc.)
-          if (view.type === 'dayGridMonth') {
-            const weekday = date.toLocaleDateString('es-ES', {weekday: 'long'});
-            // Primera letra en mayúscula, resto en minúsculas
-            const formattedWeekday = weekday.charAt(0).toUpperCase() + weekday.slice(1);
-            return <span className="fc-weekday-only">{formattedWeekday}</span>;
+          if (args.view.type === 'dayGridMonth') {
+            // Obtener el nombre del día en español (lunes, martes, etc.)
+            const días = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+            const nombreDía = días[args.date.getDay()];
+            return <span className="fc-weekday-only">{nombreDía}</span>;
           }
-          // Para otras vistas (semana, día) mantiene el formato por defecto
+          
+          // Para las vistas de semana y día, mostrar el nombre corto y el número
+          const nombreCorto = new Date(args.date).toLocaleDateString('es-ES', {weekday: 'short'});
           return (
             <>
-              {date.toLocaleDateString('es-ES', {weekday: 'short'})} {date.getDate()}
+              {nombreCorto} {args.date.getDate()}
             </>
           );
         }}
