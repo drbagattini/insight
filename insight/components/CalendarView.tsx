@@ -419,6 +419,7 @@ export default function CalendarView() {
         }}
         dayHeaderClassNames={'bg-gray-50 text-gray-700 font-semibold py-2'}
         locale={esLocale}
+        firstDay={1} // 1 = Lunes como primer día de la semana
         // El formato de cabecera de día ya está definido arriba
         buttonIcons={{
           prev: 'chevron-left',
