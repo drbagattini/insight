@@ -104,52 +104,71 @@ const calendarStyles = `
   }
   
   /* Estilos para los botones de Google Calendar */
-  .fc .fc-button-primary.fc-googleCalendar-button {
+  .fc .fc-button-primary.fc-googleCalendar-button,
+  .fc .fc-button-primary.fc-googleCalendarDisconnect-button {
+    /* Estilos comunes */
     background-color: #ffffff;
     border-color: #dadce0;
-    color: #3c4043;
+    color: #3c4043; /* Color por defecto */
     font-family: 'Google Sans', Roboto, Arial, sans-serif;
     box-shadow: 0 1px 2px rgba(60, 64, 67, 0.3);
     height: 36px;
-    padding: 0 16px;
+    width: auto;
+    min-width: 150px; /* Ancho mínimo para garantizar espacio suficiente */
+    padding: 0 16px 0 14px;
     font-size: 14px;
     font-weight: 500;
     letter-spacing: 0.25px;
-    /* Usar flexbox para alinear el contenido */
-    display: inline-flex;
+    position: relative;
+    
+    /* Configuración para garantizar el centrado del texto */
+    display: flex;
     align-items: center;
-    justify-content: center; /* Centrar texto horizontalmente */
-    text-align: center;     /* Asegurar que el texto esté centrado */
-    /* Garantizar que el texto sea visible y centrado */
+    justify-content: center;
+    text-align: center;
+    flex-direction: row;
     white-space: nowrap;
-    overflow: hidden;
+  }
+  
+  /* Estilos específicos para el botón de desvinculación */
+  .fc .fc-button-primary.fc-googleCalendarDisconnect-button {
+    background-color: #fce8e8;
+    border-color: #fadede;
+    color: #d93025;
+    box-shadow: 0 1px 2px rgba(60, 64, 67, 0.1);
+  }
+  
+  /* El icono de Google Calendar en el botón debe estar posicionado al inicio */
+  .fc .fc-button-primary.fc-googleCalendar-button::before {
+    content: '';
+    flex-shrink: 0; /* Evitar que el icono se encoja */
+    width: 18px;
+    height: 18px;
+    margin-right: 8px; /* Espacio entre el icono y el texto */
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M20.0001 6V16C20.0001 17.1 19.1001 18 18.0001 18H6.00006C4.90006 18 4.00006 17.1 4.00006 16V6C4.00006 4.9 4.90006 4 6.00006 4H18.0001C19.1001 4 20.0001 4.9 20.0001 6ZM18.0001 6H6.00006V16H18.0001V6ZM8.00006 10C8.00006 8.9 8.90006 8 10.0001 8C11.1001 8 12.0001 8.9 12.0001 10C12.0001 11.1 11.1001 12 10.0001 12C8.90006 12 8.00006 11.1 8.00006 10ZM10.0001 14C8.00006 14 6.00006 15 6.00006 17H14.0001C14.0001 15 12.0001 14 10.0001 14ZM16.0001 10H18.0001V12H16.0001V10ZM16.0001 14H18.0001V16H16.0001V14Z" fill="currentColor"/></svg>');
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+  
+  /* Ajuste específico para el botón de desvinculación para centrar texto */
+  .fc .fc-button-primary.fc-googleCalendarDisconnect-button::before {
+    display: none; /* Eliminar el icono heredado */
   }
 
+  /* Agregar un espacio después del texto para balancear visualmente con el icono */
+  .fc .fc-button-primary.fc-googleCalendar-button::after {
+    content: '';
+    width: 18px; /* Mismo ancho que el icono para mantener balance */
+    display: inline-block;
+    margin-left: 0; /* Sin margen para compensar por el padding del botón */
+    opacity: 0; /* Invisible, solo para balance visual */
+  }
+  
   .fc .fc-button-primary.fc-googleCalendar-button:hover {
     background-color: #f6f6f6;
     border-color: #dadce0;
     color: #202124;
     box-shadow: 0 1px 3px rgba(60, 64, 67, 0.4);
-  }
-
-  .fc .fc-button-primary.fc-googleCalendarDisconnect-button {
-    background-color: #fce8e8;
-    border-color: #fadede;
-    color: #d93025;
-    font-family: 'Google Sans', Roboto, Arial, sans-serif;
-    box-shadow: 0 1px 2px rgba(60, 64, 67, 0.1);
-    padding: 0 16px;
-    font-size: 14px;
-    font-weight: 500;
-    letter-spacing: 0.25px;
-    height: 36px;
-    /* Mismo estilo que el botón de Google Calendar */
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    white-space: nowrap;
-    overflow: hidden;
   }
 
   .fc .fc-button-primary.fc-googleCalendarDisconnect-button:hover {
