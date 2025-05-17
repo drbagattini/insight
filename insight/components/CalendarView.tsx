@@ -57,21 +57,35 @@ const mapDateSelectArgToModalData = (selectInfo: DateSelectArg): ModalAppointmen
 
 // Estilos personalizados para el calendario
 const calendarStyles = `
-  /* Estilos para los encabezados de día en la vista de mes */
-  .fc-dayGridMonth-view .fc-col-header-cell {
-    padding: 6px 0;
-    background-color: #f5f7f9;
-    border-bottom: 1px solid #e1e7eb;
-  }
+  /* Nombres de días en las columnas de la vista mensual */
+  .fc-col-header-cell.fc-day-mon .fc-col-header-cell-cushion::before { content: 'Lunes'; }
+  .fc-col-header-cell.fc-day-tue .fc-col-header-cell-cushion::before { content: 'Martes'; }
+  .fc-col-header-cell.fc-day-wed .fc-col-header-cell-cushion::before { content: 'Miércoles'; }
+  .fc-col-header-cell.fc-day-thu .fc-col-header-cell-cushion::before { content: 'Jueves'; }
+  .fc-col-header-cell.fc-day-fri .fc-col-header-cell-cushion::before { content: 'Viernes'; }
+  .fc-col-header-cell.fc-day-sat .fc-col-header-cell-cushion::before { content: 'Sábado'; }
+  .fc-col-header-cell.fc-day-sun .fc-col-header-cell-cushion::before { content: 'Domingo'; }
   
+  /* Ocultar texto original y mostrar nuestros nombres personalizados */
   .fc-dayGridMonth-view .fc-col-header-cell-cushion {
+    font-size: 0;
     padding: 8px 4px;
     width: 100%;
     text-align: center;
     display: block;
+  }
+  
+  .fc-dayGridMonth-view .fc-col-header-cell-cushion::before {
+    font-size: 0.95rem;
     color: #374151;
-    font-size: 0.85rem;
     font-weight: 600;
+  }
+  
+  /* Estilos para los encabezados de día en la vista de mes */
+  .fc-dayGridMonth-view .fc-col-header-cell {
+    padding: 8px 0;
+    background-color: #f5f7f9;
+    border-bottom: 1px solid #e1e7eb;
   }
   
   /* Estilo para los días de la semana */
@@ -101,6 +115,8 @@ const calendarStyles = `
     letter-spacing: 0.25px;
     display: flex;
     align-items: center;
+    justify-content: center; /* Centrar texto horizontalmente */
+    text-align: center;     /* Asegurar que el texto esté centrado */
   }
 
   .fc .fc-button-primary.fc-googleCalendar-button:hover {
@@ -123,6 +139,8 @@ const calendarStyles = `
     height: 36px;
     display: flex;
     align-items: center;
+    justify-content: center; /* Centrar texto horizontalmente */
+    text-align: center;     /* Asegurar que el texto esté centrado */
   }
 
   .fc .fc-button-primary.fc-googleCalendarDisconnect-button:hover {
