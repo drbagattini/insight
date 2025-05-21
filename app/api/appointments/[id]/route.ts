@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/lib/auth';
 import { createClient } from '@supabase/supabase-js';
@@ -21,16 +21,15 @@ const updateAppointmentSchema = z.object({
 
 // GET a single appointment
 export async function GET(
-  request: Request,
+  request: NextRequest,
   context: { params: { id: string } }
 ) {
-  const { params } = context;
+  const id = context.params.id;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { id } = params;
   if (!id) {
     return NextResponse.json({ error: 'Missing appointment ID' }, { status: 400 });
   }
@@ -55,16 +54,15 @@ export async function GET(
 
 // PATCH/PUT: update an appointment
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   context: { params: { id: string } }
 ) {
-  const { params } = context;
+  const id = context.params.id;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { id } = params;
   if (!id) {
     return NextResponse.json({ error: 'Missing appointment ID' }, { status: 400 });
   }
@@ -98,18 +96,16 @@ export async function PATCH(
 
 // DELETE: remove an appointment
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   context: { params: { id: string } }
 ) {
-  const { params } = context;
+  const id = context.params.id;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !session.accessToken) {
     console.error('DELETE /api/appointments/[id]: Unauthorized or missing access token. Session:', session);
     return NextResponse.json({ error: 'Unauthorized or missing access token for Google Calendar sync.' }, { status: 401 });
   }
   const accessToken = session.accessToken as string;
-
-  const { id } = params;
   if (!id) {
     return NextResponse.json({ error: 'Missing appointment ID' }, { status: 400 });
   }
