@@ -22,8 +22,9 @@ const updateAppointmentSchema = z.object({
 // GET a single appointment
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
+  const { params } = context;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -55,8 +56,9 @@ export async function GET(
 // PATCH/PUT: update an appointment
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
+  const { params } = context;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -97,8 +99,9 @@ export async function PATCH(
 // DELETE: remove an appointment
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
+  const { params } = context;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !session.accessToken) {
     console.error('DELETE /api/appointments/[id]: Unauthorized or missing access token. Session:', session);
