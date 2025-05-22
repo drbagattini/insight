@@ -81,13 +81,20 @@ export default function RegisterForm() {
           } else {
             errorMessage = createError; // Usar el mensaje de error string directamente
           }
-        } else if (typeof createError === 'object' && createError !== null && createError instanceof Error) {
-          // Si es un objeto Error, verificar su mensaje
-          if (createError.message.includes('Email ya registrado') || createError.message.includes('duplicate key') || createError.message.includes('already registered')) {
-            errorMessage = 'Email ya registrado';
-          } else {
-            errorMessage = createError.message;
+        } else if (typeof createError === 'object' && createError !== null) {
+          // En este punto, TypeScript sabe que createError es un objeto no nulo.
+          if (createError instanceof Error) {
+            // Ahora, comprobamos si es una instancia de Error.
+            // Si es un objeto Error, verificar su mensaje
+            if (createError.message.includes('Email ya registrado') || createError.message.includes('duplicate key') || createError.message.includes('already registered')) {
+              errorMessage = 'Email ya registrado';
+            } else {
+              errorMessage = createError.message;
+            }
           }
+          // Nota: Si createError fuera un objeto pero no una instancia de Error,
+          // no se manejaría aquí y errorMessage conservaría su valor anterior.
+          // Esto es consistente con la lógica original.
         }
         setError(errorMessage);
         return;
