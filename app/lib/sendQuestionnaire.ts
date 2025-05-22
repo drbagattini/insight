@@ -5,7 +5,7 @@ export const sendQuestionnaireWhatsApp = async (phone: string, link: string, lan
     to: phone,
     templateName: 'insight',
     languageCode: language,
-    parameters: [
+    bodyParameters: [
       {
         type: 'text',
         text: link,

@@ -15,6 +15,6 @@ export async function sendQuestionnaireWhatsApp(
     to: phone,
     templateName: process.env.WHATSAPP_TEMPLATE_NAME || 'insight',
     languageCode: language,
-    parameters: parametersForTemplate,
+    bodyParameters: parametersForTemplate,
   });
 }
