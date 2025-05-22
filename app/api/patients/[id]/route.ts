@@ -1,18 +1,17 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from '@/app/lib/supabaseAdmin';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/lib/auth';
 
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
 
-  const { id } = params;
+  const id = request.nextUrl.pathname.split('/').pop();
   if (!id) {
     return NextResponse.json({ error: 'Patient ID no proporcionado' }, { status: 400 });
   }
@@ -36,10 +35,9 @@ export async function GET(
 }
 
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest
 ) {
-  const { id } = params;
+  const id = request.nextUrl.pathname.split('/').pop();
   if (!id) {
     return NextResponse.json({ error: 'Patient ID no proporcionado' }, { status: 400 });
   }
