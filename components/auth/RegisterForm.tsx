@@ -82,19 +82,21 @@ export default function RegisterForm() {
             errorMessage = createError; // Usar el mensaje de error string directamente
           }
         } else if (typeof createError === 'object' && createError !== null) {
-          // En este punto, TypeScript sabe que createError es un objeto no nulo.
-          if (createError instanceof Error) {
-            // Ahora, comprobamos si es una instancia de Error.
-            // Si es un objeto Error, verificar su mensaje
-            if (createError.message.includes('Email ya registrado') || createError.message.includes('duplicate key') || createError.message.includes('already registered')) {
+          // Es un objeto y no es nulo. Verificamos si tiene la propiedad 'message'.
+          // Esto es "duck typing" para tratarlo como un objeto de error.
+          if ('message' in createError && typeof (createError as { message?: unknown }).message === 'string') {
+            // Tiene una propiedad 'message' de tipo string, lo tratamos como un error.
+            const errorWithMessage = createError as { message: string }; // Ahora es seguro hacer este cast
+            if (errorWithMessage.message.includes('Email ya registrado') || errorWithMessage.message.includes('duplicate key') || errorWithMessage.message.includes('already registered')) {
               errorMessage = 'Email ya registrado';
             } else {
-              errorMessage = createError.message;
+              errorMessage = errorWithMessage.message;
             }
           }
-          // Nota: Si createError fuera un objeto pero no una instancia de Error,
-          // no se manejaría aquí y errorMessage conservaría su valor anterior.
-          // Esto es consistente con la lógica original.
+          // Si es un objeto pero no tiene una propiedad 'message' de tipo string (es decir, no parece un Error),
+          // errorMessage conservará el valor por defecto asignado antes de este bloque.
+          // Este comportamiento es consistente con la lógica original donde un objeto
+          // que no era `instanceof Error` no actualizaba errorMessage en esta ruta.
         }
         setError(errorMessage);
         return;
