@@ -252,7 +252,7 @@ export default function PatientEvolutionPage() {
         borderDash: [5,5],
         pointRadius: 0,
         fill: false,
-        borderCapStyle: 'butt',
+        borderCapStyle: 'butt' as 'butt',
         borderJoinStyle: 'miter',
         order: 0,
       },
