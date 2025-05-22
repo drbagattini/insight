@@ -20,7 +20,7 @@ const updateAppointmentSchema = z.object({
 });
 
 // GET a single appointment
-export async function GET(request: NextRequest, params: { id: string }) {
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const id = params.id;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest, params: { id: string }) {
 }
 
 // PATCH/PUT: update an appointment
-export async function PATCH(request: NextRequest, params: { id: string }) {
+export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   const id = params.id;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
@@ -89,7 +89,7 @@ export async function PATCH(request: NextRequest, params: { id: string }) {
 }
 
 // DELETE: remove an appointment
-export async function DELETE(request: NextRequest, params: { id: string }) {
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   const id = params.id;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !session.accessToken) {
