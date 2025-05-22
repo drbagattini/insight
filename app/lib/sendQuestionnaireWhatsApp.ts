@@ -1,4 +1,4 @@
-import { sendWhatsAppTemplate, WhatsAppParameter } from './whatsapp';
+import { sendWhatsAppTemplate, WhatsAppParameter, WhatsAppButtonParameter } from './whatsapp';
 
 export async function sendQuestionnaireWhatsApp(
   phone: string,
