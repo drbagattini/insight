@@ -20,8 +20,9 @@ const updateAppointmentSchema = z.object({
 });
 
 // GET a single appointment
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  const id = params.id;
+export async function GET(request: NextRequest) {
+  // Extract ID from path
+  const id = request.nextUrl.pathname.split('/').pop();
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -50,8 +51,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 // PATCH/PUT: update an appointment
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
-  const id = params.id;
+export async function PATCH(request: NextRequest) {
+  // Extract ID from path
+  const id = request.nextUrl.pathname.split('/').pop();
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -89,8 +91,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 }
 
 // DELETE: remove an appointment
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-  const id = params.id;
+export async function DELETE(request: NextRequest) {
+  // Extract ID from path
+  const id = request.nextUrl.pathname.split('/').pop();
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || !session.accessToken) {
     console.error('DELETE /api/appointments/[id]: Unauthorized or missing access token. Session:', session);
