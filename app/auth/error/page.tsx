@@ -1,7 +1,9 @@
 import Link from 'next/link';
 
-export default function ErrorPage({ searchParams }: { searchParams: { error?: string } }) {
-  const error = searchParams.error;
+export const dynamic = 'force-dynamic';
+
+export default async function ErrorPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  const { error } = await searchParams;
 
   const getErrorMessage = () => {
     switch (error) {
