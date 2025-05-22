@@ -5,7 +5,7 @@ import { UserRoleType } from '@/types/roles';
 import { authOptions } from '@/app/lib/auth';
 
 declare module 'next-auth' {
-  interface User extends NextAuthUserBase {
+  interface User {
     id: string; // Sobrescribe o asegura que id siempre es string
     role?: UserRoleType;
     // name, email, image son opcionales y vienen de NextAuthUserBase
