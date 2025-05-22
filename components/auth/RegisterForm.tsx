@@ -81,7 +81,7 @@ export default function RegisterForm() {
           } else {
             errorMessage = createError; // Usar el mensaje de error string directamente
           }
-        } else if (createError instanceof Error) {
+        } else if (typeof createError === 'object' && createError !== null && createError instanceof Error) {
           // Si es un objeto Error, verificar su mensaje
           if (createError.message.includes('Email ya registrado') || createError.message.includes('duplicate key') || createError.message.includes('already registered')) {
             errorMessage = 'Email ya registrado';
