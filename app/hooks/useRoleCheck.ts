@@ -1,6 +1,6 @@
 "use client";
 import { useSession } from "next-auth/react";
-import { UserRoleType } from "@/types/roles";
+import { UserRoleType, UserRole } from "@/types/roles";
 
 export function useRoleCheck() {
   const { data: session } = useSession();
@@ -10,8 +10,8 @@ export function useRoleCheck() {
     hasRole: (requiredRole: UserRoleType) => userRole === requiredRole,
     hasAnyRole: (requiredRoles: UserRoleType[]) => 
       userRole ? requiredRoles.includes(userRole) : false,
-    isAdmin: () => userRole === "ADMIN",
-    isPsychologist: () => userRole === "PSYCHOLOGIST",
+    isAdmin: () => userRole === UserRole.ADMIN,
+    isPsychologist: () => userRole === UserRole.PSICOLOGO,
     currentRole: userRole,
   };
 }
