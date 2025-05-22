@@ -28,7 +28,7 @@ const getIdFromPath = (request: NextRequest) => {
 // GET a single appointment
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   const session = await getServerSession(authOptions);
   
@@ -36,7 +36,7 @@ export async function GET(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const id = params.id;
+  const id = context.params.id;
   if (!id) {
     return NextResponse.json({ error: 'Missing appointment ID' }, { status: 400 });
   }
