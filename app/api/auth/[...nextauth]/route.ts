@@ -19,7 +19,7 @@ declare module 'next-auth' {
 }
 
 declare module 'next-auth/jwt' {
-  interface JWT extends NextAuthJWTBase {
+  interface JWT {
     id: string; // ID del usuario (de Supabase)
     role?: UserRoleType;
     name?: string | null;
