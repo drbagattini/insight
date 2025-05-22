@@ -19,11 +19,17 @@ const updateAppointmentSchema = z.object({
   metadata: z.record(z.unknown()).optional(),
 });
 
+// Helper function to extract ID from path
+const getIdFromPath = (request: NextRequest) => {
+  const pathParts = request.nextUrl.pathname.split('/');
+  return pathParts[pathParts.length - 1];
+};
+
 // GET a single appointment
 export async function GET(request: NextRequest) {
-  // Extract ID from path
-  const id = request.nextUrl.pathname.split('/').pop();
+  const id = getIdFromPath(request);
   const session = await getServerSession(authOptions);
+  
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -52,9 +58,9 @@ export async function GET(request: NextRequest) {
 
 // PATCH/PUT: update an appointment
 export async function PATCH(request: NextRequest) {
-  // Extract ID from path
-  const id = request.nextUrl.pathname.split('/').pop();
+  const id = getIdFromPath(request);
   const session = await getServerSession(authOptions);
+  
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -92,9 +98,9 @@ export async function PATCH(request: NextRequest) {
 
 // DELETE: remove an appointment
 export async function DELETE(request: NextRequest) {
-  // Extract ID from path
-  const id = request.nextUrl.pathname.split('/').pop();
+  const id = getIdFromPath(request);
   const session = await getServerSession(authOptions);
+  
   if (!session?.user?.id || !session.accessToken) {
     console.error('DELETE /api/appointments/[id]: Unauthorized or missing access token. Session:', session);
     return NextResponse.json({ error: 'Unauthorized or missing access token for Google Calendar sync.' }, { status: 401 });
