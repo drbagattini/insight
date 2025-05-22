@@ -14,7 +14,7 @@ export async function sendQuestionnaireWhatsApp(
   await sendWhatsAppTemplate({
     to: phone,
     templateName: process.env.WHATSAPP_TEMPLATE_NAME || 'insight',
-    language,
+    languageCode: language,
     parameters: parametersForTemplate,
   });
 }
