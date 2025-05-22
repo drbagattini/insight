@@ -11,7 +11,7 @@ declare module 'next-auth' {
     // name, email, image son opcionales y vienen de NextAuthUserBase
   }
 
-  interface Session extends NextAuthSessionBase {
+  interface Session {
     user: User; // Usa nuestra interfaz User extendida
     accessToken?: string;
     error?: string; // Para errores (ej. de refresco de token)
