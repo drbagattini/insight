@@ -1,12 +1,7 @@
-'use client';
-export const dynamic = 'force-dynamic';
-
-import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-export default function ErrorPage() {
-  const searchParams = useSearchParams();
-  const error = searchParams?.get('error');
+export default function ErrorPage({ searchParams }: { searchParams: { error?: string } }) {
+  const error = searchParams.error;
 
   const getErrorMessage = () => {
     switch (error) {
