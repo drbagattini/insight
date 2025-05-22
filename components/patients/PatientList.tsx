@@ -7,9 +7,10 @@ interface PatientListProps {
   onEdit: (patient: Patient) => void;
   onDelete: (patient: Patient) => void;
   onViewEvolution: (patient: Patient) => void;
+  onSendQuestionnaire: (patient: Patient) => void; // Added new prop
 }
 
-export default function PatientList({ onEdit, onDelete, onViewEvolution }: PatientListProps) {
+export default function PatientList({ onEdit, onDelete, onViewEvolution, onSendQuestionnaire }: PatientListProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
   const { data: patients = [], isLoading, error } = useQuery<Patient[]>({
@@ -77,6 +78,12 @@ export default function PatientList({ onEdit, onDelete, onViewEvolution }: Patie
                     className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600"
                   >
                     Ver Evolución
+                  </button>
+                  <button
+                    onClick={() => onSendQuestionnaire(patient)} // Added this button
+                    className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+                  >
+                    Enviar Cuestionario
                   </button>
                   <button
                     onClick={() => onEdit(patient)}
