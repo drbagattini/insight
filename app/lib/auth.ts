@@ -203,50 +203,55 @@ export const authOptions: AuthOptions = {
   ],
   callbacks: {
     async signIn({ user, account, profile }) {
-      console.log('[signIn] Inicio del proceso signIn', { provider: account?.provider, email: user.email, userId: user.id });
-      
-      // Buscar si ya existe un usuario con este email en public.users (tanto para Google como para Credentials)
+      console.log('=== INICIO SIGNIN ===');
+      console.log('Usuario entrante:', { 
+        email: user.email, 
+        id: user.id, 
+        provider: account?.provider,
+        name: user.name
+      });
+
       if (user.email) {
-        const { data: existingUser, error } = await supabaseAdmin
-          .from('users')
-          .select('id, email')
-          .eq('email', user.email)
-          .single();
-        
-        if (error) {
-          // Si hay un error pero no es porque no se encontró el usuario, loggearlo
-          if (error.code !== 'PGRST116') { // PGRST116 es 'No se encontró el registro'
-            console.error(`[signIn] Error buscando usuario existente con email ${user.email}:`, error);
-          }
-          // Si no hay usuario existente, permitir el flujo normal
-          console.log(`[signIn] No se encontró usuario existente con email ${user.email}. Continuando flujo normal.`);
-          return true;
-        }
-        
-        if (existingUser) {
-          console.log(`[signIn] Usuario existente encontrado para ${user.email}. ID existente: ${existingUser.id}, ID actual: ${user.id}`);
-          
-          // Si los IDs son diferentes, usar el existente para mantener consistencia
-          if (existingUser.id !== user.id) {
-            console.log(`[signIn] Reemplazando ID ${user.id} con ID existente ${existingUser.id}`);
-            user.id = existingUser.id;
+        console.log('Buscando usuario existente con email:', user.email);
+        try {
+          // Buscar en la tabla public.users
+          const { data: existingUser, error } = await supabaseAdmin
+            .from('users')
+            .select('id, email, first_name, last_name')
+            .eq('email', user.email)
+            .single();
+
+          if (error && error.code !== 'PGRST116') { // PGRST116 es 'No se encontró el registro'
+            console.error('Error buscando usuario existente:', error);
+          } else if (existingUser) {
+            console.log('Usuario existente encontrado en public.users:', existingUser);
+            console.log('Comparando IDs - Entrante:', user.id, 'vs Existente:', existingUser.id);
             
-            // Si es Google, tenemos que actualizar también en auth.users
-            if (account?.provider === 'google') {
-              try {
-                // Intentar una actualización en auth.accounts para vincular la cuenta de Google al usuario existente
-                console.log(`[signIn] Intentando vincular cuenta de Google al usuario existente ${existingUser.id}`);
-                // Nota: Esta es una operación avanzada que podría requerir ajustes según tu esquema
-              } catch (e) {
-                console.error('[signIn] Error al intentar vincular cuenta:', e);
+            if (existingUser.id !== user.id) {
+              console.log('Reemplazando ID para mantener consistencia');
+              user.id = existingUser.id;
+              
+              // Si es Google, intentamos actualizar la cuenta
+              if (account?.provider === 'google') {
+                try {
+                  console.log('Actualizando cuenta de Google para usar el ID existente');
+                  // Aquí podríamos actualizar la cuenta en auth.users si fuera necesario
+                } catch (e) {
+                  console.error('Error al actualizar cuenta de Google:', e);
+                }
               }
+            } else {
+              console.log('Los IDs ya coinciden, no se necesita actualización');
             }
           } else {
-            console.log(`[signIn] El ID actual ya coincide con el existente: ${user.id}`);
+            console.log('No se encontró usuario existente con este email');
           }
+        } catch (e) {
+          console.error('Error inesperado en signIn:', e);
         }
       }
-      
+
+      console.log('=== FIN SIGNIN ===');
       return true;
     },
     async jwt({ token, user, account }: { token: JWT; user?: NextAuthUser | undefined; account?: Account | null }): Promise<JWT> {
