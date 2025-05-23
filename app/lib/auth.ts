@@ -136,7 +136,7 @@ export const authOptions: AuthOptions = {
           
           const { data: publicUser, error: publicUserError } = await supabaseAdmin
             .from('users') // Asegúrate que 'users' es el nombre correcto de tu tabla pública
-            .select('id, name, email, role') // Selecciona los campos necesarios
+            .select('id, nombre_usuario, email, role') // Corregido: name -> nombre_usuario
             .eq('email', authData.user.email) // Busca por el email del usuario autenticado
             .single(); // Esperamos un solo usuario
 
@@ -162,10 +162,11 @@ export const authOptions: AuthOptions = {
 
           // 3. Devolver el objeto usuario para NextAuth usando los datos de la tabla pública `users`
           return {
-            id: publicUser.id, // ID de la tabla public.users
+            id: publicUser.id, // Este es el ID de la tabla public.users
+            name: publicUser.nombre_usuario, // Corregido: mapear nombre_usuario a name
             email: publicUser.email,
-            name: publicUser.name,
-            role: (publicUser.role || 'paciente') as UserRoleType
+            role: publicUser.role, // Incluimos el rol
+            // Otros campos que NextAuth o tu aplicación puedan necesitar del usuario
           };
 
         } catch (err: any) {
