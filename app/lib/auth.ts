@@ -19,13 +19,10 @@ console.log(`- VERCEL_ENV: ${process.env.VERCEL_ENV || 'NO CONFIGURADO'}`);
 // Definir una URL base consistente para todos los entornos
 const BASE_URL = 'https://insight-roan.vercel.app';
 
-// PASO 1: Forzar NEXTAUTH_URL para todos los despliegues
-process.env.NEXTAUTH_URL = BASE_URL;
-console.log(`- NEXTAUTH_URL forzado a: ${process.env.NEXTAUTH_URL}`);
-
-// Logging adicional para depuración
-console.log(`- URL de callback para Google espera ser: ${BASE_URL}/api/auth/callback/google`);
-console.log('- ASEGÚRATE de que esta URL exacta esté agregada en Google Cloud Console')
+// Los logs de variables de entorno se mantienen para depuración.
+// NEXTAUTH_URL debe ser configurado directamente en Vercel Project Settings.
+console.log(`- URL de callback para Google (derivada de NEXTAUTH_URL) debería ser: ${process.env.NEXTAUTH_URL}/api/auth/callback/google`);
+console.log('- ASEGÚRATE de que esta URL exacta esté agregada en Google Cloud Console y que NEXTAUTH_URL esté correctamente configurado en Vercel GUI.')
 
 const supabase = createClient(supabaseUrl, anonKey);
 const supabaseAdmin = createClient(supabaseUrl, serviceKey, {
@@ -205,6 +202,35 @@ export const authOptions: AuthOptions = {
     })
   ],
   callbacks: {
+    async signIn({ user, account, profile }) {
+      // Solo intervenir en el flujo de OAuth (Google)
+      if (account?.provider === 'google') {
+        // Buscar si ya existe un usuario con este email en public.users
+        const { data: existingUser, error } = await supabaseAdmin
+          .from('users')
+          .select('id')
+          .eq('email', user.email)
+          .single();
+        
+        if (error) {
+          // Si hay un error pero no es porque no se encontró el usuario, loggearlo
+          if (error.code !== 'PGRST116') { // PGRST116 es 'No se encontró el registro'
+            console.error(`[signIn] Error buscando usuario existente con email ${user.email}:`, error);
+          }
+          // Si no existe o hay error, permitir el flujo normal
+          return true;
+        }
+        
+        if (existingUser) {
+          console.log(`[signIn] Usuario existente encontrado para ${user.email}. Usando ID existente: ${existingUser.id} en lugar de crear uno nuevo.`);
+          // Reemplazar el ID generado por el adaptador con el ID existente
+          // Esto prevendrá la creación de un nuevo registro en public.users
+          user.id = existingUser.id;
+        }
+      }
+      
+      return true;
+    },
     async jwt({ token, user, account }: { token: JWT; user?: NextAuthUser | undefined; account?: Account | null }): Promise<JWT> {
       // Al iniciar sesión o conectar una cuenta por primera vez
       if (account && user) {
