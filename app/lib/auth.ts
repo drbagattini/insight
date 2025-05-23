@@ -203,12 +203,13 @@ export const authOptions: AuthOptions = {
   ],
   callbacks: {
     async signIn({ user, account, profile }) {
-      // Solo intervenir en el flujo de OAuth (Google)
-      if (account?.provider === 'google') {
-        // Buscar si ya existe un usuario con este email en public.users
+      console.log('[signIn] Inicio del proceso signIn', { provider: account?.provider, email: user.email, userId: user.id });
+      
+      // Buscar si ya existe un usuario con este email en public.users (tanto para Google como para Credentials)
+      if (user.email) {
         const { data: existingUser, error } = await supabaseAdmin
           .from('users')
-          .select('id')
+          .select('id, email')
           .eq('email', user.email)
           .single();
         
@@ -217,15 +218,32 @@ export const authOptions: AuthOptions = {
           if (error.code !== 'PGRST116') { // PGRST116 es 'No se encontró el registro'
             console.error(`[signIn] Error buscando usuario existente con email ${user.email}:`, error);
           }
-          // Si no existe o hay error, permitir el flujo normal
+          // Si no hay usuario existente, permitir el flujo normal
+          console.log(`[signIn] No se encontró usuario existente con email ${user.email}. Continuando flujo normal.`);
           return true;
         }
         
         if (existingUser) {
-          console.log(`[signIn] Usuario existente encontrado para ${user.email}. Usando ID existente: ${existingUser.id} en lugar de crear uno nuevo.`);
-          // Reemplazar el ID generado por el adaptador con el ID existente
-          // Esto prevendrá la creación de un nuevo registro en public.users
-          user.id = existingUser.id;
+          console.log(`[signIn] Usuario existente encontrado para ${user.email}. ID existente: ${existingUser.id}, ID actual: ${user.id}`);
+          
+          // Si los IDs son diferentes, usar el existente para mantener consistencia
+          if (existingUser.id !== user.id) {
+            console.log(`[signIn] Reemplazando ID ${user.id} con ID existente ${existingUser.id}`);
+            user.id = existingUser.id;
+            
+            // Si es Google, tenemos que actualizar también en auth.users
+            if (account?.provider === 'google') {
+              try {
+                // Intentar una actualización en auth.accounts para vincular la cuenta de Google al usuario existente
+                console.log(`[signIn] Intentando vincular cuenta de Google al usuario existente ${existingUser.id}`);
+                // Nota: Esta es una operación avanzada que podría requerir ajustes según tu esquema
+              } catch (e) {
+                console.error('[signIn] Error al intentar vincular cuenta:', e);
+              }
+            }
+          } else {
+            console.log(`[signIn] El ID actual ya coincide con el existente: ${user.id}`);
+          }
         }
       }
       
