@@ -132,7 +132,8 @@ export const authOptions: AuthOptions = {
           }
 
           // 2. Obtener el usuario de la tabla pública `users` (la que usa el SupabaseAdapter)
-          // Esto asegura que usamos el mismo ID de usuario que usaría el login con Google.
+          console.log(`[AuthOptions-Credentials] Buscando en public.users con email: '${authData.user.email}' (ID de auth.users: ${authData.user.id})`);
+          
           const { data: publicUser, error: publicUserError } = await supabaseAdmin
             .from('users') // Asegúrate que 'users' es el nombre correcto de tu tabla pública
             .select('id, name, email, role') // Selecciona los campos necesarios
@@ -140,21 +141,24 @@ export const authOptions: AuthOptions = {
             .single(); // Esperamos un solo usuario
 
           if (publicUserError) {
-            console.error(`AuthOptions: Error buscando usuario en tabla pública 'users' para email ${authData.user.email}:`, publicUserError);
+            console.error(`[AuthOptions-Credentials] Error al consultar public.users con email '${authData.user.email}':`, JSON.stringify(publicUserError, null, 2));
             // Si el usuario existe en Supabase Auth pero no en la tabla pública 'users',
             // esto podría indicar un problema de sincronización o que el SupabaseAdapter no lo ha creado aún.
-            // Por ahora, retornamos null, pero podrías considerar crearlo aquí si es necesario.
             const errorToThrow = new Error('UserNotFoundInPublicTable');
             (errorToThrow as any).type = 'UserNotFoundInPublicTable';
+            (errorToThrow as any).details = `Query error for email: ${authData.user.email}`;
             throw errorToThrow;
           }
 
           if (!publicUser) {
-            console.error(`AuthOptions: No se encontró el usuario en la tabla pública 'users' para email ${authData.user.email}.`);
+            console.error(`[AuthOptions-Credentials] No se encontró usuario en public.users para email '${authData.user.email}'. publicUser es:`, publicUser);
             const errorToThrow = new Error('UserNotFoundInPublicTable');
             (errorToThrow as any).type = 'UserNotFoundInPublicTable';
+            (errorToThrow as any).details = `User not found in public.users for email: ${authData.user.email}`;
             throw errorToThrow;
           }
+
+          console.log(`[AuthOptions-Credentials] Usuario encontrado en public.users:`, JSON.stringify(publicUser, null, 2));
 
           // 3. Devolver el objeto usuario para NextAuth usando los datos de la tabla pública `users`
           return {
