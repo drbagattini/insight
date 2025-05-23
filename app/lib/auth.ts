@@ -16,12 +16,16 @@ console.log(`- NEXTAUTH_URL: ${process.env.NEXTAUTH_URL || 'NO CONFIGURADO'}`);
 console.log(`- VERCEL_URL: ${process.env.VERCEL_URL || 'NO CONFIGURADO'}`);
 console.log(`- VERCEL_ENV: ${process.env.VERCEL_ENV || 'NO CONFIGURADO'}`);
 
-// Asegurarse de que siempre se use la URL estable para callbacks
-if (process.env.VERCEL_ENV === 'preview' || process.env.VERCEL_ENV === 'production') {
-  // Forzar el uso de insight-roan.vercel.app para todos los despliegues
-  process.env.NEXTAUTH_URL = 'https://insight-roan.vercel.app';
-  console.log(`- NEXTAUTH_URL forzado a: ${process.env.NEXTAUTH_URL}`);
-}
+// Definir una URL base consistente para todos los entornos
+const BASE_URL = 'https://insight-roan.vercel.app';
+
+// PASO 1: Forzar NEXTAUTH_URL para todos los despliegues
+process.env.NEXTAUTH_URL = BASE_URL;
+console.log(`- NEXTAUTH_URL forzado a: ${process.env.NEXTAUTH_URL}`);
+
+// Logging adicional para depuración
+console.log(`- URL de callback para Google espera ser: ${BASE_URL}/api/auth/callback/google`);
+console.log('- ASEGÚRATE de que esta URL exacta esté agregada en Google Cloud Console')
 
 const supabase = createClient(supabaseUrl, anonKey);
 const supabaseAdmin = createClient(supabaseUrl, serviceKey, {
@@ -75,11 +79,14 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
 }
 
 export const authOptions: AuthOptions = {
+    // Las URL de callback se derivan de NEXTAUTH_URL
   adapter: SupabaseAdapter({ url: supabaseUrl, secret: serviceKey }),
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      // Google Provider usa la configuración global de NextAuth para determinar las URLs
+
       authorization: {
         params: {
           prompt: 'consent',
