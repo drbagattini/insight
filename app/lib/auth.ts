@@ -10,6 +10,19 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
+// Log de variables de entorno críticas para depuración
+console.log('AUTH CONFIG - Variables de entorno NextAuth:');
+console.log(`- NEXTAUTH_URL: ${process.env.NEXTAUTH_URL || 'NO CONFIGURADO'}`);
+console.log(`- VERCEL_URL: ${process.env.VERCEL_URL || 'NO CONFIGURADO'}`);
+console.log(`- VERCEL_ENV: ${process.env.VERCEL_ENV || 'NO CONFIGURADO'}`);
+
+// Asegurarse de que siempre se use la URL estable para callbacks
+if (process.env.VERCEL_ENV === 'preview' || process.env.VERCEL_ENV === 'production') {
+  // Forzar el uso de insight-roan.vercel.app para todos los despliegues
+  process.env.NEXTAUTH_URL = 'https://insight-roan.vercel.app';
+  console.log(`- NEXTAUTH_URL forzado a: ${process.env.NEXTAUTH_URL}`);
+}
+
 const supabase = createClient(supabaseUrl, anonKey);
 const supabaseAdmin = createClient(supabaseUrl, serviceKey, {
   auth: { autoRefreshToken: false, persistSession: false }
