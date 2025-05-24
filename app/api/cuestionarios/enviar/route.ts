@@ -162,8 +162,8 @@ async function enviarCuestionarioPorCanal(
   return true;
 }
 
-// Exportar la función para pruebas
-export { enviarCuestionarioPorCanal };
+// La función enviarCuestionarioPorCanal se utiliza internamente por POST.
+// Si se necesita para pruebas unitarias externas, considerar moverla a un archivo de utilidades.
 
 export async function POST(req: NextRequest) {
   // 1) Verificar sesión y autorización
