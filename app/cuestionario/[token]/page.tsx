@@ -218,10 +218,6 @@ export default function CuestionarioPage() {
           </p>
         </div>
 
-        {/* Debug: mostrar cantidad de items */}
-        <div className="text-sm text-gray-600 mb-4 bg-yellow-100 p-2 rounded">
-          Debug: Mostrando {linkInfo.cuestionario.items?.length || 0} preguntas de {linkInfo.cuestionario.titulo}
-        </div>
 
         <div className="space-y-6">
           {linkInfo.cuestionario.items.map((pregunta, index) => {
