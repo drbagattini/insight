@@ -168,11 +168,38 @@ export const authOptions: AuthOptions = {
           }
 
           if (!publicUser) {
-            console.error(`[AuthOptions-Credentials] No se encontró usuario en public.users para email '${authData.user.email}'. publicUser es:`, publicUser);
-            const errorToThrow = new Error('UserNotFoundInPublicTable');
-            (errorToThrow as any).type = 'UserNotFoundInPublicTable';
-            (errorToThrow as any).details = `User not found in public.users for email: ${authData.user.email}`;
-            throw errorToThrow;
+            console.log(`[AuthOptions-Credentials] No se encontró usuario en public.users para email '${authData.user.email}', creando uno nuevo`);
+            
+            // Crear un registro en public.users para este usuario
+            const userEmail = authData.user.email || '';
+            const { data: insertedUser, error: insertError } = await supabaseAdmin
+              .from('users')
+              .insert({
+                id: authData.user.id,
+                email: userEmail,
+                password_hash: '', // placeholder para usuarios de credenciales
+                role: 'psicologo', // Asumimos psicologo por defecto
+                first_name: authData.user.user_metadata?.first_name || (userEmail ? userEmail.split('@')[0] : '') || '',
+                last_name: authData.user.user_metadata?.last_name || ''
+              })
+              .select('id, first_name, last_name, email, role')
+              .single();
+              
+            if (insertError) {
+              console.error(`[AuthOptions-Credentials] Error creando usuario en public.users:`, insertError);
+              const errorToThrow = new Error('ErrorCreatingUserInPublicTable');
+              (errorToThrow as any).type = 'ErrorCreatingUserInPublicTable';
+              (errorToThrow as any).details = `Error creating user in public.users: ${insertError.message}`;
+              throw errorToThrow;
+            }
+            
+            console.log(`[AuthOptions-Credentials] Usuario creado exitosamente en public.users:`, insertedUser);
+            return {
+              id: insertedUser.id,
+              name: [insertedUser.first_name, insertedUser.last_name].filter(Boolean).join(' ') || insertedUser.email,
+              email: insertedUser.email,
+              role: insertedUser.role
+            };
           }
 
           console.log(`[AuthOptions-Credentials] Usuario encontrado en public.users:`, JSON.stringify(publicUser, null, 2));
