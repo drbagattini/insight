@@ -271,8 +271,21 @@ export const authOptions: AuthOptions = {
           }
 
           if (existingByEmail && existingByEmail.id !== user.id) {
-            console.error(`[SignIn] CRITICAL INCONSISTENCY: Email ${user.email} exists in public.users with ID ${existingByEmail.id}, but canonical auth.users.id is ${user.id}. Sign-in denied. Please resolve manually.`);
-            return false;
+            console.warn(`[SignIn] INCONSISTENCY DETECTED: Email ${user.email} exists in public.users with ID ${existingByEmail.id}, but canonical auth.users.id is ${user.id}. Attempting to update...`);
+            
+            // Intentar actualizar el ID en public.users para que coincida con auth.users
+            const { error: updateError } = await supabaseAdmin
+              .from('users')
+              .update({ id: user.id })
+              .eq('id', existingByEmail.id);
+            
+            if (updateError) {
+              console.error('[SignIn] Failed to update user ID in public.users:', updateError);
+              return false;
+            }
+            
+            console.log(`[SignIn] Successfully updated user ID in public.users from ${existingByEmail.id} to ${user.id}`);
+            return true;
           }
           
           console.log(`[SignIn] Creating new profile in public.users for ID ${user.id} and email ${user.email}.`);
