@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
 import { enviarCuestionarioPorCanal } from "@/app/lib/utils/cuestionarios";
 
+// Test endpoint for sending questionnaires
 export async function POST(req: NextRequest) {
   const { email, whatsapp, canal } = await req.json();
   try {
