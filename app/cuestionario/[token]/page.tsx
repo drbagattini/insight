@@ -28,6 +28,29 @@ export default function CuestionarioPage() {
   const params = useParams<{ token: string }>();
   const token = params?.token;
 
+  // Agregar efecto para sobrescribir el overflow del body
+  useEffect(() => {
+    // Guardar el overflow original
+    const originalOverflow = document.body.style.overflow;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+    const originalHeight = document.body.style.height;
+    const originalHtmlHeight = document.documentElement.style.height;
+    
+    // Sobrescribir para permitir scroll
+    document.body.style.overflow = 'auto';
+    document.documentElement.style.overflow = 'auto';
+    document.body.style.height = 'auto';
+    document.documentElement.style.height = 'auto';
+    
+    // Restaurar al desmontar el componente
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.documentElement.style.overflow = originalHtmlOverflow;
+      document.body.style.height = originalHeight;
+      document.documentElement.style.height = originalHtmlHeight;
+    };
+  }, []);
+
   if (!token) {
     return (
       <div className="min-h-screen flex items-center justify-center">
