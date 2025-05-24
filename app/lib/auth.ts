@@ -229,75 +229,125 @@ export const authOptions: AuthOptions = {
     })
   ],
   callbacks: {
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account, profile }: { user: NextAuthUser; account: Account | null; profile?: any }) {
       console.log('=== INICIO SIGNIN ===');
       console.log('Usuario entrante:', { 
         email: user.email, 
         id: user.id, 
         provider: account?.provider,
-        name: user.name
+        name: user.name,
+        roleFromUser: (user as any).role 
       });
 
-      if (user.email) {
-        console.log('Buscando usuario existente con email:', user.email);
-        try {
-          // Buscar en la tabla public.users
-          const { data: existingUser, error } = await supabaseAdmin
+      if (!user.id || !user.email) {
+        console.error('[SignIn] Critical: Missing user.id or user.email from provider. Denying sign-in.');
+        return false; 
+      }
+
+      try {
+        const { data: publicProfile, error: fetchError } = await supabaseAdmin
+          .from('users')
+          .select('id, email, first_name, last_name, role')
+          .eq('id', user.id)
+          .single();
+
+        if (fetchError && fetchError.code !== 'PGRST116') {
+          console.error('[SignIn] Error fetching user from public.users by ID:', user.id, fetchError);
+          return false;
+        }
+
+        if (!publicProfile) {
+          console.log(`[SignIn] No profile in public.users for ID ${user.id}. Checking for email conflict before creating...`);
+
+          const { data: existingByEmail, error: emailCheckError } = await supabaseAdmin
             .from('users')
-            .select('id, email, first_name, last_name, role')
+            .select('id')
             .eq('email', user.email)
             .single();
 
-          if (error && error.code !== 'PGRST116') { // PGRST116 es 'No se encontró el registro'
-            console.error('Error buscando usuario existente:', error);
-          } else if (existingUser) {
-            console.log('Usuario existente encontrado en public.users:', existingUser);
-            console.log('Comparando IDs - Entrante:', user.id, 'vs Existente:', existingUser.id);
-            
-            if (existingUser.id !== user.id) {
-              console.log('Reemplazando ID para mantener consistencia');
-              user.id = existingUser.id;
-              
-              // Si es Google, intentamos actualizar la cuenta
-              if (account?.provider === 'google') {
-                try {
-                  console.log('Actualizando cuenta de Google para usar el ID existente');
-                  // Aquí podríamos actualizar la cuenta en auth.users si fuera necesario
-                } catch (e) {
-                  console.error('Error al actualizar cuenta de Google:', e);
-                }
+          if (emailCheckError && emailCheckError.code !== 'PGRST116') {
+            console.error('[SignIn] Error checking for existing user by email:', user.email, emailCheckError);
+            return false;
+          }
+
+          if (existingByEmail && existingByEmail.id !== user.id) {
+            console.error(`[SignIn] CRITICAL INCONSISTENCY: Email ${user.email} exists in public.users with ID ${existingByEmail.id}, but canonical auth.users.id is ${user.id}. Sign-in denied. Please resolve manually.`);
+            return false;
+          }
+          
+          console.log(`[SignIn] Creating new profile in public.users for ID ${user.id} and email ${user.email}.`);
+          
+          let firstName = '';
+          let lastName = '';
+          const userRole = (user as any).role || 'psicologo';
+
+          if (account?.provider === 'google' && profile) {
+            firstName = profile.given_name || profile.first_name || '';
+            lastName = profile.family_name || profile.last_name || '';
+            if (!firstName && profile.name) firstName = profile.name.split(' ')[0] || '';
+            if (!lastName && profile.name) lastName = profile.name.split(' ').slice(1).join(' ') || '';
+          } else if (user.name) {
+            const nameParts = user.name.split(' ');
+            firstName = nameParts[0] || '';
+            lastName = nameParts.slice(1).join(' ') || '';
+          }
+          
+          if (!firstName && user.email) {
+              firstName = user.email.split('@')[0];
+          }
+
+          const { error: insertError } = await supabaseAdmin
+            .from('users')
+            .insert({
+              id: user.id,
+              email: user.email,
+              first_name: firstName,
+              last_name: lastName,
+              role: userRole, 
+            });
+
+          if (insertError) {
+            console.error('[SignIn] Error inserting new user into public.users:', user.id, insertError);
+            return false;
+          }
+          console.log(`[SignIn] Profile created in public.users for ID ${user.id}`);
+          (user as any).role = userRole; 
+          user.name = [firstName, lastName].filter(Boolean).join(' ');
+
+        } else {
+          console.log(`[SignIn] Profile found in public.users for ID ${user.id}. Email: ${publicProfile.email}.`);
+          (user as any).role = publicProfile.role;
+          user.name = [publicProfile.first_name, publicProfile.last_name].filter(Boolean).join(' ') || publicProfile.email;
+          user.email = publicProfile.email;
+
+          if (account?.provider === 'google' && profile) {
+            const newFirstName = profile.given_name || profile.first_name || '';
+            const newLastName = profile.family_name || profile.last_name || '';
+            const nameChanged = (newFirstName && newFirstName !== publicProfile.first_name) || (newLastName && newLastName !== publicProfile.last_name);
+
+            if (nameChanged) {
+              console.log(`[SignIn] Updating name for user ${user.id} from Google profile.`);
+              const { error: updateError } = await supabaseAdmin
+                .from('users')
+                .update({ 
+                  first_name: newFirstName || publicProfile.first_name,
+                  last_name: newLastName || publicProfile.last_name
+                })
+                .eq('id', user.id);
+              if (updateError) console.error('[SignIn] Error updating name in public.users:', user.id, updateError);
+              else {
+                console.log(`[SignIn] Name updated for user ${user.id}`);
+                user.name = [newFirstName || publicProfile.first_name, newLastName || publicProfile.last_name].filter(Boolean).join(' ');
               }
-            } else {
-              console.log('Los IDs ya coinciden, no se necesita actualización');
-            }
-          } else {
-            console.log('No se encontró usuario existente con este email, creando perfil en public.users');
-            
-            // Crear un registro en public.users para evitar violación de FK
-            const { error: insertError } = await supabaseAdmin
-              .from('users')
-              .insert({
-                id: user.id,
-                email: user.email,
-                password_hash: '', // placeholder para usuarios de credenciales
-                role: user.role || 'psicologo', // Asumimos psicologo por defecto
-                first_name: user.name?.split(' ')[0] || user.email?.split('@')[0] || '',
-                last_name: user.name?.split(' ').slice(1).join(' ') || ''
-              });
-              
-            if (insertError) {
-              console.error('Error creando perfil en public.users:', insertError);
-            } else {
-              console.log('Perfil creado exitosamente en public.users con ID:', user.id);
             }
           }
-        } catch (e) {
-          console.error('Error inesperado en signIn:', e);
         }
+        console.log('=== FIN SIGNIN (permitido) ===');
+        return true;
+      } catch (e) {
+        console.error('[SignIn] Unexpected top-level error:', e);
+        return false;
       }
-
-      console.log('=== FIN SIGNIN ===');
-      return true;
     },
     async jwt({ token, user, account }: { token: JWT; user?: NextAuthUser | undefined; account?: Account | null }): Promise<JWT> {
       // Al iniciar sesión o conectar una cuenta por primera vez
