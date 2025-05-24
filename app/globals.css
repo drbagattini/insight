@@ -8,7 +8,14 @@
 }
 
 /* Hack para que full calendar ocupe todo el espacio disponible */
-html, body, #__next {
+/* NOTA: Aplicar solo a páginas con calendario, no globalmente */
+.calendar-layout {
+  height: 100% !important;
+}
+
+.calendar-layout html, 
+.calendar-layout body, 
+.calendar-layout #__next {
   height: 100% !important;
   margin: 0 !important;
   padding: 0 !important;
