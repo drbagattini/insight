@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from "next/server";
-import { enviarCuestionarioPorCanal } from "@/app/api/cuestionarios/enviar/route";
+import { enviarCuestionarioPorCanal } from "@/app/lib/utils/cuestionarios";
 
 export async function POST(req: NextRequest) {
   const { email, whatsapp, canal } = await req.json();
