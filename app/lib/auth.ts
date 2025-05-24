@@ -217,7 +217,7 @@ export const authOptions: AuthOptions = {
           // Buscar en la tabla public.users
           const { data: existingUser, error } = await supabaseAdmin
             .from('users')
-            .select('id, email, first_name, last_name')
+            .select('id, email, first_name, last_name, role')
             .eq('email', user.email)
             .single();
 
@@ -244,7 +244,25 @@ export const authOptions: AuthOptions = {
               console.log('Los IDs ya coinciden, no se necesita actualización');
             }
           } else {
-            console.log('No se encontró usuario existente con este email');
+            console.log('No se encontró usuario existente con este email, creando perfil en public.users');
+            
+            // Crear un registro en public.users para evitar violación de FK
+            const { error: insertError } = await supabaseAdmin
+              .from('users')
+              .insert({
+                id: user.id,
+                email: user.email,
+                password_hash: '', // placeholder para usuarios de credenciales
+                role: user.role || 'psicologo', // Asumimos psicologo por defecto
+                first_name: user.name?.split(' ')[0] || user.email?.split('@')[0] || '',
+                last_name: user.name?.split(' ').slice(1).join(' ') || ''
+              });
+              
+            if (insertError) {
+              console.error('Error creando perfil en public.users:', insertError);
+            } else {
+              console.log('Perfil creado exitosamente en public.users con ID:', user.id);
+            }
           }
         } catch (e) {
           console.error('Error inesperado en signIn:', e);
