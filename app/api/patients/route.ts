@@ -121,6 +121,38 @@ export async function POST(req: NextRequest) {
 
   const { sendInitial } = parsed.data;
 
+  // Verificar directamente si el psicólogo existe en public.users
+  const { data: userExists, error: userCheckError } = await supabaseAdmin
+    .from('users')
+    .select('id')
+    .eq('id', psicologoId)
+    .single();
+    
+  if (userCheckError || !userExists) {
+    console.log('[POST /api/patients] Psicólogo no encontrado en public.users, creando registro');
+    
+    // Crear registro del psicólogo si no existe
+    const { error: createUserError } = await supabaseAdmin
+      .from('users')
+      .insert({
+        id: psicologoId,
+        email: session.user.email ?? '',
+        password_hash: '',
+        role: session.user.role ?? 'psicologo',
+        first_name: session.user.name?.split(' ')[0] ?? session.user.email?.split('@')[0] ?? '',
+        last_name: session.user.name?.split(' ').slice(1).join(' ') ?? '',
+      });
+      
+    if (createUserError) {
+      console.error('[POST /api/patients] Error creando usuario:', createUserError);
+      return NextResponse.json({ error: 'Error creando perfil de psicólogo' }, { status: 500 });
+    }
+    
+    console.log('[POST /api/patients] Psicólogo creado exitosamente');
+  } else {
+    console.log('[POST /api/patients] Psicólogo encontrado en public.users');
+  }
+
   // Insertar paciente con service role key y filtro manual
   const { data: paciente, error: pacienteError } = await supabaseAdmin
     .from("patients")
