@@ -1,34 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabaseAdmin';
-
-// Compute next date based on frequency
-function computeNextDate(dateStr: string, frequency: string): string {
-  const date = new Date(dateStr);
-  if (frequency === 'semanal') date.setDate(date.getDate() + 7);
-  else if (frequency === 'mensual') date.setMonth(date.getMonth() + 1);
-  else if (frequency === 'trimestral') date.setMonth(date.getMonth() + 3);
-  return date.toISOString();
-}
-
-// Generate token and expiration
-function generarTokenYExpiracion() {
-  const token = crypto.randomUUID();
-  const expiracion = new Date();
-  expiracion.setDate(expiracion.getDate() + 7);
-  return { token, expiracion: expiracion.toISOString() };
-}
-
-// Simulated send logic (integrate with SendGrid or Twilio)
-async function enviarCuestionarioPorCanal(
-  email: string | null,
-  whatsapp: string | null,
-  canal: string,
-  linkPublico: string
-) {
-  console.log(`[Cron] Enviando cuestionario por ${canal} a ${email || whatsapp}`);
-  console.log(`Link: ${linkPublico}`);
-  return true;
-}
+import { computeNextDate, generarTokenYExpiracion, enviarCuestionarioPorCanal } from '@/app/lib/utils/cuestionarios';
 
 // POST /api/envios_programados/process
 export async function POST(req: NextRequest) {
@@ -66,15 +38,10 @@ export async function POST(req: NextRequest) {
       }
       count++;
       // Calcular próxima fecha
-      const next = new Date(job.proximo_envio);
-      switch (job.frecuencia) {
-        case 'semanal': next.setDate(next.getDate() + 7); break;
-        case 'mensual': next.setMonth(next.getMonth() + 1); break;
-        case 'trimestral': next.setMonth(next.getMonth() + 3); break;
-      }
+      const next = computeNextDate(job.proximo_envio, job.frecuencia);
       await supabaseAdmin
         .from('envios_programados')
-        .update({ proximo_envio: next.toISOString() })
+        .update({ proximo_envio: next })
         .eq('id', job.id);
     } catch (e) {
       console.error('Error procesando job', job.id, e);

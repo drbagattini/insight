@@ -144,3 +144,12 @@ export function generarTokenYExpiracion() {
   expiracion.setDate(expiracion.getDate() + 7); // Expira en 7 días
   return { token, expiracion: expiracion.toISOString() };
 }
+
+// Función para calcular la próxima fecha basada en la frecuencia
+export function computeNextDate(dateStr: string, frequency: string): string {
+  const date = new Date(dateStr);
+  if (frequency === 'semanal') date.setDate(date.getDate() + 7);
+  else if (frequency === 'mensual') date.setMonth(date.getMonth() + 1);
+  else if (frequency === 'trimestral') date.setMonth(date.getMonth() + 3);
+  return date.toISOString();
+}
