@@ -89,6 +89,23 @@ export async function POST(req: NextRequest) {
       .select('id')
       .eq('id', psicologoId);
     console.log('[POST /api/patients] User exists after upsert:', { checkUser, checkErr });
+
+    // Si después del upsert seguimos sin registro, crear uno mínimo para evitar error FK
+    if ((!checkUser || checkUser.length === 0) && !checkErr) {
+      console.warn('[POST /api/patients] No se encontró perfil tras upsert, creando registro mínimo');
+      const { error: insertMissingError } = await supabaseAdmin.from('users').insert({
+        id: psicologoId,
+        email: session.user.email ?? '',
+        password_hash: '',
+        role: session.user.role ?? 'psicologo',
+        first_name: session.user.name?.split(' ')[0] ?? session.user.email?.split('@')[0] ?? '',
+        last_name: session.user.name?.split(' ').slice(1).join(' ') ?? '',
+      });
+      if (insertMissingError) {
+        console.error('[POST /api/patients] Error creando perfil mínimo:', insertMissingError);
+        return NextResponse.json({ error: 'Error interno creando perfil' }, { status: 500 });
+      }
+    }
   } catch (err) {
     console.error('[POST /api/patients] Unexpected error ensuring profile exists:', err);
     return NextResponse.json({ error: 'Error interno verificando perfil' }, { status: 500 });
