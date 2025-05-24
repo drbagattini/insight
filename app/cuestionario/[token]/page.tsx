@@ -73,6 +73,11 @@ export default function CuestionarioPage() {
 
         setLinkInfo(data);
         
+        // Debug: verificar qué datos llegaron
+        console.log('Datos del cuestionario recibidos:', data);
+        console.log('Items del cuestionario:', data.cuestionario.items);
+        console.log('Cantidad de items:', data.cuestionario.items?.length);
+        
         // Inicializar respuestas
         const respuestasIniciales: Record<number, number> = {};
         data.cuestionario.items.forEach((item: Pregunta) => {
@@ -203,17 +208,23 @@ export default function CuestionarioPage() {
   }
 
   return (
-    <div className="min-h-screen py-8 px-4">
-      <div className="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow-md">
-        <h1 className="text-3xl font-bold mb-4 tracking-wide uppercase">CUESTIONARIO DE BIENESTAR</h1>
-        <p className="font-bold text-lg mb-6">{linkInfo.pacienteNombre}</p>
-        <p className="mb-8 text-gray-700 text-lg">
-          El cuestionario de bienestar de la OMS (WHO-5), es un instrumento de autoinforme que mide el bienestar mental. Por favor, indique para estas cinco afirmaciones cuál define mejor cómo se ha sentido usted durante las últimas dos semanas. Observe que cifras mayores significan mayor bienestar.
-        </p>
+    <div className="min-h-screen py-8 px-4 bg-gray-50">
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+          <h1 className="text-3xl font-bold mb-4 tracking-wide uppercase">CUESTIONARIO DE BIENESTAR</h1>
+          <p className="font-bold text-lg mb-6">{linkInfo.pacienteNombre}</p>
+          <p className="mb-8 text-gray-700 text-lg">
+            El cuestionario de bienestar de la OMS (WHO-5), es un instrumento de autoinforme que mide el bienestar mental. Por favor, indique para estas cinco afirmaciones cuál define mejor cómo se ha sentido usted durante las últimas dos semanas. Observe que cifras mayores significan mayor bienestar.
+          </p>
+        </div>
 
-        <div className="space-y-12">
+        {/* Debug: mostrar cantidad de items */}
+        <div className="text-sm text-gray-600 mb-4 bg-yellow-100 p-2 rounded">
+          Debug: Mostrando {linkInfo.cuestionario.items?.length || 0} preguntas de {linkInfo.cuestionario.titulo}
+        </div>
 
-          {linkInfo.cuestionario.items.map((pregunta) => {
+        <div className="space-y-6">
+          {linkInfo.cuestionario.items.map((pregunta, index) => {
             const valor = respuestas[pregunta.id];
             const thumbWidth = 32;
             const max = 5;
@@ -230,8 +241,10 @@ export default function CuestionarioPage() {
               '#00AA00', // 6
             ][valor];
             return (
-              <div key={pregunta.id} className="mb-8 p-6 bg-white rounded-xl shadow border border-gray-100 transition-transform hover:shadow-lg">
-                <p className="text-lg font-bold mb-8 text-gray-800">{pregunta.texto}</p>
+              <div key={pregunta.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                <p className="text-lg font-semibold mb-6 text-gray-800">
+                  {index + 1}. {pregunta.texto}
+                </p>
                 <div className="relative flex flex-col items-center">
                   <div className="flex justify-between w-full px-1 mb-2">
                     <span className="text-gray-700 text-lg font-bold select-none">0</span>
@@ -240,12 +253,11 @@ export default function CuestionarioPage() {
                   <div className="relative w-full mb-6">
                     <div className="relative w-full h-3 flex items-center">
                       <div
-                        className="absolute left-0 top-1/2 -translate-y-1/2 h-3 rounded-lg"
+                        className="absolute left-0 top-1/2 -translate-y-1/2 h-3 rounded-lg transition-all duration-300"
                         style={{
                           width: fillWidth,
                           background: sliderColor,
                           zIndex: 1,
-                          transition: 'width 0.3s cubic-bezier(0.4,0,0.2,1)',
                         }}
                       />
                       <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-3 bg-gray-200 rounded-lg" style={{zIndex: 0}} />
@@ -257,12 +269,12 @@ export default function CuestionarioPage() {
                         value={valor}
                         aria-label={pregunta.texto}
                         onChange={(e) => handleRespuestaChange(pregunta.id, Number(e.target.value))}
-                        className="w-full h-3 appearance-none bg-transparent slider-thumb-custom"
+                        className="w-full h-3 appearance-none bg-transparent cursor-pointer slider-thumb-custom"
                         style={{ position: 'relative', zIndex: 2 }}
                       />
                     </div>
                   </div>
-                  <p className="mt-4 text-center text-blue-600 font-semibold text-base">
+                  <p className="mt-4 text-center text-blue-600 font-medium text-base">
                     {scaleLabels[valor]}
                   </p>
                 </div>
@@ -271,22 +283,24 @@ export default function CuestionarioPage() {
           })}
         </div>
 
-        <div className="mt-8 flex flex-col items-center gap-2">
-          <button
-            onClick={handleSubmit}
-            disabled={enviando || !allAnswered}
-            className="px-8 py-3 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-lg transition-all"
-          >
-            {enviando ? (
-              <span className="flex items-center gap-2"><span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></span>Enviando...</span>
-            ) : (
-              "Enviar respuestas"
+        <div className="mt-8 bg-white p-6 rounded-lg shadow-md">
+          <div className="flex flex-col items-center gap-2">
+            <button
+              onClick={handleSubmit}
+              disabled={enviando || !allAnswered}
+              className="px-8 py-3 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-lg transition-all"
+            >
+              {enviando ? (
+                <span className="flex items-center gap-2"><span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></span>Enviando...</span>
+              ) : (
+                "Enviar respuestas"
+              )}
+            </button>
+            {!allAnswered && (
+              <span className="text-xs text-red-400 mt-1">Por favor, responde todas las preguntas para poder enviar.</span>
             )}
-          </button>
-          {!allAnswered && (
-            <span className="text-xs text-red-400 mt-1">Por favor, responde todas las preguntas para poder enviar.</span>
-          )}
-          <span className="text-xs text-gray-400 mt-2">Tus respuestas son confidenciales y solo serán vistas por tu profesional de salud.</span>
+            <span className="text-xs text-gray-400 mt-2">Tus respuestas son confidenciales y solo serán vistas por tu profesional de salud.</span>
+          </div>
         </div>
       </div>
     </div>
