@@ -138,7 +138,7 @@ export function SignIn({ providers = ['google', 'credentials'], error }: SignInP
             )}
             <button
               type="submit"
-              className="w-full bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-red-500 text-white hover:bg-red-600 px-4 py-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Iniciando sesión...' : 'Iniciar sesión'}
