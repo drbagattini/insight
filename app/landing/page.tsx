@@ -1,12 +1,47 @@
+'use client';
+
 import Link from 'next/link';
+import { useEffect } from 'react';
 
 export default function LandingPage() {
+  useEffect(() => {
+    // Smooth scrolling for anchor links
+    const handleSmoothScroll = (e: MouseEvent) => {
+      const target = e.target as HTMLAnchorElement;
+      if (target.hash && target.pathname === window.location.pathname) {
+        e.preventDefault();
+        const element = document.querySelector(target.hash);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }
+    };
+
+    const links = document.querySelectorAll('a[href^="#"]');
+    links.forEach(link => {
+      link.addEventListener('click', handleSmoothScroll as EventListener);
+    });
+
+    return () => {
+      links.forEach(link => {
+        link.removeEventListener('click', handleSmoothScroll as EventListener);
+      });
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       {/* Header */}
       <header className="px-6 py-8 max-w-7xl mx-auto">
         <nav className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-900">Insight</h1>
+          <div className="flex items-center space-x-2">
+            {/* Insight Logo - i in a circle */}
+            <svg width="40" height="40" viewBox="0 0 40 40" className="text-blue-600">
+              <circle cx="20" cy="20" r="18" fill="currentColor" />
+              <text x="20" y="27" textAnchor="middle" className="text-white text-xl font-bold" fill="white">i</text>
+            </svg>
+            <h1 className="text-3xl font-bold text-gray-900">Insight</h1>
+          </div>
           <div className="space-x-4">
             <Link href="/auth/login" className="text-gray-600 hover:text-gray-900 transition-colors">
               Iniciar Sesión
@@ -23,6 +58,13 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <section className="px-6 py-16 max-w-7xl mx-auto text-center">
+        <div className="mb-8">
+          {/* Large Logo for Hero */}
+          <svg width="80" height="80" viewBox="0 0 80 80" className="mx-auto text-blue-600 mb-6">
+            <circle cx="40" cy="40" r="36" fill="currentColor" />
+            <text x="40" y="54" textAnchor="middle" className="text-white text-4xl font-bold" fill="white">i</text>
+          </svg>
+        </div>
         <h2 className="text-5xl font-bold text-gray-900 mb-6">
           Plataforma Integral de Gestión Clínica
         </h2>
@@ -38,12 +80,12 @@ export default function LandingPage() {
           >
             Comenzar Ahora
           </Link>
-          <Link 
+          <a 
             href="#features" 
-            className="border border-gray-300 text-gray-700 px-8 py-3 rounded-md hover:bg-gray-50 transition-colors text-lg font-semibold"
+            className="border border-gray-300 text-gray-700 px-8 py-3 rounded-md hover:bg-gray-50 transition-colors text-lg font-semibold cursor-pointer"
           >
             Conocer Más
-          </Link>
+          </a>
         </div>
       </section>
 
@@ -89,7 +131,7 @@ export default function LandingPage() {
       </section>
 
       {/* Benefits Section */}
-      <section className="px-6 py-16 bg-gray-50">
+      <section id="benefits" className="px-6 py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto">
           <h3 className="text-3xl font-bold text-center text-gray-900 mb-12">
             ¿Por qué elegir Insight?
@@ -143,7 +185,7 @@ export default function LandingPage() {
       </section>
 
       {/* Testimonials Section */}
-      <section className="px-6 py-16 bg-white">
+      <section id="testimonials" className="px-6 py-16 bg-white">
         <div className="max-w-7xl mx-auto">
           <h3 className="text-3xl font-bold text-center text-gray-900 mb-12">
             Lo que dicen nuestros usuarios
