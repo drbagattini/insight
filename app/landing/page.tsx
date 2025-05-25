@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect } from 'react';
+import './scrollFix.css';
 
 export default function LandingPage() {
   useEffect(() => {
@@ -30,12 +31,12 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 overflow-y-auto">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-white shadow-md px-6 py-4">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
+    <>
+      {/* Header - Fijo en la parte superior */}
+      <header className="fixed top-0 left-0 right-0 bg-white shadow-md z-50 py-4">
+        <div className="container mx-auto px-4 flex justify-between items-center">
           <div className="flex items-center space-x-2">
-            {/* Insight Logo - i in a circle */}
+            {/* Logo Insight */}
             <svg width="32" height="32" viewBox="0 0 40 40" className="text-blue-600">
               <circle cx="20" cy="20" r="18" fill="currentColor" />
               <text x="20" y="27" textAnchor="middle" className="text-white text-xl font-bold" fill="white">i</text>
@@ -55,6 +56,9 @@ export default function LandingPage() {
           </div>
         </div>
       </header>
+      
+      {/* Contenido principal con padding-top para compensar el header fijo */}
+      <main className="pt-20">
 
       {/* Hero Section */}
       <section className="px-6 pt-16 pb-12 max-w-7xl mx-auto text-center">
@@ -250,6 +254,7 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
+      {/* Footer */}
       <footer className="px-6 py-8 bg-gray-900 text-gray-400">
         <div className="max-w-7xl mx-auto text-center">
           <p>&copy; 2024 Insight. Todos los derechos reservados.</p>
@@ -261,6 +266,7 @@ export default function LandingPage() {
           </p>
         </div>
       </footer>
-    </div>
+      </main>
+    </>
   );
 }
