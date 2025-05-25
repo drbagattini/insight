@@ -30,17 +30,17 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 overflow-y-auto">
       {/* Header */}
-      <header className="px-6 py-8 max-w-7xl mx-auto">
-        <nav className="flex justify-between items-center">
+      <header className="sticky top-0 z-50 bg-white shadow-md px-6 py-4">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-2">
             {/* Insight Logo - i in a circle */}
-            <svg width="40" height="40" viewBox="0 0 40 40" className="text-blue-600">
+            <svg width="32" height="32" viewBox="0 0 40 40" className="text-blue-600">
               <circle cx="20" cy="20" r="18" fill="currentColor" />
               <text x="20" y="27" textAnchor="middle" className="text-white text-xl font-bold" fill="white">i</text>
             </svg>
-            <h1 className="text-3xl font-bold text-gray-900">Insight</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Insight</h1>
           </div>
           <div className="space-x-4">
             <Link href="/auth/login" className="text-gray-600 hover:text-gray-900 transition-colors">
@@ -53,11 +53,11 @@ export default function LandingPage() {
               Registrarse
             </Link>
           </div>
-        </nav>
+        </div>
       </header>
 
       {/* Hero Section */}
-      <section className="px-6 py-16 max-w-7xl mx-auto text-center">
+      <section className="px-6 pt-16 pb-12 max-w-7xl mx-auto text-center">
         <div className="mb-8">
           {/* Large Logo for Hero */}
           <svg width="80" height="80" viewBox="0 0 80 80" className="mx-auto text-blue-600 mb-6">
@@ -255,6 +255,9 @@ export default function LandingPage() {
           <p>&copy; 2024 Insight. Todos los derechos reservados.</p>
           <p className="mt-2">
             Plataforma de Gestión Clínica para Profesionales de la Salud Mental
+          </p>
+          <p className="mt-2">
+            Contacto: <a href="mailto:investigacion@centrouno.edu.uy" className="hover:text-white transition-colors">investigacion@centrouno.edu.uy</a>
           </p>
         </div>
       </footer>
