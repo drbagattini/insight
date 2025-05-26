@@ -67,6 +67,25 @@ export function SignIn({ providers = ['google', 'credentials'], error }: SignInP
 
   return (
     <div className="auth-container space-y-6 max-w-md w-full mx-auto p-6 bg-white rounded-lg shadow-md">
+      <div className="flex flex-col items-center">
+        <div className="flex items-center">
+          <svg
+            className="w-10 h-10 text-blue-600 mr-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            ></path>
+          </svg>
+          <h1 className="text-3xl font-bold text-blue-600">Insight</h1>
+        </div>
+      </div>
       {providers.includes('google') && (
         <button
           onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
