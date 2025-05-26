@@ -228,13 +228,12 @@ export default function CuestionarioPage() {
               ? '0px'
               : `calc((${valor}/${max})*(100% - ${thumbWidth}px) + ${thumbWidth/2}px)`;
             const sliderColor = [
-              '#FF0000', // 0
-              '#FF6600', // 1
-              '#FFCC00', // 2
-              '#CCFF00', // 3
-              '#66FF00', // 4
-              '#33CC33', // 5
-              '#00AA00', // 6
+              '#EF4444', // 0 - rojo
+              '#F97316', // 1 - naranja
+              '#F59E0B', // 2 - ámbar
+              '#FACC15', // 3 - amarillo
+              '#10B981', // 4 - esmeralda
+              '#059669', // 5 - verde
             ][valor];
             return (
               <div key={pregunta.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
@@ -246,29 +245,37 @@ export default function CuestionarioPage() {
                     <span className="text-gray-700 text-lg font-bold select-none">0</span>
                     <span className="text-gray-700 text-lg font-bold select-none">5</span>
                   </div>
-                  <div className="relative w-full mb-6">
-                    <div className="relative w-full h-3 flex items-center">
-                      <div
-                        className="absolute left-0 top-1/2 -translate-y-1/2 h-3 rounded-lg transition-all duration-300"
-                        style={{
-                          width: fillWidth,
-                          background: sliderColor,
-                          zIndex: 1,
-                        }}
-                      />
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-3 bg-gray-200 rounded-lg" style={{zIndex: 0}} />
-                      <input
-                        type="range"
-                        min={0}
-                        max={5}
-                        step={1}
-                        value={valor}
-                        aria-label={pregunta.texto}
-                        onChange={(e) => handleRespuestaChange(pregunta.id, Number(e.target.value))}
-                        className="w-full h-3 appearance-none bg-transparent cursor-pointer slider-thumb-custom"
-                        style={{ position: 'relative', zIndex: 2 }}
-                      />
-                    </div>
+                  
+                  <div className="relative w-full h-2 bg-gray-200 rounded-full mb-6">
+                    <div 
+                      className="absolute left-0 top-0 h-full rounded-full transition-all duration-300"
+                      style={{
+                        width: fillWidth,
+                        backgroundColor: sliderColor,
+                      }}
+                    />
+                    <input
+                      type="range"
+                      min={0}
+                      max={5}
+                      step={1}
+                      value={valor}
+                      onChange={(e) => handleRespuestaChange(pregunta.id, Number(e.target.value))}
+                      className="w-full h-2 appearance-none bg-transparent border-none relative z-10 cursor-pointer"
+                      style={{
+                        WebkitAppearance: 'none',
+                        background: 'transparent',
+                      }}
+                      aria-label={`Respuesta para: ${pregunta.texto}`}
+                    />
+                  </div>
+                  
+                  <div className="flex justify-between mt-1">
+                    {[0, 1, 2, 3, 4, 5].map((num) => (
+                      <span key={num} className="text-xs text-gray-500 w-6 text-center">
+                        {num}
+                      </span>
+                    ))}
                   </div>
                   <p className="mt-4 text-center text-blue-600 font-medium text-base">
                     {scaleLabels[valor]}
