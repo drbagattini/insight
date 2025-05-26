@@ -95,3 +95,73 @@ input[type="range"]:focus {
   font-size: 0.875rem;
   border-left: 4px solid #d97706;
 }
+
+/* Estilos para el input de slider interactivo en CuestionarioPage.tsx */
+input[type="range"].interactive-slider-input {
+  background: transparent !important; /* Solo el track es transparente */
+  border: none !important;
+  box-shadow: none !important;
+  margin: 0 !important; /* Resetear el margen */
+  padding: 0 !important; /* Resetear el padding */
+  height: 100% !important; /* Ocupar la altura del contenedor */
+  z-index: 10 !important; /* Mantener el input por encima para capturar eventos */
+  position: relative !important;
+}
+
+/* Definir el thumb para que sea visible y atractivo */
+input[type="range"].interactive-slider-input::-webkit-slider-thumb {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  width: 24px !important; /* Tamaño visible */
+  height: 24px !important;
+  background: #3b82f6 !important; /* Color azul consistente */
+  border-radius: 50% !important; /* Forma circular */
+  border: 4px solid white !important;
+  box-shadow: 0 1px 10px rgba(0,0,0,0.18) !important;
+  cursor: pointer !important;
+  margin-top: -11px !important; /* Centrar verticalmente */
+  position: relative !important;
+  z-index: 15 !important; /* Asegurar que esté por encima */
+}
+
+input[type="range"].interactive-slider-input::-moz-range-thumb {
+  width: 24px !important;
+  height: 24px !important;
+  background: #3b82f6 !important;
+  border-radius: 50% !important;
+  border: 4px solid white !important;
+  box-shadow: 0 1px 10px rgba(0,0,0,0.18) !important;
+  cursor: pointer !important;
+  position: relative !important;
+  z-index: 15 !important;
+}
+
+input[type="range"].interactive-slider-input::-ms-thumb {
+  width: 24px !important;
+  height: 24px !important;
+  background: #3b82f6 !important;
+  border-radius: 50% !important;
+  border: 4px solid white !important;
+  box-shadow: 0 1px 10px rgba(0,0,0,0.18) !important;
+  cursor: pointer !important;
+  position: relative !important;
+  z-index: 15 !important;
+}
+
+/* Hacer que el track sea invisible */
+input[type="range"].interactive-slider-input::-webkit-slider-runnable-track {
+  background: transparent !important;
+  border: none !important;
+}
+
+input[type="range"].interactive-slider-input::-moz-range-track {
+  background: transparent !important;
+  border: none !important;
+}
+
+input[type="range"].interactive-slider-input::-ms-track {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: transparent !important;
+}
+

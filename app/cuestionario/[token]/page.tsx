@@ -243,10 +243,6 @@ export default function CuestionarioPage() {
           </p>
         </div>
 
-        {/* Mensaje de debug - temporal */}
-        <div className="debug-message mb-6">
-          <p>Debug: Mostrando {linkInfo.cuestionario.items?.length || 0} preguntas del cuestionario</p>
-        </div>
 
         <div className="space-y-6">
           {linkInfo.cuestionario.items.map((pregunta, index) => {
@@ -260,7 +256,7 @@ export default function CuestionarioPage() {
               '#EF4444', // 0 - rojo
               '#F97316', // 1 - naranja
               '#F59E0B', // 2 - ámbar
-              '#84CC16', // 3 - lima
+              '#FACC15', // 3 - amarillo
               '#10B981', // 4 - esmeralda
               '#059669', // 5 - verde
             ][valor];
@@ -292,7 +288,7 @@ export default function CuestionarioPage() {
                       step={1}
                       value={valor}
                       onChange={(e) => handleRespuestaChange(pregunta.id, Number(e.target.value))}
-                      className="w-full h-2 appearance-none bg-transparent"
+                      className="interactive-slider-input w-full h-2 appearance-none bg-transparent border-none relative z-10"
                       aria-label={`Respuesta para: ${pregunta.texto}`}
                     />
                   </div>
