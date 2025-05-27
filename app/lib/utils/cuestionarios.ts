@@ -99,14 +99,21 @@ export async function enviarCuestionarioPorCanal(
             type: 'template',
             template: {
               name: templateName,
-              language: { code: 'es' },
+              language: { code: 'en' },
               components: [
                 {
                   type: 'body',
                   parameters: [
                     { type: 'text', text: nombrePaciente },
-                    { type: 'text', text: nombreCuestionario },
-                    { type: 'text', text: linkPublico }
+                    { type: 'text', text: nombreCuestionario }
+                  ]
+                },
+                {
+                  type: 'button',
+                  sub_type: 'url',
+                  index: '0', // Assuming it's the first button
+                  parameters: [
+                    { type: 'text', text: linkPublico } // This is for the button's dynamic URL part
                   ]
                 }
               ]
