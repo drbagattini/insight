@@ -7,9 +7,10 @@ import { enviarCuestionarioPorCanal, generarTokenYExpiracion } from "@/app/lib/u
 
 // Schema para validación
 const enviarCuestionarioSchema = z.object({
-  pacienteId: z.string().uuid("ID de paciente inválido"),
+  pacienteId: z.string().uuid(),
   cuestionarioId: z.string().uuid().optional(),
-  canal: z.enum(['email','whatsapp']).optional(),
+  canal: z.enum(["email", "whatsapp"]).optional(),
+  envioProgramadoId: z.string().uuid().optional(), // Nuevo campo opcional
 });
 
 export async function POST(req: NextRequest) {
@@ -97,19 +98,28 @@ export async function POST(req: NextRequest) {
   const { token, expiracion } = generarTokenYExpiracion();
 
   // 8) Crear el link público en la base de datos
+  const insertData: any = {
+    paciente_id: paciente.id,
+    cuestionario_id: cuestionarioId,
+    token,
+    expira_en: expiracion,
+    enviado_desde: canal, // Guardar el canal por el que se envió efectivamente
+  };
+
+  if (parsed.data.envioProgramadoId) {
+    insertData.envio_programado_id = parsed.data.envioProgramadoId;
+  }
+
   const { data: link, error: linkError } = await supabaseAdmin
     .from("links_cuestionario")
-    .insert({
-      paciente_id: paciente.id,
-      cuestionario_id: cuestionarioId,
-      token,
-      expira_en: expiracion,
-    })
+    .insert(insertData)
     .select("token")
     .single();
 
   if (linkError || !link) {
-    return NextResponse.json({ error: "Error al generar el link" }, { status: 500 });
+    console.error("Database error generating link:", linkError);
+    const dbErrorMessage = linkError ? linkError.message : "No se pudo obtener el token del link insertado.";
+    return NextResponse.json({ error: `Error al generar el link: ${dbErrorMessage}` }, { status: 500 });
   }
 
   // 9) Construir la URL pública
