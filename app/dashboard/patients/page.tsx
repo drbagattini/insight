@@ -113,13 +113,16 @@ export default function PatientsPage() {
 
   return (
     <div className="container mx-auto p-6 max-w-6xl">
-      {/* Patient List */}
-      <PatientList
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onSendQuestionnaire={handleSendQuestionnaire}
-        onViewEvolution={handleViewEvolution}
-      />
+      {/* Lista de pacientes */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <PatientList
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onViewEvolution={handleViewEvolution}
+          onSendQuestionnaire={handleSendQuestionnaire}
+          hideTitle={true}
+        />
+      </div>
 
       {/* Patient Form Modal */}
       {showForm && (

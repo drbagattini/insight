@@ -3,6 +3,7 @@ import { signIn } from 'next-auth/react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import InsightLogo from '../common/InsightLogo';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -68,23 +69,10 @@ export function SignIn({ providers = ['google', 'credentials'], error }: SignInP
   return (
     <div className="auth-container space-y-6 max-w-md w-full mx-auto p-6 bg-white rounded-lg shadow-md">
       <div className="flex flex-col items-center">
-        <div className="flex items-center">
-          <svg
-            className="w-10 h-10 text-blue-600 mr-2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            ></path>
-          </svg>
-          <h1 className="text-3xl font-bold text-blue-600">Insight</h1>
+        <div className="mb-6">
+          <InsightLogo textSize="lg" />
         </div>
+        <h2 className="text-xl font-semibold text-gray-800">Iniciar sesión en tu cuenta</h2>
       </div>
       {providers.includes('google') && (
         <button
@@ -180,12 +168,16 @@ export function SignIn({ providers = ['google', 'credentials'], error }: SignInP
             >
               {isResetting ? 'Enviando...' : '¿Olvidaste tu contraseña?'}
             </a>
-            <Link
-              href="/auth/register"
-              className="text-blue-600 hover:text-blue-800 transition-colors"
-            >
-              ¿No tienes cuenta? Regístrate
-            </Link>
+            <div className="mt-4 pt-4 border-t border-gray-200 w-full text-center">
+              <p className="text-sm text-gray-600">¿No tienes cuenta?{' '}
+                <Link
+                  href="/auth/register"
+                  className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                >
+                  Regístrate
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
       )}

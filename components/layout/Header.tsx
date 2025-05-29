@@ -8,20 +8,36 @@ import { usePathname } from 'next/navigation';
 
 export default function Header() {
   const { data: session } = useSession();
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
   let headerTitle = 'Dashboard';
-  if (pathname) {
-    if (pathname === '/dashboard') headerTitle = 'Resumen asistencial';
-    else if (pathname.startsWith('/dashboard/patients/') && pathname.split('/').length === 4) headerTitle = 'Seguimiento clínico';
-    else if (pathname.startsWith('/dashboard/patients')) headerTitle = 'Pacientes';
-    else if (pathname === '/dashboard/calendar') headerTitle = 'Agenda';
+  
+  // Mapeo de rutas a títulos
+  const routeTitles: Record<string, string> = {
+    '/dashboard': 'Resumen asistencial',
+    '/dashboard/calendar': 'Agenda',
+    '/dashboard/patients': 'Pacientes',
+    '/dashboard/questionnaires': 'Cuestionarios',
+    '/dashboard/reports': 'Reportes'
+  };
+
+  // Determinar el título basado en la ruta
+  headerTitle = routeTitles[pathname] || headerTitle;
+
+  // Para rutas dinámicas como /dashboard/patients/[id]
+  if (pathname.startsWith('/dashboard/patients/') && pathname.split('/').length === 4) {
+    headerTitle = 'Seguimiento clínico';
   }
+
+  // Siempre mostrar el título en el header
+  const hideTitle = false;
 
   return (
     <header className="bg-white border-b">
       <div className="flex items-center justify-between h-16 px-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">{headerTitle}</h1>
+        <div className="flex items-center space-x-6">
+          {!hideTitle && (
+            <h1 className="text-lg font-semibold text-gray-900">{headerTitle}</h1>
+          )}
         </div>
 
         <Menu as="div" className="relative">

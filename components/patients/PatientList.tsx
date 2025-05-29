@@ -9,9 +9,16 @@ interface PatientListProps {
   onDelete: (patient: Patient) => void;
   onViewEvolution: (patient: Patient) => void;
   onSendQuestionnaire: (patient: Patient) => void;
+  hideTitle?: boolean;
 }
 
-export default function PatientList({ onEdit, onDelete, onViewEvolution, onSendQuestionnaire }: PatientListProps) {
+export default function PatientList({ 
+  onEdit, 
+  onDelete, 
+  onViewEvolution, 
+  onSendQuestionnaire,
+  hideTitle = false 
+}: PatientListProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
   const { data: patients = [], isLoading, error } = useQuery<Patient[]>({
@@ -39,13 +46,15 @@ export default function PatientList({ onEdit, onDelete, onViewEvolution, onSendQ
     <div className="space-y-6">
       {/* Título y botón de agregar */}
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-800">Pacientes</h1>
-        <button
-          onClick={() => onEdit({} as Patient)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-        >
-          <span>+</span> Agregar Paciente
-        </button>
+        {!hideTitle && <h1 className="text-2xl font-bold text-gray-800">Pacientes</h1>}
+        <div className={hideTitle ? 'ml-auto' : ''}>
+          <button
+            onClick={() => onEdit({} as Patient)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+          >
+            <span>+</span> Agregar Paciente
+          </button>
+        </div>
       </div>
 
       {/* Barra de búsqueda */}
