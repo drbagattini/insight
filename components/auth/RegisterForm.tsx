@@ -7,10 +7,12 @@ import { createUser, checkEmailExists } from '@/app/lib/userAPI';
 import type { UserCreateInput } from '@/types/user';
 
 export default function RegisterForm() {
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
+  // const [showSuccessMessage, setShowSuccessMessage] = useState(false); // Moved up
 
   useEffect(() => {
     setIsMounted(true);
@@ -102,8 +104,8 @@ export default function RegisterForm() {
         return;
       }
 
-      // Redireccionar al login
-      router.push('/auth/login?registered=true');
+      // Mostrar mensaje de éxito y preparar redirección
+      setShowSuccessMessage(true);
     } catch (err) { // Este catch maneja errores generales del handleSubmit
       console.error('Error en registro (catch general):', err);
       // Asegurar que el error mostrado sea un string
@@ -113,8 +115,27 @@ export default function RegisterForm() {
     }
   };
 
+  useEffect(() => {
+    if (showSuccessMessage) {
+      const timer = setTimeout(() => {
+        router.push('/auth/login');
+      }, 3000); // 3 segundos de retraso
+      return () => clearTimeout(timer); // Limpiar el temporizador si el componente se desmonta
+    }
+  }, [showSuccessMessage, router]);
+
   if (!isMounted) {
     return null;
+  }
+
+  if (showSuccessMessage) {
+    return (
+      <div className="text-center p-6 bg-white shadow-md rounded-lg">
+        <svg className="mx-auto mb-4 w-16 h-16 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <h2 className="text-2xl font-semibold text-gray-800 mb-2">¡Registro Exitoso!</h2>
+        <p className="text-gray-600">Serás redirigido a la página de inicio de sesión en unos momentos...</p>
+      </div>
+    );
   }
 
   return (
