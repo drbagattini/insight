@@ -19,7 +19,7 @@ export function SignIn({ providers = ['google', 'credentials'], error }: SignInP
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [isResetting, setIsResetting] = useState(false);
+
 
   // Map NextAuth error codes to user-friendly messages
   const errorMessages: Record<string, string> = {
@@ -36,35 +36,6 @@ export function SignIn({ providers = ['google', 'credentials'], error }: SignInP
       setMessage({ type: 'error', text: errorMessages[error] ?? errorMessages.default });
     }
   }, [error]);
-
-  const handlePasswordReset = async () => {
-    if (!supabase) {
-      setMessage({ type: 'error', text: 'Error de configuración del cliente.' });
-      return;
-    }
-    if (!email) {
-      setMessage({ type: 'error', text: 'Por favor, ingresa tu email primero.' });
-      return;
-    }
-    setIsResetting(true);
-    setMessage(null);
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/`,
-      });
-      if (error) {
-        console.error('Error al solicitar reseteo:', error.message);
-        setMessage({ type: 'error', text: `Error: ${error.message}` });
-      } else {
-        setMessage({ type: 'success', text: 'Si el email es válido, recibirás un enlace para resetear tu contraseña.' });
-      }
-    } catch (error) {
-      console.error('Error inesperado en reseteo:', error);
-      setMessage({ type: 'error', text: `Error inesperado: ${error instanceof Error ? error.message : 'Intentelo de nuevo.'}` });
-    } finally {
-      setIsResetting(false);
-    }
-  };
 
   return (
     <div className="auth-container space-y-6 max-w-md w-full mx-auto p-6 bg-white rounded-lg shadow-md">
@@ -152,22 +123,12 @@ export function SignIn({ providers = ['google', 'credentials'], error }: SignInP
             </button>
           </form>
           <div className="text-center text-sm flex flex-col items-center">
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault(); // Prevenir navegación por defecto del href
-                if (!isResetting && email) { // Solo ejecutar si no se está reseteando y hay email
-                  handlePasswordReset();
-                }
-              }}
-              // Aplicar clases de estilo y deshabilitado condicionalmente
-              className={`text-blue-600 hover:text-blue-800 transition-colors ${isResetting || !email ? 'opacity-50 cursor-not-allowed' : ''} mb-2`}
-              // Evitar click si está deshabilitado visualmente
-              style={{ pointerEvents: isResetting || !email ? 'none' : 'auto' }}
-              aria-disabled={isResetting || !email}
+            <Link
+              href="/auth/forgot-password"
+              className="text-blue-600 hover:text-blue-800 transition-colors mb-2"
             >
-              {isResetting ? 'Enviando...' : '¿Olvidaste tu contraseña?'}
-            </a>
+              ¿Olvidaste tu contraseña?
+            </Link>
             <div className="mt-4 pt-4 border-t border-gray-200 w-full text-center">
               <p className="text-sm text-gray-600">¿No tienes cuenta?{' '}
                 <Link
