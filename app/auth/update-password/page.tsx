@@ -35,11 +35,13 @@ export default function UpdatePasswordPage() {
     }
 
     // Also check for error in query parameters (e.g., if Supabase redirects with ?error=...)
-    const queryError = searchParams.get('error');
-    const queryErrorDescription = searchParams.get('error_description');
-    if (queryError) {
-        setErrorParam(queryErrorDescription || queryError);
-        setMessage({ type: 'error', text: queryErrorDescription || queryError });
+    if (searchParams) {
+      const queryError = searchParams.get('error');
+      const queryErrorDescription = searchParams.get('error_description');
+      if (queryError) {
+          setErrorParam(queryErrorDescription || queryError);
+          setMessage({ type: 'error', text: queryErrorDescription || queryError });
+      }
     }
 
   }, [searchParams]);
