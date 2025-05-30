@@ -332,8 +332,32 @@ export const authOptions: AuthOptions = {
       if (account && user) {
         token.id = user.id; 
         token.email = user.email;
-        token.name = user.name;
+        // token.name = user.name; // We'll use firstName and lastName instead
         token.role = (user.role ?? 'paciente') as UserRoleType;
+
+        // Fetch first_name, last_name, and image_url from public.users
+        try {
+          const { data: publicUser, error: publicUserError } = await supabaseAdmin
+            .from('users')
+            .select('first_name, last_name, image_url')
+            .eq('id', user.id)
+            .single();
+
+          if (publicUserError) {
+            console.error(`[JWT Callback] Error fetching user details from public.users for ID ${user.id}:`, publicUserError);
+          } else if (publicUser) {
+            token.firstName = publicUser.first_name;
+            token.lastName = publicUser.last_name;
+            token.image_url = publicUser.image_url;
+            token.name = `${publicUser.first_name || ''} ${publicUser.last_name || ''}`.trim(); // Keep full name for compatibility
+            console.log(`[JWT Callback] Fetched public.users details for ${user.id}:`, { firstName: token.firstName, lastName: token.lastName, imageUrl: token.image_url });
+          } else {
+            console.warn(`[JWT Callback] No user found in public.users for ID ${user.id}`);
+          }
+        } catch (e) {
+          console.error(`[JWT Callback] Exception fetching user details from public.users for ID ${user.id}:`, e);
+        }
+
 
         if (account.provider === 'google') {
           token.accessToken = account.access_token;
@@ -367,6 +391,23 @@ export const authOptions: AuthOptions = {
         }
       }
 
+      // Fetch fresh image_url on every JWT invocation (option A)
+      if (!user && token.id) {
+        try {
+          const { data: publicUser, error: publicUserError } = await supabaseAdmin
+            .from('users')
+            .select('image_url')
+            .eq('id', token.id as string)
+            .single();
+          if (!publicUserError && publicUser?.image_url) {
+            token.image_url = publicUser.image_url;
+            console.log(`[JWT Callback] Refreshed image_url for ${token.id}:`, token.image_url);
+          }
+        } catch (e) {
+          console.error(`[JWT Callback] Error refreshing image_url for ${token.id}:`, e);
+        }
+      }
+
       // Si el token de acceso no ha expirado, devuélvelo
       if (token.accessTokenExpires && Date.now() < token.accessTokenExpires) {
         // console.log("Access token is valid");
@@ -390,7 +431,10 @@ export const authOptions: AuthOptions = {
       session.user.id = token.id as string;
       session.user.role = token.role as UserRoleType;
       if (token.email) session.user.email = token.email;
-      if (token.name) session.user.name = token.name;
+      if (token.name) session.user.name = token.name; // Full name
+      if (token.firstName) session.user.firstName = token.firstName;
+      if (token.lastName) session.user.lastName = token.lastName;
+      if (token.image_url) session.user.image_url = token.image_url;
       
       session.accessToken = token.accessToken;
       session.error = token.error; // Propagate error from token refresh
