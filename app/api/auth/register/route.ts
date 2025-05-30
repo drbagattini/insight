@@ -52,31 +52,29 @@ export async function POST(request: Request) {
     }
 
     // Éxito - El usuario fue creado en auth.users
-    console.log('AUTH API: User created successfully in Supabase Auth with ID:', authData.user.id);
+    const userId = authData.user.id; // Define userId here
+    console.log('AUTH API: User created successfully in Supabase Auth with ID:', userId);
 
-    // Insertar perfil en public.users para resolver FK patients_psychologist_id_fkey
-    try {
-      const hashedPassword = await hash(userData.password, 10);
-      const { error: insertError } = await supabaseAdmin
-        .from('users')
-        .insert({
-          id: authData.user.id,
-          email: userData.email,
-          password_hash: hashedPassword,
-          role: UserRole.PSICOLOGO,
-          first_name: userData.first_name,
-          last_name: userData.last_name,
-        });
-      if (insertError) {
-        console.error('AUTH API: Error inserting into public.users:', insertError.message);
-        return NextResponse.json({ error: 'Error al crear perfil de usuario' }, { status: 500 });
-      }
-    } catch (err) {
-      console.error('AUTH API: Unexpected error hashing password:', err);
-      return NextResponse.json({ error: 'Error interno al generar hash de contraseña' }, { status: 500 });
+    // --- BEGIN WORKAROUND: Set email_confirmed_at ---
+    console.log(`AUTH API: Attempting to mark email as confirmed for user ${userId}`);
+    const { error: confirmationError } = await supabaseAdmin.auth.admin.updateUserById(
+      userId,
+      { email_confirm: true } // This should set email_confirmed_at for the user
+    );
+
+    if (confirmationError) {
+      console.error(`AUTH API: CRITICAL - Failed to mark email as confirmed for user ${userId}:`, confirmationError);
+      // This is a critical failure because the user won't be able to log in.
+      // Consider if you need to delete the partially created user, though that adds complexity.
+      return NextResponse.json({ 
+        error: `Usuario creado (ID: ${userId}) pero falló la confirmación automática del email. Por favor, contacte a soporte.`,
+        details: confirmationError.message
+      }, { status: 500 }); // Internal Server Error, as the registration process is incomplete.
     }
+    console.log(`AUTH API: Email successfully marked as confirmed for user ${userId}.`);
+    // --- END WORKAROUND ---
 
-    return NextResponse.json({ message: 'Usuario registrado exitosamente', userId: authData.user.id }, { status: 201 }); // 201 Created
+    return NextResponse.json({ message: 'Usuario registrado y email confirmado exitosamente', userId: userId }, { status: 201 }); // 201 Created
 
   } catch (error) {
     console.error('AUTH API: Unexpected error in registration:', error);

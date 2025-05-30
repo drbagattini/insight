@@ -106,7 +106,9 @@ export const authOptions: AuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
           console.error('AuthOptions: Missing credentials');
-          return null;
+          const error = new Error('MissingCredentials');
+          (error as any).type = 'MissingCredentials'; 
+          throw error;
         }
         try {
           // 1. Autenticar contra Supabase Auth
@@ -117,35 +119,24 @@ export const authOptions: AuthOptions = {
 
           if (authError) {
             console.error(`AuthOptions: Error de Supabase Auth:`, authError.message);
-            // Determinar si el email no existe o la contraseña es inválida
-            // Esta lógica puede necesitar ajustes basados en cómo quieres manejar los errores
-            let errorCode = 'AuthenticationFailed';
-            if (authError.message.toLowerCase().includes('invalid login credentials')) {
-              // Intentar verificar si el email existe para diferenciar entre email no encontrado y contraseña incorrecta
-              const { data: userExistsData, error: checkError } = await supabaseAdmin
-                .from('users') // Asume que esta es tu tabla pública de usuarios
-                .select('id')
-                .eq('email', credentials.email)
-                .maybeSingle(); // Usa maybeSingle para no fallar si no hay resultados
-
-              if (checkError && checkError.code !== 'PGRST116') { // PGRST116 es 'Fetched rowcount is not one'
-                console.error('AuthOptions: Error verificando existencia de email:', checkError);
-              } else if (userExistsData) {
-                errorCode = 'InvalidPassword';
-              } else {
-                errorCode = 'EmailNotFound';
-              }
-            } else if (authError.message.toLowerCase().includes('email not confirmed')) {
-              errorCode = 'EmailNotConfirmed';
+            let errorType = 'AuthenticationFailed'; // Default
+      
+            if (authError.message.toLowerCase().includes('email not confirmed')) {
+              errorType = 'EmailNotConfirmed';
+            } else if (authError.message.toLowerCase().includes('invalid login credentials')) {
+              errorType = 'InvalidCredentials';
             }
-            const errorToThrow = new Error(errorCode);
-            (errorToThrow as any).type = errorCode;
+
+            const errorToThrow = new Error(errorType); 
+            (errorToThrow as any).type = errorType; 
             throw errorToThrow;
           }
 
           if (!authData?.user) {
-            console.error(`AuthOptions: No se encontró el usuario en Supabase Auth.`);
-            return null;
+            console.error(`AuthOptions: No se encontró el usuario en Supabase Auth (inesperado después de un no-error).`);
+            const errorToThrow = new Error('UserNotFoundAfterAuth');
+            (errorToThrow as any).type = 'UserNotFoundAfterAuth';
+            throw errorToThrow;
           }
 
           // 2. Obtener el usuario de la tabla pública `users` (la que usa el SupabaseAdapter)
@@ -159,47 +150,20 @@ export const authOptions: AuthOptions = {
 
           if (publicUserError) {
             console.error(`[AuthOptions-Credentials] Error al consultar public.users con email '${authData.user.email}':`, JSON.stringify(publicUserError, null, 2));
-            // Si el usuario existe en Supabase Auth pero no en la tabla pública 'users',
-            // esto podría indicar un problema de sincronización o que el SupabaseAdapter no lo ha creado aún.
-            const errorToThrow = new Error('UserNotFoundInPublicTable');
-            (errorToThrow as any).type = 'UserNotFoundInPublicTable';
+            const errorToThrow = new Error('UserQueryFailedInPublicTable'); // Nuevo tipo de error
+            (errorToThrow as any).type = 'UserQueryFailedInPublicTable';
             (errorToThrow as any).details = `Query error for email: ${authData.user.email}`;
             throw errorToThrow;
           }
 
           if (!publicUser) {
-            console.log(`[AuthOptions-Credentials] No se encontró usuario en public.users para email '${authData.user.email}', creando uno nuevo`);
-            
-            // Crear un registro en public.users para este usuario
-            const userEmail = authData.user.email || '';
-            const { data: insertedUser, error: insertError } = await supabaseAdmin
-              .from('users')
-              .insert({
-                id: authData.user.id,
-                email: userEmail,
-                password_hash: '', // placeholder para usuarios de credenciales
-                role: 'psicologo', // Asumimos psicologo por defecto
-                first_name: authData.user.user_metadata?.first_name || (userEmail ? userEmail.split('@')[0] : '') || '',
-                last_name: authData.user.user_metadata?.last_name || ''
-              })
-              .select('id, first_name, last_name, email, role')
-              .single();
-              
-            if (insertError) {
-              console.error(`[AuthOptions-Credentials] Error creando usuario en public.users:`, insertError);
-              const errorToThrow = new Error('ErrorCreatingUserInPublicTable');
-              (errorToThrow as any).type = 'ErrorCreatingUserInPublicTable';
-              (errorToThrow as any).details = `Error creating user in public.users: ${insertError.message}`;
-              throw errorToThrow;
-            }
-            
-            console.log(`[AuthOptions-Credentials] Usuario creado exitosamente en public.users:`, insertedUser);
-            return {
-              id: insertedUser.id,
-              name: [insertedUser.first_name, insertedUser.last_name].filter(Boolean).join(' ') || insertedUser.email,
-              email: insertedUser.email,
-              role: insertedUser.role
-            };
+            // ANTES: intentaba crear el usuario.
+            // AHORA: si no está, es un problema porque el trigger debería haberlo creado.
+            console.error(`[AuthOptions-Credentials] CRITICAL: No se encontró usuario en public.users para email '${authData.user.email}' (ID: ${authData.user.id}). El trigger debería haberlo creado.`);
+            const errorToThrow = new Error('UserNotFoundInPublicTablePostTrigger'); // Nuevo tipo de error
+            (errorToThrow as any).type = 'UserNotFoundInPublicTablePostTrigger';
+            (errorToThrow as any).details = `User with email ${authData.user.email} and ID ${authData.user.id} not found in public.users. Trigger issue?`;
+            throw errorToThrow; 
           }
 
           console.log(`[AuthOptions-Credentials] Usuario encontrado en public.users:`, JSON.stringify(publicUser, null, 2));
@@ -210,19 +174,20 @@ export const authOptions: AuthOptions = {
             id: publicUser.id, // Este es el ID de la tabla public.users
             name: fullName,
             email: publicUser.email,
-            role: publicUser.role, // Incluimos el rol
-            // Otros campos que NextAuth o tu aplicación puedan necesitar del usuario
+            role: publicUser.role as UserRoleType, // Incluimos el rol y casteamos
+            supabaseAccessToken: authData.session?.access_token,
+            supabaseRefreshToken: authData.session?.refresh_token,
           };
 
         } catch (err: any) {
-            // Si el error ya tiene un 'type', es uno que hemos construido nosotros, así que lo relanzamos
+            // Si el error ya tiene un 'type' (porque lo lanzamos nosotros), lo relanzamos para que NextAuth lo use
             if (err.type) {
-                throw err;
+                throw err; 
             }
-            // Para errores inesperados
+            // Para errores inesperados no categorizados por nosotros
             console.error('AuthOptions: Error inesperado durante la autenticación con credenciales:', err);
-            const authError = new Error("AuthenticationFailed");
-            (authError as any).type = "AuthenticationFailed";
+            const authError = new Error("UnhandledAuthenticationError");
+            (authError as any).type = "UnhandledAuthenticationError";
             throw authError;
         }
       }
