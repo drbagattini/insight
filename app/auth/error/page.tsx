@@ -3,7 +3,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 
 const errorMessages: { [key: string]: string } = {
   default: 'Ocurrió un error durante el proceso de autenticación. Por favor, intenta de nuevo.',
@@ -21,7 +21,7 @@ const errorMessages: { [key: string]: string } = {
   UnhandledAuthenticationError: 'Ocurrió un error inesperado (código: UAE). Por favor, inténtalo de nuevo.',
 };
 
-export default function AuthErrorPage() {
+function AuthErrorContent() {
   const searchParams = useSearchParams();
   const errorType = searchParams?.get('error');
   const [message, setMessage] = useState(errorMessages.default);
@@ -54,5 +54,13 @@ export default function AuthErrorPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function AuthErrorPage() {
+  return (
+    <Suspense fallback={<div>Cargando información del error...</div>}>
+      <AuthErrorContent />
+    </Suspense>
   );
 }
