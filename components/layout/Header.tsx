@@ -8,12 +8,15 @@ import { usePathname } from 'next/navigation';
 
 export default function Header() {
   const { data: session } = useSession();
+
+
   const pathname = usePathname() || '';
   let headerTitle = 'Dashboard';
   
   // Mapeo de rutas a títulos
   const routeTitles: Record<string, string> = {
     '/dashboard': 'Resumen asistencial',
+    '/dashboard/profile': 'Mi Perfil',
     '/dashboard/calendar': 'Agenda',
     '/dashboard/patients': 'Pacientes',
     '/dashboard/questionnaires': 'Cuestionarios',
@@ -42,8 +45,20 @@ export default function Header() {
 
         <Menu as="div" className="relative">
           <Menu.Button className="flex items-center space-x-3 text-sm">
-            <span className="text-gray-700">{session?.user?.name || 'Usuario'}</span>
-            <UserCircleIcon className="w-8 h-8 text-gray-400" />
+            <span className="font-semibold text-gray-700">
+              {session?.user?.firstName && session?.user?.lastName
+                ? `${session.user.firstName} ${session.user.lastName}`
+                : session?.user?.name || 'Usuario'}
+            </span>
+            {session?.user?.image_url ? (
+              <img
+                className="w-8 h-8 rounded-full object-cover"
+                src={session.user.image_url}
+                alt="Foto de perfil"
+              />
+            ) : (
+              <UserCircleIcon className="w-8 h-8 text-gray-400" />
+            )}
           </Menu.Button>
 
           <Transition
@@ -59,7 +74,7 @@ export default function Header() {
               <Menu.Item>
                 {({ active }) => (
                   <a
-                    href="/profile"
+                    href="/dashboard/profile"
                     className={`${
                       active ? 'bg-gray-100' : ''
                     } block px-4 py-2 text-sm text-gray-700`}
