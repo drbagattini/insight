@@ -21,15 +21,37 @@ export default function PatientList({
 }: PatientListProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { data: patients = [], isLoading, error } = useQuery<Patient[]>({
+  const { 
+    data: patients = [], 
+    isLoading, 
+    error, 
+    refetch 
+  } = useQuery<Patient[]>({
     queryKey: QUERY_KEYS.PATIENTS,
     queryFn: async () => {
-      const response = await fetch('/api/patients');
+      console.log('Obteniendo lista de pacientes...');
+      const response = await fetch('/api/patients', {
+        // Evitar caché del navegador
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      });
+      
       if (!response.ok) {
-        throw new Error('Error al cargar pacientes');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Error en la respuesta del servidor:', errorData);
+        throw new Error(errorData.error || 'Error al cargar pacientes');
       }
-      return response.json();
-    }
+      
+      const data = await response.json();
+      console.log('Pacientes recibidos:', data);
+      return Array.isArray(data) ? data : [];
+    },
+    // Forzar recarga cuando el componente se monta
+    refetchOnMount: true,
+    // No volver a intentar automáticamente en caso de error
+    retry: 1
   });
 
   // Filtrar pacientes por nombre

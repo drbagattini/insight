@@ -28,9 +28,8 @@ export async function GET(request: Request) {
         const { data: respList, error: respError } = await supabaseAdmin
           .from('respuestas')
           .select('enviado_en')
-          // .eq('paciente_id', pacienteId) // No es necesario si filtramos por envio_programado_id
-          // .eq('cuestionario_id', send.cuestionario_id) // No es necesario si filtramos por envio_programado_id
-          .eq('envio_programado_id', send.id) // Asumiendo que 'send.id' es el 'envios_programados.id'
+          .eq('paciente_id', send.paciente_id)
+          .eq('cuestionario_id', send.cuestionario_id)
           .order('enviado_en', { ascending: false })
           .limit(1);
         if (respError) {
