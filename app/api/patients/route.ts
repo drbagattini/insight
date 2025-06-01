@@ -37,23 +37,54 @@ export async function GET() {
   // 1) Obtener sesión y verificar autorización
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, {
+      status: 401,
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      }
+    });
   }
 
-  // Obtener pacientes del psicólogo con service role key y filtro manual
-  const { data, error } = await supabaseAdmin
-    .from("patients")
-    .select("*")
-    .eq("psychologist_id", session.user.id)
-    .order("created_at", { ascending: false });
+  try {
+    console.log(`[GET /api/patients] Buscando pacientes para psicólogo: ${session.user.id}`);
+    
+    // Obtener pacientes del psicólogo
+    const { data, error } = await supabaseAdmin
+      .from("patients")
+      .select("*")
+      .eq("psychologist_id", session.user.id)
+      .order("created_at", { ascending: false });
 
-  if (error) {
-    console.error("[GET /api/patients]", error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      console.error("[GET /api/patients] Error al obtener pacientes:", error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    console.log(`[GET /api/patients] Encontrados ${data?.length || 0} pacientes`);
+    // Asegurarse de devolver un array incluso si data es null/undefined
+    return NextResponse.json(Array.isArray(data) ? data : [], {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      }
+    });
+  } catch (error) {
+    console.error("[GET /api/patients] Error inesperado:", error);
+    return NextResponse.json(
+      { error: 'Error interno del servidor' }, 
+      {
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        }
+      }
+    );
   }
-
-  // 3) Devolver lista vacía si no hay datos
-  return NextResponse.json(data ?? []);
 }
 
 //// ---------- POST ----------
@@ -65,50 +96,73 @@ export async function POST(req: NextRequest) {
   }
   const psicologoId = session.user.id;
 
-  // Ensure legacy psychologists have profile record to satisfy FK constraint
-  try {
-    const upsertResponse = await supabaseAdmin
-      .from('users')
-      .upsert({
-        id: psicologoId,
-        email: session.user.email ?? '',
-        password_hash: '', // placeholder for legacy users
-        role: session.user.role,
-        first_name: session.user.name ?? '',
-        last_name: '',
-      }, { onConflict: 'id' });
-    console.log('[POST /api/patients] Upsert response:', upsertResponse);
-    const profileError = upsertResponse.error;
-    if (profileError && profileError.code !== '23505') {
-      console.error('[POST /api/patients] Error ensuring profile exists:', profileError);
-      const profileMsg = profileError.message || profileError.code || 'Error interno al verificar perfil';
-      return NextResponse.json({ error: profileMsg }, { status: 500 });
+  // Asegurar y obtener el perfil de psicólogo
+  let profileId = session.user.id;
+  const email = session.user.email ?? '';
+  const [firstName, ...rest] = (session.user.name ?? email.split('@')[0]).split(' ');
+  const lastName = rest.join(' ');
+  // Verificar perfil por ID
+  const { data: userById } = await supabaseAdmin.from('users').select('id, email').eq('id', profileId).single();
+  
+  if (!userById) {
+    // Verificar perfil por email existente
+    if (!email) {
+      console.error('[POST /api/patients] No se puede crear usuario sin email');
+      return NextResponse.json({ 
+        error: 'Se requiere email para crear el perfil del psicólogo' 
+      }, { status: 400 });
     }
-    const { data: checkUser, error: checkErr } = await supabaseAdmin
+
+    // Buscar usuario por email
+    const { data: userByEmail } = await supabaseAdmin
       .from('users')
       .select('id')
-      .eq('id', psicologoId);
-    console.log('[POST /api/patients] User exists after upsert:', { checkUser, checkErr });
+      .eq('email', email)
+      .single();
 
-    // Si después del upsert seguimos sin registro, crear uno mínimo para evitar error FK
-    if ((!checkUser || checkUser.length === 0) && !checkErr) {
-      console.warn('[POST /api/patients] No se encontró perfil tras upsert, creando registro mínimo');
-      const { error: insertMissingError } = await supabaseAdmin.from('users').insert({
-        id: psicologoId,
-        email: session.user.email ?? '',
-        password_hash: '',
-        role: session.user.role ?? 'psicologo',
-        first_name: session.user.name?.split(' ')[0] ?? session.user.email?.split('@')[0] ?? '',
-        last_name: session.user.name?.split(' ').slice(1).join(' ') ?? '',
-      });
-      if (insertMissingError) {
-        console.error('[POST /api/patients] Error creando perfil mínimo:', insertMissingError);
-        return NextResponse.json({ error: 'Error interno creando perfil' }, { status: 500 });
+    if (userByEmail) {
+      // Si existe por email, usar ese ID
+      profileId = userByEmail.id;
+      console.log(`[POST /api/patients] Usuario encontrado por email, usando ID: ${profileId}`);
+    } else {
+      // Crear nuevo perfil con upsert para evitar duplicados
+      console.log(`[POST /api/patients] Creando nuevo usuario con email: ${email}`);
+      const { data: newUser, error: createErr } = await supabaseAdmin
+        .from('users')
+        .upsert({
+          id: session.user.id,
+          email,
+          password_hash: '',
+          role: session.user.role ?? 'psicologo',
+          first_name: firstName,
+          last_name: lastName
+        })
+        .select()
+        .single();
+
+      if (createErr || !newUser) {
+        console.error('[POST /api/patients] Error en upsert de usuario:', createErr);
+        return NextResponse.json({ 
+          error: 'Error en el registro del psicólogo',
+          details: createErr?.message || 'No se pudo crear el usuario'
+        }, { status: 500 });
       }
+      
+      console.log(`[POST /api/patients] Usuario creado: ${session.user.id}`);
+      profileId = newUser.id;
     }
-  } catch (err) {
-    console.error('[POST /api/patients] Unexpected error ensuring profile exists:', err);
-    return NextResponse.json({ error: 'Error interno verificando perfil' }, { status: 500 });
+  } else if (userById.email !== email && email) {
+    // Actualizar email si es diferente
+    const { error: updateError } = await supabaseAdmin
+      .from('users')
+      .update({ email })
+      .eq('id', profileId);
+      
+    if (updateError) {
+      console.error('[POST /api/patients] Error actualizando email:', updateError);
+    } else {
+      console.log(`[POST /api/patients] Email actualizado para usuario ${profileId}`);
+    }
   }
 
   // 2) Validar body
@@ -121,47 +175,19 @@ export async function POST(req: NextRequest) {
 
   const { sendInitial } = parsed.data;
 
-  // Verificar directamente si el psicólogo existe en public.users
-  const { data: userExists, error: userCheckError } = await supabaseAdmin
-    .from('users')
-    .select('id')
-    .eq('id', psicologoId)
-    .single();
-    
-  if (userCheckError || !userExists) {
-    console.log('[POST /api/patients] Psicólogo no encontrado en public.users, creando registro');
-    
-    // Crear registro del psicólogo si no existe
-    const { error: createUserError } = await supabaseAdmin
-      .from('users')
-      .insert({
-        id: psicologoId,
-        email: session.user.email ?? '',
-        password_hash: '',
-        role: session.user.role ?? 'psicologo',
-        first_name: session.user.name?.split(' ')[0] ?? session.user.email?.split('@')[0] ?? '',
-        last_name: session.user.name?.split(' ').slice(1).join(' ') ?? '',
-      });
-      
-    if (createUserError) {
-      console.error('[POST /api/patients] Error creando usuario:', createUserError);
-      return NextResponse.json({ error: 'Error creando perfil de psicólogo' }, { status: 500 });
-    }
-    
-    console.log('[POST /api/patients] Psicólogo creado exitosamente');
-  } else {
-    console.log('[POST /api/patients] Psicólogo encontrado en public.users');
-  }
+  // Ya verificamos y aseguramos la existencia del perfil del psicólogo al inicio
+  console.log(`[POST /api/patients] Usando perfil de psicólogo con ID: ${profileId}`);
 
   // Insertar paciente con service role key y filtro manual
   const { data: paciente, error: pacienteError } = await supabaseAdmin
     .from("patients")
     .insert({
-      psychologist_id: psicologoId,
+      psychologist_id: profileId,
       name: parsed.data.name,
       email: parsed.data.email,
       whatsapp: parsed.data.whatsapp,
       metadata: parsed.data.metadata,
+      active: true, // Establecer paciente como activo por defecto
     })
     .select("*")
     .single();

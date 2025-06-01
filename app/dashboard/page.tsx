@@ -7,8 +7,9 @@ import {
   ClipboardDocumentListIcon,
   CalendarIcon,
 } from '@heroicons/react/24/outline';
-import StatCard from '@/components/dashboard/StatCard';
+import KpiCard from '@/components/dashboard/KpiCard';
 import PatientForm from '@/components/patients/PatientForm';
+import { KPIs } from '@/types/dashboard';
 import { NewPatient } from '@/types/patients';
 import {
   Chart as ChartJS,
@@ -49,6 +50,13 @@ const whoData = {
   ],
 };
 
+// Fetch KPIs from backend
+async function fetchKPIs(): Promise<KPIs> {
+  const res = await fetch('/api/dashboard/kpis');
+  if (!res.ok) throw new Error('Error fetching KPIs');
+  return res.json();
+}
+
 export default function DashboardPage() {
   const [showPatientForm, setShowPatientForm] = useState(false);
 
@@ -74,6 +82,11 @@ export default function DashboardPage() {
     }
   };
 
+  const { data: kpis, isLoading: loadingKPIs } = useQuery<KPIs, Error>({
+    queryKey: ['kpis'],
+    queryFn: fetchKPIs,
+  });
+
   const { data: upcoming = [], isLoading: loadingUpcoming } = useQuery<any[]>({
     queryKey: ['upcoming'],
     queryFn: async () => {
@@ -88,26 +101,36 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Estadísticas */}
+      {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatCard
-          title="Pacientes Activos"
-          value="24"
-          icon={UserGroupIcon}
-          trend={{ value: 12, isPositive: true }}
-        />
-        <StatCard
-          title="Cuestionarios Pendientes"
-          value="8"
-          icon={ClipboardDocumentListIcon}
-          trend={{ value: 5, isPositive: false }}
-        />
-        <StatCard
-          title="Citas esta Semana"
-          value="15"
-          icon={CalendarIcon}
-          trend={{ value: 8, isPositive: true }}
-        />
+        {loadingKPIs ? (
+          <>
+            <KpiCard title="Pacientes Activos" value={0} icon={UserGroupIcon} />
+            <KpiCard title="Cuestionarios Pendientes" value={0} icon={ClipboardDocumentListIcon} />
+            <KpiCard title="Citas esta Semana" value={0} icon={CalendarIcon} />
+          </>
+        ) : (
+          <>
+            <KpiCard
+              title="Pacientes Activos"
+              value={kpis?.activePatients ?? 0}
+              delta={kpis?.deltaActive ?? null}
+              icon={UserGroupIcon}
+            />
+            <KpiCard
+              title="Cuestionarios Pendientes"
+              value={kpis?.pendingLinks ?? 0}
+              delta={kpis?.deltaPending ?? null}
+              icon={ClipboardDocumentListIcon}
+            />
+            <KpiCard
+              title="Citas esta Semana"
+              value={kpis?.weekAppointments ?? 0}
+              delta={kpis?.deltaAppointments ?? null}
+              icon={CalendarIcon}
+            />
+          </>
+        )}
       </div>
 
       {/* Gráfico WHO-5 */}

@@ -26,21 +26,43 @@ export default function PatientsPage() {
         : '/api/patients';
       const method = editingPatient?.id ? 'PUT' : 'POST';
       
+      console.log('Enviando datos del paciente:', { url, method, data });
+      
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
+        },
         body: JSON.stringify(data),
       });
 
+      const responseData = await response.json().catch(() => ({}));
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Error al guardar el paciente');
+        console.error('Error en la respuesta del servidor:', responseData);
+        throw new Error(
+          responseData.error?.message || 
+          responseData.error || 
+          'Error al guardar el paciente'
+        );
       }
 
-      // Refresh the patients list
-      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS });
+      console.log('Paciente guardado exitosamente:', responseData);
+      
+      // Forzar recarga de la lista de pacientes
+      console.log('Refrescando la lista de pacientes...');
+      await queryClient.refetchQueries({
+        queryKey: QUERY_KEYS.PATIENTS,
+        exact: true // Asegura que solo se refresque esta query específica
+      });
+      console.log('Lista de pacientes refrescada.');
+      
+      // Cerrar el formulario
       setShowForm(false);
       setEditingPatient(undefined);
+      
+      
     } catch (error) {
       console.error('Error saving patient:', error);
       throw error; // Let the form handle the error

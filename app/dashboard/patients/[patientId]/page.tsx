@@ -47,6 +47,7 @@ export default function PatientEvolutionPage() {
     respondido?: boolean;
     // Objeto del cuestionario relacionado
     cuestionarios?: { codigo: string };
+    fecha_inicio_programada?: string;
   }
   const [scheduledSends, setScheduledSends] = useState<ScheduledSend[]>([]);
   const [loadingSends, setLoadingSends] = useState(true);
@@ -165,7 +166,12 @@ export default function PatientEvolutionPage() {
       const res = await fetch('/api/cuestionarios/enviar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pacienteId: patientId, cuestionarioId: send.cuestionario_id, canal: send.canal }),
+        body: JSON.stringify({
+          pacienteId: patientId,
+          cuestionarioId: send.cuestionario_id,
+          canal: send.canal,
+          envioProgramadoId: send.id,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al enviar');
@@ -513,7 +519,11 @@ export default function PatientEvolutionPage() {
                     <td className="px-4 py-2 text-center">{send.cuestionarios?.codigo || send.cuestionario_id}</td>
                     <td className="px-4 py-2 text-center">{send.canal}</td>
                     <td className="px-4 py-2 text-center">{send.frecuencia}</td>
-                    <td className="px-4 py-2 text-center">{send.proximo_envio ? new Date(send.proximo_envio).toLocaleDateString() : new Date(send.creado_en).toLocaleDateString()}</td>
+                    <td className="px-4 py-2 text-center">
+                      {send.fecha_inicio_programada
+                        ? new Date(send.fecha_inicio_programada).toLocaleDateString()
+                        : new Date(send.creado_en).toLocaleDateString()}
+                    </td>
                     <td className="px-4 py-2 text-center">
                       {send.frecuencia === 'unico' 
                         ? 'N/A' 
