@@ -12,7 +12,7 @@ interface CustomSession extends NextAuthSession {
   sbRefreshToken?: string;
 }
 
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'; // Force dynamic to ensure latest data
 
 interface RouteHandlerParams {
   id: string;
