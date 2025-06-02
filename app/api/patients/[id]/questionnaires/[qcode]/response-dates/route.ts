@@ -11,7 +11,7 @@ interface Params {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Params }
+  params: Params
 ) {
   const { id, qcode } = params;
   console.log(`[API /response-dates] Called for id: ${id}, qcode: ${qcode}`);
