@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { type Session } from 'next-auth';
 import { authOptions } from '@/app/lib/auth';
@@ -10,10 +10,10 @@ interface Params {
 }
 
 export async function GET(
-  request: Request,
-  context: { params: Params }
+  request: NextRequest,
+  { params }: { params: Params }
 ) {
-  const { id, qcode } = context.params;
+  const { id, qcode } = params;
   console.log(`[API /response-dates] Called for id: ${id}, qcode: ${qcode}`);
 
   const session = await getServerSession(authOptions) as Session;
