@@ -360,11 +360,21 @@ export const authOptions: AuthOptions = {
 
 
         if (account.provider === 'google') {
-          token.accessToken = account.access_token;
-          token.refreshToken = account.refresh_token;
+          token.accessToken = account.access_token; // Google's access token
+          token.refreshToken = account.refresh_token; // Google's refresh token
           token.accessTokenExpires = account.expires_at ? account.expires_at * 1000 : undefined;
+          delete token.sbAccessToken;
+          delete token.sbRefreshToken;
           delete token.error; 
-          console.log("Google account linked, tokens stored in JWT:", { provider: account.provider, userId: user.id });
+          console.log("Google account linked, Google tokens stored in JWT:", { provider: account.provider, userId: user.id });
+        } else if (user && (user as any).supabaseAccessToken) {
+          // For credentials provider, user object from authorize contains supabase tokens
+          token.sbAccessToken = (user as any).supabaseAccessToken;
+          token.sbRefreshToken = (user as any).supabaseRefreshToken;
+          delete token.accessToken;
+          delete token.refreshToken;
+          delete token.accessTokenExpires;
+          console.log("Credentials login, Supabase tokens stored in JWT:", { provider: account.provider, userId: user.id });
         }
       }
 
@@ -433,11 +443,23 @@ export const authOptions: AuthOptions = {
       if (token.email) session.user.email = token.email;
       if (token.name) session.user.name = token.name; // Full name
       if (token.firstName) session.user.firstName = token.firstName;
-      if (token.lastName) session.user.lastName = token.lastName;
+      if (token.lastName)      session.user.lastName = token.lastName;
       if (token.image_url) session.user.image_url = token.image_url;
       
-      session.accessToken = token.accessToken;
-      session.error = token.error; // Propagate error from token refresh
+      // Expose Google's access token if present (e.g., for Google Calendar API direct calls from client)
+      if (token.accessToken) {
+        session.accessToken = token.accessToken; 
+      }
+
+      // Expose Supabase tokens to the session object for client-side Supabase SDK and API routes
+      if (token.sbAccessToken) {
+        session.sbAccessToken = token.sbAccessToken;
+      }
+      if (token.sbRefreshToken) {
+        session.sbRefreshToken = token.sbRefreshToken;
+      }
+      
+      session.error = token.error; // Propagate error from token refresh (e.g., Google refresh token failure)
       
       return session;
     }

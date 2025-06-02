@@ -16,7 +16,9 @@ declare module 'next-auth' {
 
   interface Session {
     user: User; // Usa nuestra interfaz User extendida
-    accessToken?: string;
+    accessToken?: string; // Google's access token
+    sbAccessToken?: string; // Supabase access token
+    sbRefreshToken?: string; // Supabase refresh token
     error?: string; // Para errores (ej. de refresco de token)
   }
 }

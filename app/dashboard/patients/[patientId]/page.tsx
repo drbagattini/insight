@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from 'react';
 import { Line } from 'react-chartjs-2';
+import { PatientResponsesSection } from '@/components/patients/PatientResponsesSection';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -418,6 +419,11 @@ export default function PatientEvolutionPage() {
         <div className="bg-white p-6 rounded-lg shadow h-96">
           <Line data={chartData} options={options} />
         </div>
+        {/* Patient Responses Section */}
+        <div className="mb-8">
+          <PatientResponsesSection patientId={patientId} />
+        </div>
+
         {/* Programar nuevo envío */}
         <div className="bg-white p-6 rounded-lg shadow mb-6">
           <h3 className="text-lg font-semibold mb-4">Programar nuevo envío</h3>
@@ -555,6 +561,8 @@ export default function PatientEvolutionPage() {
             <p>No hay envíos programados</p>
           )}
         </div>
+
+
 
         {/* Modal de confirmación para cancelar envío programado */}
         {cancelSendId && (
