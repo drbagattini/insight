@@ -4,16 +4,16 @@ import { type Session } from 'next-auth';
 import { authOptions } from '@/app/lib/auth';
 import { supabaseAdmin } from '@/app/lib/supabaseAdmin';
 
-interface Params {
+interface RouteHandlerParams {
   id: string;
   qcode: string;
 }
 
 export async function GET(
   request: NextRequest,
-  params: Params
+  context: { params: RouteHandlerParams }
 ) {
-  const { id, qcode } = params;
+  const { id, qcode } = context.params;
   console.log(`[API /response-dates] Called for id: ${id}, qcode: ${qcode}`);
 
   const session = await getServerSession(authOptions) as Session;
