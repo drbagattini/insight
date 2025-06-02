@@ -14,11 +14,15 @@ interface CustomSession extends NextAuthSession {
   sbRefreshToken?: string;
 }
 
+interface RouteHandlerParams {
+  responseId: string;
+}
+
 export async function GET(
   request: NextRequest,
-  context: { params: { responseId: string } | Promise<{ responseId: string }> }
+  context: any // Using 'any' for context due to Next.js 15.3.0 typing issues
 ) {
-  const { responseId } = await context.params;
+  const { responseId } = (context.params as RouteHandlerParams); // Type assertion for params
   if (!responseId) {
     return NextResponse.json({ error: 'Response ID is required' }, { status: 400 });
   }
