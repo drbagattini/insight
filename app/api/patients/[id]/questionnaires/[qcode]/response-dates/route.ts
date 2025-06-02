@@ -11,9 +11,9 @@ interface Params {
 
 export async function GET(
   request: Request,
-  { params }: { params: Params | Promise<Params> }
+  context: { params: Params }
 ) {
-  const { id, qcode } = await params;
+  const { id, qcode } = context.params;
   console.log(`[API /response-dates] Called for id: ${id}, qcode: ${qcode}`);
 
   const session = await getServerSession(authOptions) as Session;
