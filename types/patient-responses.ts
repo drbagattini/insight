@@ -14,6 +14,7 @@ export type ResponseDetail = {
   questionnaire_name: string;     // Full name of the questionnaire (e.g., "Generalized Anxiety Disorder 7")
   date: string;                   // Timestamp (ISO string) when the response was submitted ('enviado_en')
   score: number | null;           // Overall score, if applicable
+  questionnaire_scale_description?: string; // Optional: Description of the questionnaire's scoring scale
   items: ResponseItemDetail[]; // Array of all questions and their answers
 };
 

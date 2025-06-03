@@ -133,7 +133,8 @@ export async function GET(
           id,
           codigo,
           titulo,
-          items
+          items,
+          descripcion_escala
         )
       `)
       .eq('id', responseId)
@@ -149,6 +150,7 @@ export async function GET(
       id: string;
       codigo: string;
       titulo: string;
+      descripcion_escala?: string;
       items: ItemCuestionario[];
     };
 
@@ -309,6 +311,7 @@ export async function GET(
       patient_id: responseData.paciente_id,
       questionnaire_code: cuestionario?.codigo || 'N/A',
       questionnaire_name: cuestionario?.titulo || 'Unknown Questionnaire',
+      questionnaire_scale_description: cuestionario?.descripcion_escala, // Añadir la descripción de la escala
       date: responseData.enviado_en as string,
       score: responseData.puntuacion,
       items: enrichedItems, 
