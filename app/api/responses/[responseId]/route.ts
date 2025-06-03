@@ -227,9 +227,15 @@ export async function GET(
       valor: number;       
     }
 
+    interface AnswerOption {
+      valor: number | string; // Allow string values if some questionnaires use them
+      texto: string;
+    }
+
     interface QuestionDefinitionDB {
       id: number; 
       texto: string; 
+      opciones_respuesta?: AnswerOption[]; // Make optional as not all questions might have predefined options
     }
 
     // Acceder al cuestionario (como primer elemento del array o directamente)
@@ -268,13 +274,25 @@ export async function GET(
           };
         }
 
-        const answerText = typeof rawAnswer.valor === 'number' ? String(rawAnswer.valor) : undefined;
+        let answerTextToShow: string | undefined = undefined;
+        // Default to string representation of the value if it's a number or string, otherwise undefined.
+        if (typeof rawAnswer.valor === 'number' || typeof rawAnswer.valor === 'string') {
+          answerTextToShow = String(rawAnswer.valor);
+        }
+
+        // If question definition and its options are available, try to find the qualitative text.
+        if (qDef.opciones_respuesta && Array.isArray(qDef.opciones_respuesta)) {
+          const matchingOption = qDef.opciones_respuesta.find(opt => opt.valor === rawAnswer.valor);
+          if (matchingOption) {
+            answerTextToShow = matchingOption.texto;
+          }
+        }
 
         return {
           questionId: String(rawAnswer.pregunta_id),
           questionText: qDef.texto,
           answerValue: rawAnswer.valor,
-          answerText: answerText,
+          answerText: answerTextToShow, // Use the resolved qualitative text or fallback
         };
       }).filter(item => item !== null) as ResponseItemDetail[];
     } else {

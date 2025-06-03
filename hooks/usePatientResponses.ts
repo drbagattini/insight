@@ -87,6 +87,7 @@ export const usePatientResponses = ({ patientId }: UsePatientResponsesProps) => 
   const [selectedQCode, setSelectedQCode] = useState<string | null>(null);
   const [selectedResponseDate, setSelectedResponseDate] = useState<string | null>(null);
   const [selectedResponseId, setSelectedResponseId] = useState<string | null>(null);
+  const [currentResponseDateIndex, setCurrentResponseDateIndex] = useState<number | null>(null);
 
   // Query for available questionnaire types
   const {
@@ -140,6 +141,16 @@ export const usePatientResponses = ({ patientId }: UsePatientResponsesProps) => 
     }
   }, [specificResponseInstanceData, selectedQCode, selectedResponseDate]);
 
+  // Effect to update currentResponseDateIndex when selectedResponseDate or availableResponseDates change
+  useEffect(() => {
+    if (selectedResponseDate && availableResponseDates && availableResponseDates.length > 0) {
+      const index = availableResponseDates.indexOf(selectedResponseDate);
+      setCurrentResponseDateIndex(index !== -1 ? index : null);
+    } else {
+      setCurrentResponseDateIndex(null);
+    }
+  }, [selectedResponseDate, availableResponseDates]);
+
   // Query for the full detail of the selected response, enabled when selectedResponseId is available
   const {
     data: selectedResponseFullDetail,
@@ -163,6 +174,18 @@ export const usePatientResponses = ({ patientId }: UsePatientResponsesProps) => 
     // selectedResponseId will be set by the useEffect once specificResponseInstanceData updates
   }, []);
 
+  const navigateToNewerDate = useCallback(() => {
+    if (currentResponseDateIndex !== null && currentResponseDateIndex > 0 && availableResponseDates) {
+      handleResponseDateChange(availableResponseDates[currentResponseDateIndex - 1]);
+    }
+  }, [currentResponseDateIndex, availableResponseDates, handleResponseDateChange]);
+
+  const navigateToOlderDate = useCallback(() => {
+    if (currentResponseDateIndex !== null && availableResponseDates && currentResponseDateIndex < availableResponseDates.length - 1) {
+      handleResponseDateChange(availableResponseDates[currentResponseDateIndex + 1]);
+    }
+  }, [currentResponseDateIndex, availableResponseDates, handleResponseDateChange]);
+
   const clearFilters = useCallback(() => {
     setSelectedQCode(null);
     setSelectedResponseDate(null);
@@ -170,6 +193,7 @@ export const usePatientResponses = ({ patientId }: UsePatientResponsesProps) => 
     queryClient.invalidateQueries({ queryKey: ['responseDates', patientId, selectedQCode] });
     queryClient.invalidateQueries({ queryKey: ['specificResponseInstance', patientId, selectedQCode, selectedResponseDate] });
     queryClient.invalidateQueries({ queryKey: ['responseDetail', selectedResponseId] });
+    setCurrentResponseDateIndex(null); // Reset index on clear
   }, [patientId, queryClient, selectedQCode, selectedResponseDate, selectedResponseId]);
 
   return {
@@ -185,6 +209,10 @@ export const usePatientResponses = ({ patientId }: UsePatientResponsesProps) => 
     selectedResponseDate,
     handleResponseDateChange,
     clearFilters,
+    navigateToNewerDate,
+    navigateToOlderDate,
+    canNavigateToNewerDate: currentResponseDateIndex !== null && currentResponseDateIndex > 0,
+    canNavigateToOlderDate: currentResponseDateIndex !== null && availableResponseDates && currentResponseDateIndex < availableResponseDates.length - 1,
 
     // Selected Response Full Detail
     selectedResponseFullDetail: selectedResponseFullDetail || null,

@@ -27,6 +27,10 @@ export const PatientResponsesSection: React.FC<PatientResponsesSectionProps> = (
     isLoadingSelectedResponseFullDetail,
     // isFetchingSelectedResponseFullDetail, // Can be used for more granular loading if ResponseDetailView is adapted
     errorSelectedResponseFullDetail,
+    navigateToNewerDate,
+    navigateToOlderDate,
+    canNavigateToNewerDate,
+    canNavigateToOlderDate,
   } = usePatientResponses({ patientId });
 
   // Determine conditions for rendering different UI states
@@ -51,6 +55,10 @@ export const PatientResponsesSection: React.FC<PatientResponsesSectionProps> = (
         handleResponseDateChange={handleResponseDateChange}
         isLoadingResponseDates={isLoadingResponseDates}
         errorResponseDates={errorResponseDates} // Pass error to filter bar
+        navigateToNewerDate={navigateToNewerDate}
+        navigateToOlderDate={navigateToOlderDate}
+        canNavigateToNewerDate={canNavigateToNewerDate}
+        canNavigateToOlderDate={canNavigateToOlderDate}
         onClearFilters={clearFilters}
         isLoadingGlobal={isLoadingQuestionnaires || isLoadingResponseDates || isLoadingSelectedResponseFullDetail}
       />
