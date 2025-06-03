@@ -15,6 +15,12 @@ interface ResponsesFilterBarProps {
   handleResponseDateChange: (date: string | null) => void;
   isLoadingResponseDates: boolean;
   errorResponseDates?: Error | null;
+
+  // Navigation props
+  navigateToNewerDate: () => void;
+  navigateToOlderDate: () => void;
+  canNavigateToNewerDate: boolean;
+  canNavigateToOlderDate: boolean;
   
   onClearFilters: () => void;
   isLoadingGlobal?: boolean; // For disabling the entire bar e.g. when main responses are loading
@@ -31,6 +37,10 @@ export const ResponsesFilterBar: React.FC<ResponsesFilterBarProps> = ({
   handleResponseDateChange,
   isLoadingResponseDates,
   errorResponseDates,
+  navigateToNewerDate,
+  navigateToOlderDate,
+  canNavigateToNewerDate,
+  canNavigateToOlderDate,
   onClearFilters,
   isLoadingGlobal,
 }) => {
@@ -59,12 +69,24 @@ export const ResponsesFilterBar: React.FC<ResponsesFilterBarProps> = ({
           )}
         </div>
 
-        {/* Response Date Filter */}
+        {/* Response Date Filter with Navigation */}
         <div className="flex flex-col">
           <label htmlFor="date-filter" className="text-sm font-medium text-gray-700 mb-1">
             Fecha de Respuesta
           </label>
-          <select
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={navigateToNewerDate} // Note: Newer date means smaller index (more recent)
+              disabled={!canNavigateToNewerDate || isLoadingResponseDates || isLoadingGlobal}
+              className="p-2 border border-gray-300 rounded-md shadow-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Fecha anterior"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <select
             id="date-filter"
             value={selectedResponseDate || ''}
             onChange={(e) => handleResponseDateChange(e.target.value || null)}
@@ -76,6 +98,18 @@ export const ResponsesFilterBar: React.FC<ResponsesFilterBarProps> = ({
               <option key={date} value={date}>{date}</option>
             ))}
           </select>
+          <button
+              type="button"
+              onClick={navigateToOlderDate} // Note: Older date means larger index (less recent)
+              disabled={!canNavigateToOlderDate || isLoadingResponseDates || isLoadingGlobal}
+              className="p-2 border border-gray-300 rounded-md shadow-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Fecha siguiente"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
           {errorResponseDates && (
             <p className="mt-1 text-xs text-red-600">Error: {errorResponseDates.message}</p>
           )}
