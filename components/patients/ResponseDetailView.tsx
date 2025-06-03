@@ -42,20 +42,18 @@ const ResponseDetailView: React.FC<ResponseDetailViewProps> = ({
 
   return (
     <div className="bg-white shadow-md rounded-lg overflow-hidden">
-      <div className="p-6 bg-gray-50 border-b border-gray-200">
-        <h2 className="text-2xl font-semibold text-gray-800">{questionnaire_name}</h2>
-        <div className="mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-gray-600">
-            Fecha de respuesta: {new Date(date).toLocaleDateString('es-ES', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            })}
-          </p>
+      <div className="p-6 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+        <div> {/* Left block for title and scale description */}
+          <h2 className="text-2xl font-semibold text-gray-800">{questionnaire_name}</h2>
+          {selectedResponseFullDetail.questionnaire_scale_description && (
+            <p className="mt-1 text-sm text-gray-600 italic"> {/* Margin for closeness to title */}
+              {selectedResponseFullDetail.questionnaire_scale_description}
+            </p>
+          )}
+        </div>
+        <div> {/* Right block for score */}
           {score !== null && score !== undefined && (
-            <div className="mt-2 sm:mt-0 bg-indigo-100 text-indigo-800 text-sm font-medium px-3 py-1 rounded-full">
+            <div className="bg-indigo-100 text-indigo-800 text-sm font-medium px-3 py-1 rounded-full">
               Puntaje Total: <span className="font-bold">{score}</span>
             </div>
           )}
