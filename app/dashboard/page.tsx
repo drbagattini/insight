@@ -153,7 +153,16 @@ export default function DashboardPage() {
             {upcoming.map((ev: any) => (
               <li key={ev.id} className="flex justify-between">
                 <Link href={`/dashboard/patients/${ev.paciente_id}`} className="text-blue-600 hover:underline">
-                  {ev.title}
+                  {
+                  ev.patient_name 
+                  ? (
+                    <>
+                      {ev.patient_name}
+                      {ev.title && <span className="text-gray-600 font-normal ml-1">({ev.title})</span>}
+                    </>
+                  )
+                  : (ev.title || 'Ver Cita')
+                }
                 </Link>
                 <span className="text-gray-500">
                   {format(new Date(ev.start_time), 'PPpp')}
