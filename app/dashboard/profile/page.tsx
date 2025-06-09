@@ -2,6 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { UserCircleIcon, ArrowUpTrayIcon } from '@heroicons/react/24/solid';
+import ConnectCalendarButton from '@/app/components/auth/ConnectCalendarButton';
 import { useState, useRef, useEffect } from 'react';
 
 export default function ProfilePage() {
@@ -247,6 +248,15 @@ export default function ProfilePage() {
                         <div className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-700 capitalize">
                           {user.role || 'usuario'}
                         </div>
+                      </div>
+                    </div>
+                    {/* Connect Calendar Button Section */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Integraciones de Calendario
+                      </label>
+                      <div className="mt-1">
+                        <ConnectCalendarButton />
                       </div>
                     </div>
                   </div>

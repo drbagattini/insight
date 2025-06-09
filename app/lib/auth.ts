@@ -441,12 +441,26 @@ export const authOptions: AuthOptions = {
         token.role = (user as any).role || token.role;
         token.name = user.name || token.name;
 
-        if ((user as any).sbAccessToken) {
-          console.log('[JWT] sbAccessToken FOUND on user object. Adding to JWT token.');
-          token.sbAccessToken = (user as any).sbAccessToken;
-          token.sbRefreshToken = (user as any).sbRefreshToken;
+        const userSbAccessToken = (user as any).sbAccessToken;
+        const userSbRefreshToken = (user as any).sbRefreshToken;
+        console.log(`[JWT - User Processing] Raw user.sbAccessToken value: '${userSbAccessToken}'`);
+        console.log(`[JWT - User Processing] Type of user.sbAccessToken: ${typeof userSbAccessToken}`);
+        
+        if (userSbAccessToken && typeof userSbAccessToken === 'string' && userSbAccessToken.length > 0) {
+          console.log('[JWT] user.sbAccessToken is a non-empty string. Assigning to token.sbAccessToken.');
+          token.sbAccessToken = userSbAccessToken;
+          // Assign refresh token only if access token is being assigned
+          if (userSbRefreshToken && typeof userSbRefreshToken === 'string' && userSbRefreshToken.length > 0) {
+            token.sbRefreshToken = userSbRefreshToken;
+            console.log('[JWT] user.sbRefreshToken is a non-empty string. Assigning to token.sbRefreshToken.');
+          } else {
+            console.log('[JWT] user.sbRefreshToken is falsy or not a non-empty string. Not assigning to token.sbRefreshToken.');
+            // delete token.sbRefreshToken; // Consider if stale refresh token should be cleared
+          }
         } else {
-          console.log('[JWT] sbAccessToken NOT FOUND on user object during sign-in/sign-up processing.');
+          console.log('[JWT] user.sbAccessToken is falsy or not a non-empty string. NOT assigning to token.sbAccessToken.');
+          // delete token.sbAccessToken; // Consider if stale tokens should be cleared
+          // delete token.sbRefreshToken;
         }
       }
 

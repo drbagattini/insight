@@ -31,21 +31,26 @@ export async function POST(request: Request) {
     }
 
     // *** NUEVA LÓGICA DE CREACIÓN DE USUARIO ***
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email: userData.email,
-      password: userData.password, // Usa la contraseña en texto plano
-      email_confirm: false, // Cambiar a true si se quiere confirmación por email
-      user_metadata: {
-        first_name: userData.first_name,
-        last_name: userData.last_name,
-        role: UserRole.PSICOLOGO, // Asignar rol en metadata
+      password: userData.password,
+      email_confirm: true, // Auto-confirm email. Considerar tu flujo de confirmación.
+      user_metadata: { 
+        // El trigger 'handle_new_user' usará estos campos:
+        first_name: userData.first_name, 
+        last_name: userData.last_name
+        // 'name' también podría ser una opción si el trigger lo usa como fallback principal
       },
+      app_metadata: {
+        // El trigger 'handle_new_user' espera 'userrole' para el rol:
+        userrole: userData.role || UserRole.PSICOLOGO 
+      }
     });
 
-    if (authError) {
-      console.error('AUTH API: Error creating user with Supabase Auth:', authError);
+    if (createError) {
+      console.error('AUTH API: Error creating user with Supabase Auth:', createError);
       // Verificar si el error es por email duplicado (esto puede variar según la versión de Supabase)
-      if (authError.message.includes('already registered') || authError.message.includes('unique constraint')) {
+      if (createError.message.includes('already registered') || createError.message.includes('unique constraint')) {
         return NextResponse.json({ error: 'Email ya registrado' }, { status: 409 }); // 409 Conflict es más apropiado
       }
       return NextResponse.json({ error: authError.message || 'Error al crear usuario en Supabase Auth' }, { status: 500 });
@@ -74,7 +79,13 @@ export async function POST(request: Request) {
     console.log(`AUTH API: Email successfully marked as confirmed for user ${userId}.`);
     // --- END WORKAROUND ---
 
-    return NextResponse.json({ message: 'Usuario registrado y email confirmado exitosamente', userId: userId }, { status: 201 }); // 201 Created
+    // The on_auth_user_created trigger and public.handle_new_user() function
+    // will now handle the creation/update of the corresponding public.users record.
+    // No explicit insert into public.users is needed here anymore.
+
+    console.log(`AUTH API: User ${userId} created in auth.users. Trigger will handle public.users.`);
+
+    return NextResponse.json({ message: 'Usuario registrado y email confirmado. Perfil será procesado.', userId: userId }, { status: 201 }); // 201 Created
 
   } catch (error) {
     console.error('AUTH API: Unexpected error in registration:', error);

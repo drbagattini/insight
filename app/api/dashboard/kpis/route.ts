@@ -84,7 +84,7 @@ export async function GET() {
     const { error: weekErr, count } = await supabase
       .from('appointments')
       .select('*', { count: 'exact', head: true })
-      .eq('psychologist_id', psychologistId)
+      .eq('user_id', psychologistId)
       .gte('start_time', startOfWeek.toISOString())
       .lte('start_time', endOfWeek.toISOString());
     if (weekErr) {
@@ -101,7 +101,7 @@ export async function GET() {
     const { error: prevErr, count } = await supabase
       .from('appointments')
       .select('*', { count: 'exact', head: true })
-      .eq('psychologist_id', psychologistId)
+      .eq('user_id', psychologistId)
       .gte('start_time', startOfPrevWeek.toISOString())
       .lte('start_time', endOfPrevWeek.toISOString());
     if (prevErr) {

@@ -19,14 +19,14 @@ export default function InsightLogo({
 
   return (
     <Link href="/" className={`flex items-center space-x-2 ${className}`}>
-      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white font-bold">
-        i
-      </div>
-      {withText && (
-        <span className={`font-semibold text-gray-900 ${textSizeClasses[textSize]}`}>
-          Insight
-        </span>
-      )}
+        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white font-bold">
+          i
+        </div>
+        {withText && (
+          <span className={`font-semibold text-gray-900 ${textSizeClasses[textSize]}`}>
+            Insight
+          </span>
+        )}
     </Link>
   );
 }

@@ -76,7 +76,6 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
           </div>
         </div>
       )}
-
       <div className="space-y-6">
         <div>
           <h3 className="text-lg font-medium text-gray-900 mb-4">Información del Paciente</h3>

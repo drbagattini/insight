@@ -47,7 +47,7 @@ export function SignIn({ providers = ['google', 'credentials'], error }: SignInP
       </div>
       {providers.includes('google') && (
         <button
-          onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
+          onClick={() => signIn('google', { callbackUrl: '/resumen-asistencial' })}
           className="w-full bg-white text-gray-800 border border-gray-300 hover:bg-gray-50 px-4 py-2 rounded-md flex items-center justify-center gap-2 transition-colors"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -76,7 +76,7 @@ export function SignIn({ providers = ['google', 'credentials'], error }: SignInP
               await signIn('credentials', {
                 email,
                 password,
-                callbackUrl: '/dashboard'
+                callbackUrl: '/resumen-asistencial'
               });
               // Este código normalmente no se ejecuta ya que signIn redirecciona
               setMessage({ type: 'success', text: 'Redireccionando...' });

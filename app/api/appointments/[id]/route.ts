@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
+import { getServerSession, Session as NextAuthSession } from 'next-auth/next'; // Import Session type
 import { authOptions } from '@/app/lib/auth';
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
@@ -8,6 +8,15 @@ import { z } from 'zod';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+// Extend session type locally to include our custom Google Calendar fields
+interface ExtendedSession extends NextAuthSession {
+  googleCalendarScopeGranted?: boolean;
+  googleCalendarAccessToken?: string;
+  // Ensure other custom fields like sbAccessToken are also here if accessed directly from session
+  // accessToken is the general Google login token, not used for calendar ops here.
+  accessToken?: string; 
+}
 
 // Schema de validación para actualización de citas
 const updateAppointmentSchema = z.object({
@@ -104,11 +113,12 @@ export async function DELETE(request: NextRequest) {
   const id = getIdFromPath(request);
   const session = await getServerSession(authOptions);
   
-  if (!session?.user?.id || !session.accessToken) {
-    console.error('DELETE /api/appointments/[id]: Unauthorized or missing access token. Session:', session);
-    return NextResponse.json({ error: 'Unauthorized or missing access token for Google Calendar sync.' }, { status: 401 });
+  if (!session?.user?.id) { // Check for user ID for Supabase operations
+    console.error('DELETE /api/appointments/[id]: Unauthorized, missing user ID. Session:', session);
+    return NextResponse.json({ error: 'Unauthorized: User session invalid.' }, { status: 401 });
   }
-  const accessToken = session.accessToken as string;
+  // session.accessToken (general Google login token) is not used for calendar operations here.
+  // session.googleCalendarAccessToken will be checked specifically before Google API calls.
 
   if (!id) {
     return NextResponse.json({ error: 'Missing appointment ID' }, { status: 400 });
@@ -148,14 +158,15 @@ export async function DELETE(request: NextRequest) {
   let googleSyncStatus = 'not_attempted';
   let googleSyncError = null;
 
-  if (appointmentData.google_calendar_event_id && (!isOccurrence || deleteAllSeries)) {
+  // Check for calendar scope and token BEFORE attempting Google API call
+  if (session.googleCalendarScopeGranted && session.googleCalendarAccessToken && appointmentData.google_calendar_event_id && (!isOccurrence || deleteAllSeries)) {
     try {
       const googleDeleteResponse = await fetch(
         `https://www.googleapis.com/calendar/v3/calendars/primary/events/${appointmentData.google_calendar_event_id}`,
         {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${accessToken}`,
+            'Authorization': `Bearer ${session.googleCalendarAccessToken}`, // Use specific calendar token
           },
         }
       );
@@ -186,6 +197,10 @@ export async function DELETE(request: NextRequest) {
         `Exception during Google Calendar event deletion for ${appointmentData.google_calendar_event_id}: ${e.message}`
       );
     }
+  } else if (appointmentData.google_calendar_event_id && (!isOccurrence || deleteAllSeries)) {
+    // Conditions for Google sync were met (event_id present, correct type of deletion), but user hasn't granted calendar scope or token is missing
+    googleSyncStatus = 'skipped_no_permission';
+    console.log(`DELETE /api/appointments/[id]: Skipping Google Calendar event deletion for ${appointmentData.google_calendar_event_id}. Scope granted: ${session.googleCalendarScopeGranted}, Token present: ${!!session.googleCalendarAccessToken}`);
   }
 
   // 3. Delete the appointment from Supabase
