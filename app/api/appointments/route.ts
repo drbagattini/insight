@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
+import { getServerSession, Session as NextAuthSession } from 'next-auth/next'; // Import Session type
 import { authOptions } from '@/app/lib/auth';
 import { createClient } from '@supabase/supabase-js';
 import { RRule } from 'rrule';
@@ -9,6 +9,15 @@ import { z } from 'zod';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+// Extend session type locally to include our custom Google Calendar fields
+interface ExtendedSession extends NextAuthSession {
+  googleCalendarScopeGranted?: boolean;
+  googleCalendarAccessToken?: string;
+  // Ensure other custom fields like sbAccessToken are also here if accessed directly from session
+  sbAccessToken?: string;
+  accessToken?: string; // This might be the old googleLoginAccessToken if still needed elsewhere, or can be removed if not
+}
 
 // Schema de validación para citas
 const appointmentSchema = z.object({
@@ -85,7 +94,7 @@ export async function GET(request: Request) {
     // Devolver el objeto con el nombre del paciente como propiedad directa
     return {
       ...cleanAppt,
-      paciente_nombre: pacienteNombre
+      patient_name: pacienteNombre
     };
   });
 
@@ -107,7 +116,7 @@ export async function GET(request: Request) {
       rule.between(startDate, endDate, true).forEach((dt: Date) => {
         all.push({
           ...cleanMaster,
-          paciente_nombre: pacienteNombre,
+          patient_name: pacienteNombre,
           id: `${cleanMaster.id}_${dt.toISOString()}`,
           start_time: dt.toISOString(),
           end_time: new Date(dt.getTime() + dur).toISOString(),
@@ -126,12 +135,25 @@ export async function GET(request: Request) {
 // POST: create a single or recurring appointment
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
-  // Ensure session exists, user ID is present, and accessToken is available
-  if (!session?.user?.id || !session.accessToken) {
-    console.error('POST /api/appointments: Unauthorized or missing access token. Session:', session);
-    return NextResponse.json({ error: 'Unauthorized or missing access token for Google Calendar sync.' }, { status: 401 });
+
+  // Detailed logging before the check
+  console.log('--- DEBUG: POST /api/appointments session check ---');
+  console.log('Session object raw:', JSON.stringify(session));
+  const userId = session?.user?.id;
+  const sbToken = session?.sbAccessToken;
+  console.log(`Value of session?.user?.id: '${userId}' (type: ${typeof userId})`);
+  console.log(`Value of session?.sbAccessToken: '${sbToken}' (type: ${typeof sbToken})`);
+  const condition1_userIdFalsy = !userId;
+  const condition2_sbTokenFalsy = !sbToken;
+  console.log(`Is !userId true? ${condition1_userIdFalsy}`);
+  console.log(`Is !sbToken true? ${condition2_sbTokenFalsy}`);
+  console.log('--- END DEBUG ---');
+
+  if (condition1_userIdFalsy || condition2_sbTokenFalsy || !session) { 
+    console.error('POST /api/appointments: Unauthorized due to missing user ID, Supabase access token, or session. Detailed session logged above. Actual session object:', session);
+    return NextResponse.json({ error: 'Unauthorized: Session data incomplete.' }, { status: 401 });
   }
-  const accessToken = session.accessToken as string; // We've typed this in NextAuth
+  // Note: session.accessToken (the general Google login token) is no longer used for calendar operations.
 
   // Validación de datos de entrada
   const body = await request.json();
@@ -178,8 +200,15 @@ export async function POST(request: Request) {
     .single();
 
   if (supabaseInsertError) {
-    console.error('Supabase insert error:', supabaseInsertError);
-    return NextResponse.json({ error: supabaseInsertError.message }, { status: 500 });
+    console.error('Supabase insert error:', JSON.stringify(supabaseInsertError, null, 2));
+    return NextResponse.json({ 
+      error: supabaseInsertError.message,
+      details: {
+        code: supabaseInsertError.code,
+        details: supabaseInsertError.details,
+        hint: supabaseInsertError.hint
+      }
+    }, { status: 500 });
   }
 
   if (!createdSupabaseAppointment) {
@@ -187,7 +216,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to create appointment in database.' }, { status: 500 });
   }
 
-  // 2. Attempt to create event in Google Calendar
+  // 2. Attempt to create event in Google Calendar IF permissions are granted
+  if (session.googleCalendarScopeGranted && session.googleCalendarAccessToken) {
   const googleEventDetails = {
     summary: googleEventSummary, // Use the dynamically generated summary
     description: `Cita programada a través de Insight. Paciente ID: ${paciente_id}. Título original en Insight: ${createdSupabaseAppointment.title}`,
@@ -209,7 +239,7 @@ export async function POST(request: Request) {
       {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${accessToken}`,
+          'Authorization': `Bearer ${session.googleCalendarAccessToken}`, // Use the specific calendar access token
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(googleEventDetails),
@@ -256,7 +286,8 @@ export async function POST(request: Request) {
       }, { status: 201 });
     }
     // Successfully created in Supabase, Google, and linked.
-    return NextResponse.json(updatedSupabaseAppointment, { status: 201 });
+    // Successfully created in Supabase, Google, and linked.
+    return NextResponse.json({...updatedSupabaseAppointment, google_sync_status: 'success'}, { status: 201 });
 
   } catch (e: any) {
     console.error(
@@ -266,6 +297,14 @@ export async function POST(request: Request) {
         ...createdSupabaseAppointment,
         google_sync_status: 'failed',
         google_sync_error: `Exception: ${e.message}`,
+    }, { status: 201 });
+  }
+} else {
+    // Calendar scope not granted or token missing, skip Google Calendar sync
+    console.log(`POST /api/appointments: Skipping Google Calendar sync for appointment ${createdSupabaseAppointment.id}. Scope granted: ${session.googleCalendarScopeGranted}, Token present: ${!!session.googleCalendarAccessToken}`);
+    return NextResponse.json({
+      ...createdSupabaseAppointment,
+      google_sync_status: 'skipped_no_permission',
     }, { status: 201 });
   }
 }
