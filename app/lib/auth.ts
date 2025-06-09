@@ -6,6 +6,59 @@ import { JWT } from 'next-auth/jwt';
 import { UserRoleType } from '@/types/roles';
 import { SupabaseAdapter } from "@next-auth/supabase-adapter";
 
+// Type augmentations for NextAuth
+declare module 'next-auth' {
+  interface Session {
+    user: {
+      id: string;
+      role: UserRoleType; // Assuming UserRoleType is imported or globally available
+      email?: string | null;
+      name?: string | null;
+      firstName?: string | null;
+      lastName?: string | null;
+      image_url?: string | null;
+    };
+    sbAccessToken?: string;
+    sbRefreshToken?: string;
+    googleLoginAccessToken?: string;
+    googleCalendarAccessToken?: string;
+    googleCalendarScopeGranted?: boolean;
+    error?: string;
+  }
+
+  interface User extends NextAuthUser { // NextAuthUser is imported
+    role?: UserRoleType;
+    firstName?: string;
+    lastName?: string;
+    image_url?: string;
+    sbAccessToken?: string;
+    sbRefreshToken?: string;
+  }
+}
+
+declare module 'next-auth/jwt' {
+  interface JWT { // JWT is imported
+    id?: string;
+    role?: UserRoleType;
+    firstName?: string;
+    lastName?: string;
+    image_url?: string;
+    sbAccessToken?: string;
+    sbRefreshToken?: string;
+    
+    googleLoginAccessToken?: string;
+    googleLoginRefreshToken?: string;
+    googleLoginExpiresAt?: number;
+
+    googleCalendarAccessToken?: string;
+    googleCalendarRefreshToken?: string;
+    googleCalendarExpiresAt?: number;
+    googleCalendarScopeGranted?: boolean;
+    
+    error?: string;
+  }
+}
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -76,26 +129,22 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
 }
 
 export const authOptions: AuthOptions = {
-    // Las URL de callback se derivan de NEXTAUTH_URL
-  adapter: SupabaseAdapter({ url: supabaseUrl, secret: serviceKey }),
+  // Las URL de callback se derivan de NEXTAUTH_URL
+  // Usamos JWT para evitar problemas con las tablas y FK
+  session: {
+    strategy: "jwt", 
+    maxAge: 30 * 24 * 60 * 60, // 30 días
+  },
+  pages: {
+    signIn: '/auth/login',
+    error: '/auth/login',
+  },
+  debug: process.env.NODE_ENV === 'development',
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      // Google Provider usa la configuración global de NextAuth para determinar las URLs
-
-      authorization: {
-        params: {
-          prompt: 'consent',
-          access_type: 'offline',
-          response_type: 'code',
-          scope: [
-            'https://www.googleapis.com/auth/userinfo.email',
-            'https://www.googleapis.com/auth/userinfo.profile',
-            'https://www.googleapis.com/auth/calendar.events',
-          ].join(' '),
-        }
-      }
+      // authorization block removed to rely entirely on signIn parameters for scope, prompt, etc.
     }),
     CredentialsProvider({
       name: 'Email',
@@ -144,7 +193,7 @@ export const authOptions: AuthOptions = {
           
           const { data: publicUser, error: publicUserError } = await supabaseAdmin
             .from('users') // Asegúrate que 'users' es el nombre correcto de tu tabla pública
-            .select('id, first_name, last_name, email, role') // Seleccionar first_name y last_name
+            .select('id, first_name, last_name, email') // Seleccionar first_name y last_name
             .eq('email', authData.user.email) // Busca por el email del usuario autenticado
             .single(); // Esperamos un solo usuario
 
@@ -174,7 +223,6 @@ export const authOptions: AuthOptions = {
             id: publicUser.id, // Este es el ID de la tabla public.users
             name: fullName,
             email: publicUser.email,
-            role: publicUser.role as UserRoleType, // Incluimos el rol y casteamos
             supabaseAccessToken: authData.session?.access_token,
             supabaseRefreshToken: authData.session?.refresh_token,
           };
@@ -196,24 +244,90 @@ export const authOptions: AuthOptions = {
   callbacks: {
     async signIn({ user, account, profile }: { user: NextAuthUser; account: Account | null; profile?: any }) {
       console.log('=== INICIO SIGNIN ===');
-      console.log('Usuario entrante:', { 
-        email: user.email, 
-        id: user.id, 
+      console.log('Usuario entrante:', {
+        email: user.email,
+        id: user.id,
         provider: account?.provider,
         name: user.name,
-        roleFromUser: (user as any).role 
       });
 
-      if (!user.id || !user.email) {
-        console.error('[SignIn] Critical: Missing user.id or user.email from provider. Denying sign-in.');
-        return false; 
+      if (!user.email) {
+        console.error('[SignIn] Critical: Missing user.email from provider. Denying sign-in.');
+        return false;
       }
 
       try {
+        if (account?.provider === 'google') {
+          console.log('[SignIn] Google OAuth login detected');
+          const { data: { users: foundAuthUsers }, error: listUsersError } = await supabaseAdmin.auth.admin.listUsers({
+            filter: `email eq "${user.email}"`
+          });
+
+          if (listUsersError) {
+            console.error('[SignIn] Error listando usuarios en auth.users:', listUsersError);
+            return false;
+          }
+
+          let supabaseAuthUser: any = null;
+          if (foundAuthUsers && foundAuthUsers.length > 0) {
+            supabaseAuthUser = foundAuthUsers[0];
+            console.log('[SignIn] Usuario encontrado en auth.users con ID', supabaseAuthUser.id);
+            user.id = supabaseAuthUser.id;
+          } else {
+            console.log(`[SignIn] Usuario con email ${user.email} no encontrado en auth.users. Creando...`);
+            const authMetadata = {
+              name: user.name,
+              given_name: profile?.given_name || profile?.first_name || user.name?.split(' ')[0] || '',
+              family_name: profile?.family_name || profile?.last_name || user.name?.split(' ').slice(1).join(' ') || '',
+              avatar_url: user.image || profile?.picture || ''
+            };
+            const { data: newAuthUserData, error: createAuthError } = await supabaseAdmin.auth.admin.createUser({
+              email: user.email,
+              user_metadata: authMetadata,
+              app_metadata: { userrole: 'psicologo' },
+              email_confirm: true
+            });
+            if (createAuthError) {
+              console.error('[SignIn] Error creando usuario en auth.users:', createAuthError);
+              return false;
+            }
+            supabaseAuthUser = newAuthUserData.user;
+            console.log('[SignIn] Usuario creado en auth.users con ID', supabaseAuthUser.id);
+            user.id = supabaseAuthUser.id;
+            await new Promise(resolve => setTimeout(resolve, 500)); // Allow trigger to run
+          }
+
+          if (account.id_token && user.id) {
+            console.log('[SignIn-Google] Attempting Supabase signInWithIdToken with Google ID token.');
+            const { data: supabaseSessionData, error: supabaseSessionError } = await supabase.auth.signInWithIdToken({
+              provider: 'google',
+              token: account.id_token,
+            });
+
+            if (supabaseSessionError) {
+              console.error('[SignIn-Google] Supabase signInWithIdToken error:', supabaseSessionError.message);
+              return false;
+            }
+
+            if (supabaseSessionData && supabaseSessionData.session) {
+              console.log('[SignIn-Google] Supabase session obtained successfully via signInWithIdToken.');
+              (user as any).sbAccessToken = supabaseSessionData.session.access_token;
+              (user as any).sbRefreshToken = supabaseSessionData.session.refresh_token;
+              console.log('[SignIn-Google] sbAccessToken and sbRefreshToken attached to user object.');
+            } else {
+              console.warn('[SignIn-Google] Supabase signInWithIdToken did not return a session. This is unexpected.');
+              return false;
+            }
+          } else {
+            console.warn('[SignIn-Google] Google account id_token is missing or user.id not set. Cannot perform Supabase signInWithIdToken.');
+            return false;
+          }
+        }
+
         const { data: publicProfile, error: fetchError } = await supabaseAdmin
           .from('users')
-          .select('id, email, first_name, last_name, role')
-          .eq('id', user.id)
+          .select('id, email, first_name, last_name, role, image_url')
+          .eq('id', user.id) // Use ID now that it's confirmed from auth.users
           .single();
 
         if (fetchError && fetchError.code !== 'PGRST116') {
@@ -222,58 +336,22 @@ export const authOptions: AuthOptions = {
         }
 
         if (!publicProfile) {
-          console.log(`[SignIn] No profile in public.users for ID ${user.id}. Checking for email conflict before creating...`);
-
-          const { data: existingByEmail, error: emailCheckError } = await supabaseAdmin
-            .from('users')
-            .select('id')
-            .eq('email', user.email)
-            .single();
-
-          if (emailCheckError && emailCheckError.code !== 'PGRST116') {
-            console.error('[SignIn] Error checking for existing user by email:', user.email, emailCheckError);
-            return false;
-          }
-
-          if (existingByEmail && existingByEmail.id !== user.id) {
-            console.warn(`[SignIn] INCONSISTENCY DETECTED: Email ${user.email} exists in public.users with ID ${existingByEmail.id}, but canonical auth.users.id is ${user.id}. Attempting to update...`);
-            
-            // Intentar actualizar el ID en public.users para que coincida con auth.users
-            const { error: updateError } = await supabaseAdmin
-              .from('users')
-              .update({ id: user.id })
-              .eq('id', existingByEmail.id);
-            
-            if (updateError) {
-              console.error('[SignIn] Failed to update user ID in public.users:', updateError);
-              return false;
-            }
-            
-            console.log(`[SignIn] Successfully updated user ID in public.users from ${existingByEmail.id} to ${user.id}`);
-            return true;
-          }
-          
-          console.log(`[SignIn] Creating new profile in public.users for ID ${user.id} and email ${user.email}.`);
-          
-          let firstName = '';
-          let lastName = '';
+          console.log(`[SignIn] No profile in public.users for ID ${user.id}. Creating new profile...`);
+          let firstName = (user as any).firstName || '';
+          let lastName = (user as any).lastName || '';
           const userRole = (user as any).role || 'psicologo';
+          let imageUrl = (user as any).image_url || user.image || profile?.picture || '';
 
           if (account?.provider === 'google' && profile) {
-            firstName = profile.given_name || profile.first_name || '';
-            lastName = profile.family_name || profile.last_name || '';
-            if (!firstName && profile.name) firstName = profile.name.split(' ')[0] || '';
-            if (!lastName && profile.name) lastName = profile.name.split(' ').slice(1).join(' ') || '';
-          } else if (user.name) {
-            const nameParts = user.name.split(' ');
-            firstName = nameParts[0] || '';
-            lastName = nameParts.slice(1).join(' ') || '';
+            firstName = profile.given_name || profile.first_name || firstName;
+            lastName = profile.family_name || profile.last_name || lastName;
+            imageUrl = profile.picture || imageUrl;
           }
-          
-          if (!firstName && user.email) {
-              firstName = user.email.split('@')[0];
-          }
+          if (!firstName && user.name) firstName = user.name.split(' ')[0] || '';
+          if (!lastName && user.name) lastName = user.name.split(' ').slice(1).join(' ') || '';
+          if (!firstName && user.email) firstName = user.email.split('@')[0];
 
+          console.log(`[SignIn] Creating new profile in public.users for ID ${user.id}`);
           const { error: insertError } = await supabaseAdmin
             .from('users')
             .insert({
@@ -281,192 +359,218 @@ export const authOptions: AuthOptions = {
               email: user.email,
               first_name: firstName,
               last_name: lastName,
-              role: userRole, 
+              role: userRole,
+              image_url: imageUrl,
+              created_at: new Date().toISOString()
             });
 
           if (insertError) {
-            console.error('[SignIn] Error inserting new user into public.users:', user.id, insertError);
+            console.error('[SignIn] Error inserting new user into public.users:', insertError);
             return false;
           }
-          console.log(`[SignIn] Profile created in public.users for ID ${user.id}`);
-          (user as any).role = userRole; 
+          user.role = userRole;
+          (user as any).firstName = firstName;
+          (user as any).lastName = lastName;
+          (user as any).image_url = imageUrl;
           user.name = [firstName, lastName].filter(Boolean).join(' ');
-
         } else {
-          console.log(`[SignIn] Profile found in public.users for ID ${user.id}. Email: ${publicProfile.email}.`);
-          (user as any).role = publicProfile.role;
-          user.name = [publicProfile.first_name, publicProfile.last_name].filter(Boolean).join(' ') || publicProfile.email;
+          console.log(`[SignIn] Profile found in public.users for ID ${publicProfile.id}`);
+          user.id = publicProfile.id;
+          (user as any).firstName = publicProfile.first_name;
+          (user as any).lastName = publicProfile.last_name;
           user.email = publicProfile.email;
+          user.role = publicProfile.role;
+          (user as any).image_url = publicProfile.image_url;
+          user.name = [publicProfile.first_name, publicProfile.last_name].filter(Boolean).join(' ') || publicProfile.email;
 
           if (account?.provider === 'google' && profile) {
+            const updates: any = {};
             const newFirstName = profile.given_name || profile.first_name || '';
             const newLastName = profile.family_name || profile.last_name || '';
-            const nameChanged = (newFirstName && newFirstName !== publicProfile.first_name) || (newLastName && newLastName !== publicProfile.last_name);
+            const newImageUrl = profile.picture;
 
-            if (nameChanged) {
-              console.log(`[SignIn] Updating name for user ${user.id} from Google profile.`);
-              const { error: updateError } = await supabaseAdmin
-                .from('users')
-                .update({ 
-                  first_name: newFirstName || publicProfile.first_name,
-                  last_name: newLastName || publicProfile.last_name
-                })
-                .eq('id', user.id);
-              if (updateError) console.error('[SignIn] Error updating name in public.users:', user.id, updateError);
+            if (newFirstName && newFirstName !== publicProfile.first_name) updates.first_name = newFirstName;
+            if (newLastName && newLastName !== publicProfile.last_name) updates.last_name = newLastName;
+            if (newImageUrl && newImageUrl !== publicProfile.image_url) updates.image_url = newImageUrl;
+
+            if (Object.keys(updates).length > 0) {
+              updates.updated_at = new Date().toISOString();
+              console.log(`[SignIn] Updating public.users for ${user.email} from Google profile:`, updates);
+              const { error: updateError } = await supabaseAdmin.from('users').update(updates).eq('id', user.id);
+              if (updateError) console.error('[SignIn] Error updating public.users from Google profile:', updateError);
               else {
-                console.log(`[SignIn] Name updated for user ${user.id}`);
-                user.name = [newFirstName || publicProfile.first_name, newLastName || publicProfile.last_name].filter(Boolean).join(' ');
+                if (updates.first_name) (user as any).firstName = updates.first_name;
+                if (updates.last_name) (user as any).lastName = updates.last_name;
+                if (updates.image_url) (user as any).image_url = updates.image_url;
+                user.name = [(user as any).firstName, (user as any).lastName].filter(Boolean).join(' ');
               }
             }
           }
         }
+        if (!(user as any).role) (user as any).role = 'psicologo';
         console.log('=== FIN SIGNIN (permitido) ===');
+        console.log('Usuario final para JWT:', { id: user.id, email: user.email, role: (user as any).role, name: user.name, sbAccessTokenExists: !!(user as any).sbAccessToken, firstName: (user as any).firstName, lastName: (user as any).lastName, image_url: (user as any).image_url });
         return true;
       } catch (e) {
         console.error('[SignIn] Unexpected top-level error:', e);
         return false;
       }
     },
-    async jwt({ token, user, account }: { token: JWT; user?: NextAuthUser | undefined; account?: Account | null }): Promise<JWT> {
-      // Al iniciar sesión o conectar una cuenta por primera vez
-      if (account && user) {
-        token.id = user.id; 
-        token.email = user.email;
-        // token.name = user.name; // We'll use firstName and lastName instead
-        token.role = (user.role ?? 'paciente') as UserRoleType;
 
-        // Fetch first_name, last_name, and image_url from public.users
-        try {
-          const { data: publicUser, error: publicUserError } = await supabaseAdmin
-            .from('users')
-            .select('first_name, last_name, image_url')
-            .eq('id', user.id)
-            .single();
+    async jwt({ token, user, account, profile, trigger, session: updateData }: { token: JWT; user?: NextAuthUser | undefined; account?: Account | null; profile?: any; trigger?: "signIn" | "signUp" | "update" | undefined; session?: any }): Promise<JWT> {
+      console.log("[JWT] Callback - START", { userId: user?.id, accountProvider: account?.provider, currentTokenId: token.id, trigger });
 
-          if (publicUserError) {
-            console.error(`[JWT Callback] Error fetching user details from public.users for ID ${user.id}:`, publicUserError);
-          } else if (publicUser) {
-            token.firstName = publicUser.first_name;
-            token.lastName = publicUser.last_name;
-            token.image_url = publicUser.image_url;
-            token.name = `${publicUser.first_name || ''} ${publicUser.last_name || ''}`.trim(); // Keep full name for compatibility
-            console.log(`[JWT Callback] Fetched public.users details for ${user.id}:`, { firstName: token.firstName, lastName: token.lastName, imageUrl: token.image_url });
+      if (user) {
+        console.log('[JWT] User object received during sign-in/sign-up:', JSON.stringify({
+          id: user.id,
+          email: user.email,
+          role: (user as any).role,
+          name: user.name,
+          firstName: (user as any).firstName,
+          lastName: (user as any).lastName,
+          image_url: (user as any).image_url,
+          sbAccessTokenExists: !!(user as any).sbAccessToken,
+          sbRefreshTokenExists: !!(user as any).sbRefreshToken,
+        }, null, 2));
+
+        token.id = user.id;
+        token.email = user.email || token.email;
+        token.firstName = (user as any).firstName || token.firstName;
+        token.lastName = (user as any).lastName || token.lastName;
+        token.image_url = (user as any).image_url || token.image_url;
+        token.role = (user as any).role || token.role;
+        token.name = user.name || token.name;
+
+        if ((user as any).sbAccessToken) {
+          console.log('[JWT] sbAccessToken FOUND on user object. Adding to JWT token.');
+          token.sbAccessToken = (user as any).sbAccessToken;
+          token.sbRefreshToken = (user as any).sbRefreshToken;
+        } else {
+          console.log('[JWT] sbAccessToken NOT FOUND on user object during sign-in/sign-up processing.');
+        }
+      }
+
+      if (trigger === "update" && updateData) {
+        console.log("[JWT Callback] Update trigger received", { updateData });
+        const sourceForUpdates = updateData.user || updateData;
+        if (typeof sourceForUpdates.image_url === 'string') token.image_url = sourceForUpdates.image_url;
+        if (typeof sourceForUpdates.firstName === 'string') token.firstName = sourceForUpdates.firstName;
+        if (typeof sourceForUpdates.lastName === 'string') token.lastName = sourceForUpdates.lastName;
+        if (typeof sourceForUpdates.role === 'string') token.role = sourceForUpdates.role;
+        if (typeof sourceForUpdates.name === 'string') token.name = sourceForUpdates.name;
+        else if (token.firstName && token.lastName && (typeof sourceForUpdates.firstName === 'string' || typeof sourceForUpdates.lastName === 'string')) {
+            token.name = `${token.firstName} ${token.lastName}`.trim();
+        }
+      }
+
+      if (account && account.provider === "google") {
+        console.log("[JWT Callback] Google Account object present.", { account_scopes: account.scope });
+        token.googleLoginAccessToken = account.access_token;
+        token.googleLoginRefreshToken = account.refresh_token || token.googleLoginRefreshToken;
+        token.googleLoginExpiresAt = account.expires_at ? (Date.now() + account.expires_at * 1000) : undefined;
+
+        if (account.scope?.includes("https://www.googleapis.com/auth/calendar")) {
+          console.log("JWT Callback: Google Calendar scope GRANTED in this sign-in.");
+          token.googleCalendarAccessToken = account.access_token;
+          token.googleCalendarRefreshToken = account.refresh_token || token.googleCalendarRefreshToken;
+          token.googleCalendarExpiresAt = account.expires_at ? (Date.now() + account.expires_at * 1000) : undefined;
+          token.googleCalendarScopeGranted = true;
+        } else if (token.googleCalendarScopeGranted === undefined) {
+          token.googleCalendarScopeGranted = false;
+        }
+        
+        if (profile) {
+            token.email = profile.email || token.email;
+            token.firstName = profile.given_name || token.firstName;
+            token.lastName = profile.family_name || token.lastName;
+            token.image_url = profile.picture || token.image_url;
+            if (!token.name && token.firstName && token.lastName) {
+                token.name = `${token.firstName} ${token.lastName}`.trim();
+            } else if (!token.name && profile.name) {
+                token.name = profile.name;
+            }
+        }
+      }
+
+      if (token.googleCalendarScopeGranted && token.googleCalendarAccessToken && token.googleCalendarExpiresAt && Date.now() > token.googleCalendarExpiresAt) {
+        console.log("JWT Callback: Google Calendar access token expired. Attempting refresh.");
+        if (token.googleCalendarRefreshToken) {
+          const refreshed = await refreshAccessToken({ ...token, refreshToken: token.googleCalendarRefreshToken, accessToken: token.googleCalendarAccessToken, accessTokenExpires: token.googleCalendarExpiresAt });
+          if (refreshed.error) {
+            console.error("JWT Callback: Error refreshing Google Calendar access token:", refreshed.error);
+            token.error = "RefreshCalendarTokenError";
+            delete token.googleCalendarAccessToken;
+            delete token.googleCalendarExpiresAt;
+            token.googleCalendarScopeGranted = false;
           } else {
-            console.warn(`[JWT Callback] No user found in public.users for ID ${user.id}`);
+            console.log("JWT Callback: Google Calendar access token REFRESHED successfully.");
+            token.googleCalendarAccessToken = refreshed.accessToken;
+            token.googleCalendarExpiresAt = refreshed.accessTokenExpires;
+            token.googleCalendarRefreshToken = refreshed.refreshToken || token.googleCalendarRefreshToken;
+            token.error = undefined;
           }
-        } catch (e) {
-          console.error(`[JWT Callback] Exception fetching user details from public.users for ID ${user.id}:`, e);
-        }
-
-
-        if (account.provider === 'google') {
-          token.accessToken = account.access_token; // Google's access token
-          token.refreshToken = account.refresh_token; // Google's refresh token
-          token.accessTokenExpires = account.expires_at ? account.expires_at * 1000 : undefined;
-          delete token.sbAccessToken;
-          delete token.sbRefreshToken;
-          delete token.error; 
-          console.log("Google account linked, Google tokens stored in JWT:", { provider: account.provider, userId: user.id });
-        } else if (user && (user as any).supabaseAccessToken) {
-          // For credentials provider, user object from authorize contains supabase tokens
-          token.sbAccessToken = (user as any).supabaseAccessToken;
-          token.sbRefreshToken = (user as any).supabaseRefreshToken;
-          delete token.accessToken;
-          delete token.refreshToken;
-          delete token.accessTokenExpires;
-          console.log("Credentials login, Supabase tokens stored in JWT:", { provider: account.provider, userId: user.id });
+        } else {
+          console.warn("JWT Callback: Google Calendar access token expired, but NO refresh token available.");
+          token.error = "NoCalendarRefreshToken";
+          delete token.googleCalendarAccessToken;
+          delete token.googleCalendarExpiresAt;
+          token.googleCalendarScopeGranted = false;
         }
       }
 
-      // Esta lógica de upsert se ejecuta después del login/conexión inicial
-      // y también en subsecuentes llamadas a getSession/useSession si el token JWT se usa.
-      // Es importante asegurar que el `token.id` (que debe ser el Supabase user ID) esté disponible.
-      // El SupabaseAdapter ya debería haber manejado la creación/actualización del usuario (id, email).
-      // Este bloque es para asegurar que campos adicionales como 'role' estén sincronizados si es necesario.
-      // Reemplazamos el upsert anterior que causaba conflictos de 'email' por un update más específico para 'role'.
-      if (token.id && typeof token.role === 'string') { // Asegurarse que token.id existe y token.role es un string
-        try {
-          // console.log(`[JWT Callback] Attempting to update role for user ID: ${token.id} to role: ${token.role}`);
-          const { error: updateError } = await supabaseAdmin
-            .from('users') // Asumiendo que esta es tu tabla pública de usuarios
-            .update({ role: token.role })
-            .eq('id', token.id as string);
-
-          if (updateError) {
-            // Esto podría ocurrir si el usuario (token.id) no se encuentra, o hay un problema de RLS/permisos.
-            console.error(`[JWT Callback] Error updating role for user ID ${token.id}:`, updateError);
-          }
-        } catch (err) {
-          console.error(`[JWT Callback] Exception during role update for user ID ${token.id}:`, err);
-        }
-      }
-
-      // Fetch fresh image_url on every JWT invocation (option A)
-      if (!user && token.id) {
-        try {
-          const { data: publicUser, error: publicUserError } = await supabaseAdmin
-            .from('users')
-            .select('image_url')
-            .eq('id', token.id as string)
-            .single();
-          if (!publicUserError && publicUser?.image_url) {
-            token.image_url = publicUser.image_url;
-            console.log(`[JWT Callback] Refreshed image_url for ${token.id}:`, token.image_url);
-          }
-        } catch (e) {
-          console.error(`[JWT Callback] Error refreshing image_url for ${token.id}:`, e);
-        }
-      }
-
-      // Si el token de acceso no ha expirado, devuélvelo
-      if (token.accessTokenExpires && Date.now() < token.accessTokenExpires) {
-        // console.log("Access token is valid");
-        return token;
-      }
-
-      // Si no hay accessToken (ej. login con credenciales) o si ha expirado y no hay refreshToken, devolver token actual
-      if (!token.accessToken || !token.refreshToken) {
-        // console.log("No access token or refresh token available, returning current token");
-        return token;
-      }
-      
-      // Si el token de acceso ha expirado y tenemos un refreshToken, intenta refrescarlo
-      console.log("Access token expired, attempting to refresh...");
-      return refreshAccessToken(token);
+      console.log('[JWT] JWT Callback - END. Returning token:', JSON.stringify({
+        id: token.id,
+        email: token.email,
+        name: token.name,
+        role: token.role,
+        firstName: token.firstName,
+        lastName: token.lastName,
+        image_url: token.image_url,
+        sbAccessTokenExists: !!token.sbAccessToken,
+        googleLoginAccessTokenExists: !!token.googleLoginAccessToken,
+        googleCalendarAccessTokenExists: !!token.googleCalendarAccessToken,
+        googleCalendarScopeGranted: token.googleCalendarScopeGranted,
+      }, null, 2));
+      return token;
     },
+
     async session({ session, token }: { session: any; token: JWT }): Promise<any> {
-      if (!session.user) {
-        session.user = {};
-      }
+      console.log("[Session] Callback - START", { currentSessionUserId: session.user?.id, tokenId: token.id, tokenRole: token.role });
+      if (!session.user) session.user = {};
+
       session.user.id = token.id as string;
-      session.user.role = token.role as UserRoleType;
-      if (token.email) session.user.email = token.email;
-      if (token.name) session.user.name = token.name; // Full name
-      if (token.firstName) session.user.firstName = token.firstName;
-      if (token.lastName)      session.user.lastName = token.lastName;
-      if (token.image_url) session.user.image_url = token.image_url;
-      
-      // Expose Google's access token if present (e.g., for Google Calendar API direct calls from client)
-      if (token.accessToken) {
-        session.accessToken = token.accessToken; 
+      session.user.email = token.email || session.user.email;
+      session.user.firstName = token.firstName || session.user.firstName;
+      session.user.lastName = token.lastName || session.user.lastName;
+      session.user.role = token.role || 'psicologo';
+      session.user.image_url = token.image_url || session.user.image_url;
+      session.user.name = token.name || [token.firstName, token.lastName].filter(Boolean).join(' ') || session.user.name;
+
+      if (token.sbAccessToken) {
+        console.log('[Session] sbAccessToken FOUND on JWT token. Adding to session.');
+        session.sbAccessToken = token.sbAccessToken as string;
+        session.sbRefreshToken = token.sbRefreshToken as string;
+      } else {
+        console.log('[Session] sbAccessToken NOT FOUND on JWT token.');
       }
 
-      // Expose Supabase tokens to the session object for client-side Supabase SDK and API routes
-      if (token.sbAccessToken) {
-        session.sbAccessToken = token.sbAccessToken;
-      }
-      if (token.sbRefreshToken) {
-        session.sbRefreshToken = token.sbRefreshToken;
-      }
-      
-      session.error = token.error; // Propagate error from token refresh (e.g., Google refresh token failure)
-      
+      if (token.googleLoginAccessToken) session.googleLoginAccessToken = token.googleLoginAccessToken;
+      if (token.googleCalendarAccessToken) session.googleCalendarAccessToken = token.googleCalendarAccessToken;
+      session.googleCalendarScopeGranted = token.googleCalendarScopeGranted || false;
+      session.error = token.error;
+
+      console.log('[Session] Session Callback - END. Returning session:', JSON.stringify({
+        user: { id: session.user.id, email: session.user.email, name: session.user.name, role: session.user.role, firstName: session.user.firstName, lastName: session.user.lastName, image_url: session.user.image_url },
+        sbAccessTokenExists: !!session.sbAccessToken,
+        sbRefreshTokenExists: !!session.sbRefreshToken,
+        googleLoginAccessToken: session.googleLoginAccessToken,
+        googleCalendarAccessToken: session.googleCalendarAccessToken,
+        googleCalendarScopeGranted: session.googleCalendarScopeGranted,
+        error: session.error,
+        expires: session.expires
+      }, null, 2));
       return session;
     }
-  },
-  pages: {
-    signIn: '/auth/login',
-    error: '/auth/error' // Custom error page to handle auth errors
   },
   session: {
     strategy: "jwt",
