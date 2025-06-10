@@ -6,9 +6,12 @@ declare module 'next-auth' {
    */
   interface Session {
     user: User; // Usa nuestra interfaz User extendida
-    accessToken?: string; // Google's access token
+    accessToken?: string; // Google's login access token
     sbAccessToken?: string; // Supabase access token
     sbRefreshToken?: string; // Supabase refresh token
+    googleLoginAccessToken?: string; // OAuth login token
+    googleCalendarAccessToken?: string; // OAuth calendar token
+    googleCalendarScopeGranted?: boolean; // Calendar scope grant flag
     error?: string; // Para errores (ej. de refresco de token)
   }
 

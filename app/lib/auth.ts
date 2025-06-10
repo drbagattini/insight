@@ -6,59 +6,6 @@ import { JWT } from 'next-auth/jwt';
 import { UserRoleType } from '@/types/roles';
 import { SupabaseAdapter } from "@next-auth/supabase-adapter";
 
-// Type augmentations for NextAuth
-declare module 'next-auth' {
-  interface Session {
-    user: {
-      id: string;
-      role: UserRoleType; // Assuming UserRoleType is imported or globally available
-      email?: string | null;
-      name?: string | null;
-      firstName?: string | null;
-      lastName?: string | null;
-      image_url?: string | null;
-    };
-    sbAccessToken?: string;
-    sbRefreshToken?: string;
-    googleLoginAccessToken?: string;
-    googleCalendarAccessToken?: string;
-    googleCalendarScopeGranted?: boolean;
-    error?: string;
-  }
-
-  interface User { // Augment user without extending to avoid recursive reference
-    role?: UserRoleType;
-    firstName?: string;
-    lastName?: string;
-    image_url?: string;
-    sbAccessToken?: string;
-    sbRefreshToken?: string;
-  }
-}
-
-declare module 'next-auth/jwt' {
-  interface JWT { // JWT is imported
-    id?: string;
-    role?: UserRoleType;
-    firstName?: string;
-    lastName?: string;
-    image_url?: string;
-    sbAccessToken?: string;
-    sbRefreshToken?: string;
-    
-    googleLoginAccessToken?: string;
-    googleLoginRefreshToken?: string;
-    googleLoginExpiresAt?: number;
-
-    googleCalendarAccessToken?: string;
-    googleCalendarRefreshToken?: string;
-    googleCalendarExpiresAt?: number;
-    googleCalendarScopeGranted?: boolean;
-    
-    error?: string;
-  }
-}
-
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
