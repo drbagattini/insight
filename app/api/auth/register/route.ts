@@ -53,11 +53,11 @@ export async function POST(request: Request) {
       if (createError.message.includes('already registered') || createError.message.includes('unique constraint')) {
         return NextResponse.json({ error: 'Email ya registrado' }, { status: 409 }); // 409 Conflict es más apropiado
       }
-      return NextResponse.json({ error: authError.message || 'Error al crear usuario en Supabase Auth' }, { status: 500 });
+      return NextResponse.json({ error: createError.message || 'Error al crear usuario en Supabase Auth' }, { status: 500 });
     }
 
     // Éxito - El usuario fue creado en auth.users
-    const userId = authData.user.id; // Define userId here
+    const userId = newUser.user.id; // Define userId here
     console.log('AUTH API: User created successfully in Supabase Auth with ID:', userId);
 
     // --- BEGIN WORKAROUND: Set email_confirmed_at ---
