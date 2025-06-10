@@ -194,7 +194,7 @@ export default function DashboardPage() {
                   },
                   {
                     label: 'Umbral de Referencia (25)',
-                showInLegend: false,
+                    hidden: true,
                     data: who5ScatterData.length > 0 
                           ? [{ x: who5ScatterData[0].x, y: 25 }, { x: who5ScatterData[who5ScatterData.length - 1].x, y: 25 }] 
                           : [], 
