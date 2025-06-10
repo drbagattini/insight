@@ -1,21 +1,44 @@
-import NextAuth from "next-auth";
+import { UserRoleType } from '@/types/roles'; // Importar UserRoleType
 
-declare module "next-auth" {
+declare module 'next-auth' {
+  /**
+   * Returned by `useSession`, `getSession` and received as a prop on the `SessionProvider` React Context
+   */
   interface Session {
-    user: {
-      id?: string;
-      email?: string;
-      role?: string;
-    }
+    user: User; // Usa nuestra interfaz User extendida
+    accessToken?: string; // Google's access token
+    sbAccessToken?: string; // Supabase access token
+    sbRefreshToken?: string; // Supabase refresh token
+    error?: string; // Para errores (ej. de refresco de token)
   }
 
   interface User {
-    role?: string;
+    id: string; // Sobrescribe o asegura que id siempre es string
+    role?: UserRoleType;
+    firstName?: string | null;
+    lastName?: string | null;
+    image_url?: string | null; // Para la foto de perfil
+    // name y email son opcionales y vienen de NextAuthUserBase, pero es bueno ser explícito
+    name?: string | null; 
+    email?: string | null;
   }
 }
 
-declare module "next-auth/jwt" {
+declare module 'next-auth/jwt' {
+  /** Returned by the `jwt` callback and `getToken`, when using JWT sessions */
   interface JWT {
-    role?: string;
+    id: string; // ID del usuario (de Supabase)
+    role?: UserRoleType;
+    name?: string | null; 
+    email?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+    image_url?: string | null; // Para la foto de perfil
+    
+    // Tokens de OAuth (ej. Google)
+    accessToken?: string;
+    refreshToken?: string; 
+    accessTokenExpires?: number; // Timestamp de expiración en milisegundos
+    error?: string; // Para manejar errores, ej. durante el refresh del token
   }
 }
