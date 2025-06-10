@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getServerSession, Session } from 'next-auth/next';
+import { getServerSession } from 'next-auth/next';
+import type { Session as NextAuthSession } from 'next-auth';
 import { authOptions } from '@/app/lib/auth';
 import { google } from 'googleapis';
 
 // Extend session type locally if not using the augmented one directly from authOptions context
-interface ExtendedSession extends Session {
+interface ExtendedSession extends NextAuthSession {
   googleCalendarScopeGranted?: boolean;
   googleCalendarAccessToken?: string;
 }
@@ -39,12 +40,13 @@ export async function GET(request: Request) {
     const now = new Date();
     
     // Uso de parámetros de la URL o valores predeterminados para el rango de fechas
-    const timeMin = url.searchParams.get('timeMin') || now.toISOString();
+    const timeMin: string = url.searchParams.get('timeMin') || now.toISOString();
     
     // Por defecto, eventos para los próximos 7 días si no se especifica timeMax
-    let timeMax;
-    if (url.searchParams.get('timeMax')) {
-      timeMax = url.searchParams.get('timeMax');
+    let timeMax: string;
+    const timeMaxParam = url.searchParams.get('timeMax'); // string | null
+    if (timeMaxParam) {
+      timeMax = timeMaxParam;
     } else {
       const nextWeek = new Date();
       nextWeek.setDate(now.getDate() + 7);
