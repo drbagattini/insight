@@ -38,10 +38,27 @@ declare module 'next-auth/jwt' {
     lastName?: string | null;
     image_url?: string | null; // Para la foto de perfil
     
-    // Tokens de OAuth (ej. Google)
-    accessToken?: string;
-    refreshToken?: string; 
-    accessTokenExpires?: number; // Timestamp de expiración en milisegundos
     error?: string; // Para manejar errores, ej. durante el refresh del token
+
+    // Generic OAuth tokens (primarily for initial login, e.g. Google profile/email)
+    // These are used by the refreshAccessToken helper as its target fields.
+    accessToken?: string;          // Generic access token from provider
+    refreshToken?: string;         // Generic refresh token from provider
+    accessTokenExpires?: number;   // Expiry for generic accessToken
+
+    // Supabase tokens (set in jwt callback)
+    sbAccessToken?: string;
+    sbRefreshToken?: string;
+
+    // Google Login specific tokens (openid, email, profile)
+    googleLoginAccessToken?: string;
+    googleLoginRefreshToken?: string;
+    googleLoginExpiresAt?: number;
+
+    // Google Calendar specific tokens
+    googleCalendarAccessToken?: string;
+    googleCalendarRefreshToken?: string;
+    googleCalendarExpiresAt?: number;
+    googleCalendarScopeGranted?: boolean;
   }
 }
