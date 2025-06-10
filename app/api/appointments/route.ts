@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getServerSession, Session as NextAuthSession } from 'next-auth/next'; // Import Session type
+import { getServerSession } from 'next-auth/next';
+import type { Session as NextAuthSession } from 'next-auth'; // Import Session type
 import { authOptions } from '@/app/lib/auth';
 import { createClient } from '@supabase/supabase-js';
 import { RRule } from 'rrule';
