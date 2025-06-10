@@ -26,7 +26,7 @@ declare module 'next-auth' {
     error?: string;
   }
 
-  interface User extends NextAuthUser { // NextAuthUser is imported
+  interface User { // Augment user without extending to avoid recursive reference
     role?: UserRoleType;
     firstName?: string;
     lastName?: string;
