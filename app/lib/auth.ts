@@ -58,12 +58,31 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
       console.error("Error refreshing token, response not ok:", refreshedTokens);
       throw refreshedTokens;
     }
+
+    // Validate token structure from Google
+    if (typeof refreshedTokens.access_token !== 'string' || 
+        typeof refreshedTokens.expires_in !== 'number' ||
+        (refreshedTokens.refresh_token !== undefined && typeof refreshedTokens.refresh_token !== 'string')) { // If refresh_token is present, it must be a string
+      console.error("Invalid token structure from Google:", refreshedTokens);
+      // When structure is invalid, we should not use any of refreshedTokens,
+      // and return the original token with an error.
+      return { 
+        ...token, 
+        error: "InvalidTokenStructureFromGoogle" 
+      };
+    }
     console.log("Successfully refreshed token");
+
+    const newAccessToken = refreshedTokens.access_token as string;
+    const newExpiresIn = refreshedTokens.expires_in as number;
+    // refreshedTokens.refresh_token could be a string or undefined. If undefined, this cast is fine.
+    const newRefreshToken = refreshedTokens.refresh_token as (string | undefined);
+
     return {
       ...token,
-      accessToken: refreshedTokens.access_token,
-      accessTokenExpires: Date.now() + refreshedTokens.expires_in * 1000,
-      refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,
+      accessToken: newAccessToken,
+      accessTokenExpires: Date.now() + newExpiresIn * 1000,
+      refreshToken: newRefreshToken ?? token.refreshToken, // If newRefreshToken is undefined, use the original token's refreshToken
       error: undefined, // Clear previous errors on successful refresh
     };
   } catch (error) {
@@ -205,69 +224,14 @@ export const authOptions: AuthOptions = {
 
       try {
         if (account?.provider === 'google') {
-          console.log('[SignIn] Google OAuth login detected');
-          const { data: { users: foundAuthUsers }, error: listUsersError } = await supabaseAdmin.auth.admin.listUsers({
-            filter: `email eq "${user.email}"`
-          });
-
-          if (listUsersError) {
-            console.error('[SignIn] Error listando usuarios en auth.users:', listUsersError);
-            return false;
-          }
-
-          let supabaseAuthUser: any = null;
-          if (foundAuthUsers && foundAuthUsers.length > 0) {
-            supabaseAuthUser = foundAuthUsers[0];
-            console.log('[SignIn] Usuario encontrado en auth.users con ID', supabaseAuthUser.id);
-            user.id = supabaseAuthUser.id;
-          } else {
-            console.log(`[SignIn] Usuario con email ${user.email} no encontrado en auth.users. Creando...`);
-            const authMetadata = {
-              name: user.name,
-              given_name: profile?.given_name || profile?.first_name || user.name?.split(' ')[0] || '',
-              family_name: profile?.family_name || profile?.last_name || user.name?.split(' ').slice(1).join(' ') || '',
-              avatar_url: user.image || profile?.picture || ''
-            };
-            const { data: newAuthUserData, error: createAuthError } = await supabaseAdmin.auth.admin.createUser({
-              email: user.email,
-              user_metadata: authMetadata,
-              app_metadata: { userrole: 'psicologo' },
-              email_confirm: true
-            });
-            if (createAuthError) {
-              console.error('[SignIn] Error creando usuario en auth.users:', createAuthError);
-              return false;
-            }
-            supabaseAuthUser = newAuthUserData.user;
-            console.log('[SignIn] Usuario creado en auth.users con ID', supabaseAuthUser.id);
-            user.id = supabaseAuthUser.id;
-            await new Promise(resolve => setTimeout(resolve, 500)); // Allow trigger to run
-          }
-
-          if (account.id_token && user.id) {
-            console.log('[SignIn-Google] Attempting Supabase signInWithIdToken with Google ID token.');
-            const { data: supabaseSessionData, error: supabaseSessionError } = await supabase.auth.signInWithIdToken({
-              provider: 'google',
-              token: account.id_token,
-            });
-
-            if (supabaseSessionError) {
-              console.error('[SignIn-Google] Supabase signInWithIdToken error:', supabaseSessionError.message);
-              return false;
-            }
-
-            if (supabaseSessionData && supabaseSessionData.session) {
-              console.log('[SignIn-Google] Supabase session obtained successfully via signInWithIdToken.');
-              (user as any).sbAccessToken = supabaseSessionData.session.access_token;
-              (user as any).sbRefreshToken = supabaseSessionData.session.refresh_token;
-              console.log('[SignIn-Google] sbAccessToken and sbRefreshToken attached to user object.');
-            } else {
-              console.warn('[SignIn-Google] Supabase signInWithIdToken did not return a session. This is unexpected.');
-              return false;
-            }
-          } else {
-            console.warn('[SignIn-Google] Google account id_token is missing or user.id not set. Cannot perform Supabase signInWithIdToken.');
-            return false;
+          console.log('[SignIn] Google OAuth login detected. SupabaseAdapter will handle user provisioning.');
+          // The SupabaseAdapter is responsible for creating/linking the user in Supabase Auth 
+          // and syncing to the public.users table. Manual checks and creations here are removed 
+          // to avoid conflicts and rely on the adapter's intended functionality.
+          // Ensure user.id is correctly populated by the adapter for subsequent JWT/session callbacks.
+          // If user.email is available, it can be used for logging or other checks not related to provisioning.
+          if (user.email) {
+            console.log(`[SignIn] Processing Google user: ${user.email}`);
           }
         }
 
@@ -439,10 +403,11 @@ export const authOptions: AuthOptions = {
         }
       }
 
-      if (token.googleCalendarScopeGranted && token.googleCalendarAccessToken && token.googleCalendarExpiresAt && Date.now() > token.googleCalendarExpiresAt) {
+      const expiresAt = token.googleCalendarExpiresAt;
+      if (token.googleCalendarScopeGranted && token.googleCalendarAccessToken && typeof expiresAt === 'number' && Date.now() > expiresAt) {
         console.log("JWT Callback: Google Calendar access token expired. Attempting refresh.");
         if (token.googleCalendarRefreshToken) {
-          const refreshed = await refreshAccessToken({ ...token, refreshToken: token.googleCalendarRefreshToken, accessToken: token.googleCalendarAccessToken, accessTokenExpires: token.googleCalendarExpiresAt });
+          const refreshed: JWT = await refreshAccessToken({ ...token, refreshToken: token.googleCalendarRefreshToken, accessToken: token.googleCalendarAccessToken, accessTokenExpires: token.googleCalendarExpiresAt });
           if (refreshed.error) {
             console.error("JWT Callback: Error refreshing Google Calendar access token:", refreshed.error);
             token.error = "RefreshCalendarTokenError";
@@ -451,9 +416,32 @@ export const authOptions: AuthOptions = {
             token.googleCalendarScopeGranted = false;
           } else {
             console.log("JWT Callback: Google Calendar access token REFRESHED successfully.");
-            token.googleCalendarAccessToken = refreshed.accessToken;
-            token.googleCalendarExpiresAt = refreshed.accessTokenExpires;
-            token.googleCalendarRefreshToken = refreshed.refreshToken || token.googleCalendarRefreshToken;
+
+            if (typeof refreshed.accessToken === 'string') {
+              token.googleCalendarAccessToken = refreshed.accessToken;
+            } else {
+              console.error('[JWT Callback] Post-refresh: refreshed.accessToken was not a string. Clearing googleCalendarAccessToken.');
+              delete token.googleCalendarAccessToken;
+            }
+
+            if (typeof refreshed.accessTokenExpires === 'number') {
+              token.googleCalendarExpiresAt = refreshed.accessTokenExpires;
+            } else {
+              console.error('[JWT Callback] Post-refresh: refreshed.accessTokenExpires was not a number. Clearing googleCalendarExpiresAt.');
+              delete token.googleCalendarExpiresAt;
+            }
+
+            // refreshed.refreshToken already incorporates fallback to the original token.googleCalendarRefreshToken if Google didn't provide a new one.
+            // So, we assign it if it's a string, or assign undefined if it's undefined.
+            if (typeof refreshed.refreshToken === 'string') {
+              token.googleCalendarRefreshToken = refreshed.refreshToken;
+            } else if (refreshed.refreshToken === undefined) {
+              token.googleCalendarRefreshToken = undefined; // Explicitly set to undefined if that's what refreshed.refreshToken is
+            } else {
+              console.error('[JWT Callback] Post-refresh: refreshed.refreshToken was neither string nor undefined. Clearing googleCalendarRefreshToken.');
+              delete token.googleCalendarRefreshToken;
+            }
+            
             token.error = undefined;
           }
         } else {
@@ -518,9 +506,5 @@ export const authOptions: AuthOptions = {
       }, null, 2));
       return session;
     }
-  },
-  session: {
-    strategy: "jwt",
-  },
-  debug: process.env.NODE_ENV === 'development', // Enable debug logs in development
+  }
 };
