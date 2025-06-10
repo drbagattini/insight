@@ -177,12 +177,17 @@ export async function GET() {
 
         riskPatients = Array.from(latestScoresByPatient.values())
           .filter(r => r.puntuacion < 25 && r.patient)
-          .map(r => ({
-            id: r.patient!.id,
-            name: (r.patient!.name || '').trim(),
-            score: r.puntuacion,
-            date: r.creado_en,
-          }));
+          .map(r => {
+            // Supabase foreign key joins can sometimes be interpreted as arrays by TypeScript
+            // Cast r.patient to a single object with the expected properties
+            const patient = Array.isArray(r.patient) ? r.patient[0] : r.patient;
+            return {
+              id: patient!.id,
+              name: (patient!.name || '').trim(), 
+              score: r.puntuacion,
+              date: r.creado_en,
+            };
+          });
       }
     }
 
