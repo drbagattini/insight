@@ -203,7 +203,6 @@ export default function DashboardPage() {
                     borderWidth: 1,
                     borderDash: [5, 5],
                     pointRadius: 0,
-                    type: 'line',
                     fill: false,
                     tension: 0.1,
                   }
