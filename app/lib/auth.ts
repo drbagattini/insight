@@ -7,7 +7,7 @@ import { UserRoleType } from '@/types/roles';
 import { SupabaseAdapter } from "@next-auth/supabase-adapter";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const anonKey = process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 // Log de variables de entorno críticas para depuración
@@ -119,6 +119,7 @@ export const authOptions: AuthOptions = {
         password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
+        console.log('[Cred-authorize] INICIO.', { email: credentials.email });
         if (!credentials?.email || !credentials?.password) {
           console.error('AuthOptions: Missing credentials');
           const error = new Error('MissingCredentials');
@@ -131,6 +132,11 @@ export const authOptions: AuthOptions = {
             email: credentials.email,
             password: credentials.password
           });
+
+          console.log('[Cred-authorize] authError?', !!authError, 'user?', !!authData?.user, 'session?', !!authData?.session);
+          if (authData?.session) {
+            console.log('[Cred-authorize] access_token len=', authData.session.access_token?.length);
+          }
 
           if (authError) {
             console.error(`AuthOptions: Error de Supabase Auth:`, authError.message);
@@ -185,14 +191,25 @@ export const authOptions: AuthOptions = {
 
           // 3. Devolver el objeto usuario para NextAuth usando los datos de la tabla pública `users`
           const fullName = [publicUser.first_name, publicUser.last_name].filter(Boolean).join(' ') || publicUser.email; // Fallback al email si no hay nombre
-          return {
+          const userToReturn: any = {
             id: publicUser.id, // Este es el ID de la tabla public.users
-            name: fullName,
             email: publicUser.email,
-            supabaseAccessToken: authData.session?.access_token,
-            supabaseRefreshToken: authData.session?.refresh_token,
+            name: fullName,
+            firstName: publicUser.first_name,
+            lastName: publicUser.last_name,
+            role: 'psicologo', // Asignar rol por defecto o buscarlo si está en public.users
           };
 
+          if (authData.session) {
+            console.log('[AuthOptions-Credentials] Session object from Supabase found, attaching tokens.');
+            userToReturn.sbAccessToken = authData.session.access_token;
+            userToReturn.sbRefreshToken = authData.session.refresh_token;
+          } else {
+            console.warn('[AuthOptions-Credentials] Supabase session object NOT FOUND after signInWithPassword. sbAccessToken will be missing.');
+          }
+          
+          console.log('[Cred-authorize] DEVOLVEMOS user con sbAccessToken?', !!userToReturn.sbAccessToken);
+          return userToReturn;
         } catch (err: any) {
             // Si el error ya tiene un 'type' (porque lo lanzamos nosotros), lo relanzamos para que NextAuth lo use
             if (err.type) {
@@ -358,21 +375,30 @@ export const authOptions: AuthOptions = {
         console.log(`[JWT - User Processing] Type of user.sbAccessToken: ${typeof userSbAccessToken}`);
         
         if (userSbAccessToken && typeof userSbAccessToken === 'string' && userSbAccessToken.length > 0) {
-          console.log('[JWT] user.sbAccessToken is a non-empty string. Assigning to token.sbAccessToken.');
+          console.log('[JWT] user.sbAccessToken is valid. Assigning to token.sbAccessToken.');
           token.sbAccessToken = userSbAccessToken;
-          // Assign refresh token only if access token is being assigned
+
           if (userSbRefreshToken && typeof userSbRefreshToken === 'string' && userSbRefreshToken.length > 0) {
+            console.log('[JWT] user.sbRefreshToken is valid. Assigning to token.sbRefreshToken.');
             token.sbRefreshToken = userSbRefreshToken;
-            console.log('[JWT] user.sbRefreshToken is a non-empty string. Assigning to token.sbRefreshToken.');
           } else {
-            console.log('[JWT] user.sbRefreshToken is falsy or not a non-empty string. Not assigning to token.sbRefreshToken.');
-            // delete token.sbRefreshToken; // Consider if stale refresh token should be cleared
+            console.log('[JWT] user.sbRefreshToken is NOT valid or not present. Clearing token.sbRefreshToken.');
+            delete token.sbRefreshToken; 
+          }
+
+          if (account?.provider === 'credentials') {
+            console.log(`[JWT - Credentials Login] Supabase tokens processed from user object. sbAccessToken: ${!!token.sbAccessToken}, sbRefreshToken: ${!!token.sbRefreshToken}`);
           }
         } else {
-          console.log('[JWT] user.sbAccessToken is falsy or not a non-empty string. NOT assigning to token.sbAccessToken.');
-          // delete token.sbAccessToken; // Consider if stale tokens should be cleared
-          // delete token.sbRefreshToken;
+          // This case means user.sbAccessToken was not valid to begin with.
+          console.log('[JWT] user.sbAccessToken is NOT valid or not present. Clearing token.sbAccessToken and token.sbRefreshToken.');
+          delete token.sbAccessToken;
+          delete token.sbRefreshToken;
+          if (account?.provider === 'credentials') {
+            console.warn('[JWT - Credentials Login] sbAccessToken was NOT found or was invalid on the user object from authorize. This is unexpected for credentials login. Both sbAccessToken and sbRefreshToken will be undefined in JWT.');
+          }
         }
+      // Extraneous brace was here, causing syntax errors below.
       }
 
       if (trigger === "update" && updateData) {
@@ -499,8 +525,11 @@ export const authOptions: AuthOptions = {
         console.log('[Session] sbAccessToken FOUND on JWT token. Adding to session.');
         session.sbAccessToken = token.sbAccessToken as string;
         session.sbRefreshToken = token.sbRefreshToken as string;
+        // No podemos saber aquí fácilmente si el login original fue por credenciales sin añadir más info al token,
+        // pero si sbAccessToken está presente, es un buen signo.
       } else {
         console.log('[Session] sbAccessToken NOT FOUND on JWT token.');
+        // Este log es genérico. El warning específico para credenciales estaría en el callback JWT.
       }
 
       if (token.googleLoginAccessToken) session.googleLoginAccessToken = token.googleLoginAccessToken;
