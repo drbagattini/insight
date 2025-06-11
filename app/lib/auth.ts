@@ -241,21 +241,16 @@ export const authOptions: AuthOptions = {
 
       try {
         if (account?.provider === 'google') {
-          console.log('[SignIn] Google OAuth login detected. SupabaseAdapter will handle user provisioning.');
-          // The SupabaseAdapter is responsible for creating/linking the user in Supabase Auth 
-          // and syncing to the public.users table. Manual checks and creations here are removed 
-          // to avoid conflicts and rely on the adapter's intended functionality.
-          // Ensure user.id is correctly populated by the adapter for subsequent JWT/session callbacks.
-          // If user.email is available, it can be used for logging or other checks not related to provisioning.
-          if (user.email) {
-            console.log(`[SignIn] Processing Google user: ${user.email}`);
-          }
+          console.log('[SignIn] Google OAuth login detected. SupabaseAdapter will handle provisioning; skipping manual public.users sync.');
+          return true;
         }
 
+        // --- Credentials login branch (public.users manual sync) ---
+        
         const { data: publicProfile, error: fetchError } = await supabaseAdmin
           .from('users')
           .select('id, email, first_name, last_name, role, image_url')
-          .eq('id', user.id) // Use ID now that it's confirmed from auth.users
+          .eq('id', user.id)
           .single();
 
         if (fetchError && fetchError.code !== 'PGRST116') {
@@ -270,7 +265,7 @@ export const authOptions: AuthOptions = {
           const userRole = (user as any).role || 'psicologo';
           let imageUrl = (user as any).image_url || user.image || profile?.picture || '';
 
-          if (account?.provider === 'google' && profile) {
+          if (account?.provider === 'credentials' && profile) {
             firstName = profile.given_name || profile.first_name || firstName;
             lastName = profile.family_name || profile.last_name || lastName;
             imageUrl = profile.picture || imageUrl;
@@ -311,7 +306,7 @@ export const authOptions: AuthOptions = {
           (user as any).image_url = publicProfile.image_url;
           user.name = [publicProfile.first_name, publicProfile.last_name].filter(Boolean).join(' ') || publicProfile.email;
 
-          if (account?.provider === 'google' && profile) {
+          if (account?.provider === 'credentials' && profile) {
             const updates: any = {};
             const newFirstName = profile.given_name || profile.first_name || '';
             const newLastName = profile.family_name || profile.last_name || '';
@@ -323,9 +318,9 @@ export const authOptions: AuthOptions = {
 
             if (Object.keys(updates).length > 0) {
               updates.updated_at = new Date().toISOString();
-              console.log(`[SignIn] Updating public.users for ${user.email} from Google profile:`, updates);
+              console.log(`[SignIn] Updating public.users for ${user.email} from profile:`, updates);
               const { error: updateError } = await supabaseAdmin.from('users').update(updates).eq('id', user.id);
-              if (updateError) console.error('[SignIn] Error updating public.users from Google profile:', updateError);
+              if (updateError) console.error('[SignIn] Error updating public.users from profile:', updateError);
               else {
                 if (updates.first_name) (user as any).firstName = updates.first_name;
                 if (updates.last_name) (user as any).lastName = updates.last_name;
