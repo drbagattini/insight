@@ -119,7 +119,7 @@ export const authOptions: AuthOptions = {
         password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
-        console.log('[Cred-authorize] INICIO.', { email: credentials.email });
+        console.log('[Cred-authorize] INICIO.', { email: credentials?.email });
         if (!credentials?.email || !credentials?.password) {
           console.error('AuthOptions: Missing credentials');
           const error = new Error('MissingCredentials');
