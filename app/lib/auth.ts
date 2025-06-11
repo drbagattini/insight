@@ -241,8 +241,32 @@ export const authOptions: AuthOptions = {
 
       try {
         if (account?.provider === 'google') {
-          console.log('[SignIn] Google OAuth login detected. SupabaseAdapter will handle provisioning; skipping manual public.users sync.');
-          return true;
+          console.log('[SignIn] Google OAuth login (post-adapter). Ensuring canonical user.id from public.users');
+
+          const { data: publicProfile, error } = await supabaseAdmin
+            .from('users')
+            .select('id, first_name, last_name, role, image_url')
+            .eq('email', user.email)
+            .single();
+
+          if (error && error.code !== 'PGRST116') {
+            console.error('[SignIn] Error fetching public.users by email for Google login:', error);
+            return false;
+          }
+
+          if (publicProfile) {
+            console.log('[SignIn] Found public.users profile for Google user:', publicProfile.id);
+            user.id = publicProfile.id;
+            (user as any).firstName = publicProfile.first_name;
+            (user as any).lastName = publicProfile.last_name;
+            user.role = publicProfile.role;
+            (user as any).image_url = publicProfile.image_url;
+            user.name = [publicProfile.first_name, publicProfile.last_name].filter(Boolean).join(' ') || user.name;
+          } else {
+            console.warn('[SignIn] No public.users row found for Google email. Relying on SupabaseAdapter to create it.');
+          }
+
+          return true; // Skip credentials-specific logic
         }
 
         // --- Credentials login branch (public.users manual sync) ---
