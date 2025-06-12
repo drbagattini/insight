@@ -266,6 +266,29 @@ export const authOptions: AuthOptions = {
             console.warn('[SignIn] No public.users row found for Google email. Relying on SupabaseAdapter to create it.');
           }
 
+          // NEW: Obtain Supabase session via Google ID token to get sbAccessToken / sbRefreshToken
+          if ((account as any).id_token) {
+            try {
+              const { data: supaAuthData, error: supaAuthErr } = await supabase.auth.signInWithIdToken({
+                provider: 'google',
+                token: (account as any).id_token as string,
+              });
+              if (supaAuthErr) {
+                console.error('[SignIn] Supabase signInWithIdToken error:', supaAuthErr);
+              } else if (supaAuthData?.session) {
+                console.log('[SignIn] Supabase session acquired via Google ID token. Attaching sbAccessToken to user.');
+                (user as any).sbAccessToken = supaAuthData.session.access_token;
+                (user as any).sbRefreshToken = supaAuthData.session.refresh_token;
+              } else {
+                console.warn('[SignIn] signInWithIdToken returned no error but also no session.');
+              }
+            } catch (e: any) {
+              console.error('[SignIn] Exception during Supabase signInWithIdToken:', e);
+            }
+          } else {
+            console.warn('[SignIn] account.id_token missing; cannot obtain Supabase session for Google login.');
+          }
+
           return true; // Skip credentials-specific logic
         }
 

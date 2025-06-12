@@ -17,6 +17,7 @@ import 'chartjs-adapter-date-fns';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { format, subDays } from 'date-fns'; 
+import { es as esLocaleDate } from 'date-fns/locale';
 import Link from 'next/link';
 import {
   Users, 
@@ -31,6 +32,7 @@ import { NewPatient } from '@/types/patients';
 import { AppointmentModal, ModalAppointmentData } from '@/components/appointments/AppointmentModal';
 import HeaderActions from '@/components/dashboard/HeaderActions';
 import RiskPatientsDrawer from '@/components/dashboard/RiskPatientsDrawer';
+import PendingQuestionnairesModal from '@/components/dashboard/PendingQuestionnairesModal';
 import { useDashboardSummary } from '@/hooks/useDashboardSummary';
 import { Dialog, Transition } from '@headlessui/react';
 
@@ -51,6 +53,7 @@ export default function DashboardPage() {
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
   const [currentAppointmentData, setCurrentAppointmentData] = useState<ModalAppointmentData | null>(null);
   const [isRiskDrawerOpen, setIsRiskDrawerOpen] = useState(false);
+  const [isPendingModalOpen, setIsPendingModalOpen] = useState(false);
 
   // State for WHO-5 date range (default 90 days)
   const ninetyDaysAgo = subDays(new Date(), 90);
@@ -85,7 +88,8 @@ export default function DashboardPage() {
     queryKey: ['upcomingAppointmentsDashboard'], 
     queryFn: async () => {
       const now = new Date().toISOString();
-      const endPeriod = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); 
+      // Buscar próximas citas en los próximos 30 días
+      const endPeriod = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); 
       const res = await axios.get('/api/appointments', { params: { start: now, end: endPeriod, limit: 5, sortBy: 'start_time_asc' } });
       return (res.data as any[])
         .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
@@ -138,6 +142,7 @@ export default function DashboardPage() {
           value={summaryData?.questionnairesPending ?? '-'}
           icon={ClipboardList}
           isLoading={loadingSummary}
+          onClick={() => setIsPendingModalOpen(true)}
         />
         <KpiCard
           title="Pacientes en Riesgo"
@@ -261,7 +266,7 @@ export default function DashboardPage() {
       </div>
       {/* Próximas 5 citas */}
       <div className="bg-white p-6 rounded-lg shadow">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Próximas 5 citas</h2>
+        <h2 className="text-lg font-medium text-gray-900 mt-4 mb-6">Próximas 5 citas</h2>
         {loadingUpcoming ? (
           <div className="space-y-2">
             {[...Array(3)].map((_, i) => (
@@ -269,28 +274,46 @@ export default function DashboardPage() {
             ))}
           </div>
         ) : upcomingAppointments.length > 0 ? (
-          <ul className="space-y-3">
+          <ul className="divide-y divide-gray-300 border-t border-gray-300">
             {upcomingAppointments.map((ev: any) => (
-              <li key={ev.id} className="flex justify-between items-center p-2 hover:bg-gray-50 rounded-md">
-                <Link
-                  href={`/dashboard/patients/${ev.paciente_id}`}
-                  className="text-blue-600 hover:underline flex items-center"
-                >
-                  <span className="flex items-center">
-                    {riskPatientIds.includes(ev.paciente_id) && (
-                      <AlertTriangle className="h-4 w-4 mr-2 text-red-600" />
-                    )}
-                    {ev.patient_name ? (
-                      <>
-                        {ev.patient_name}
-                        {ev.title && <span className="text-gray-500 font-normal ml-1 text-sm">({ev.title})</span>}
-                      </>
-                    ) : (ev.title || 'Ver Cita')}
-                  </span>
-                </Link>
-                <span className="text-gray-600 text-sm">
-                  {format(new Date(ev.start_time), 'PPp', {})} 
-                </span>
+              <li
+                key={ev.id}
+                className={`first:pt-2 last:pb-0 py-4 px-4 transition-colors hover:bg-gray-50 ${riskPatientIds.includes(ev.paciente_id) ? 'bg-red-50' : ''}`}
+              >
+                <div className="flex justify-between items-center">
+                  {/* Nombre + icono riesgo + título */}
+                  <div>
+                    <div className="flex items-center space-x-1">
+                      <p className="text-gray-900 font-semibold leading-5">
+                        {ev.patient_name || 'Sin paciente'}
+                      </p>
+                      {riskPatientIds.includes(ev.paciente_id) && (
+                        <AlertTriangle className="h-4 w-4 text-red-600" />
+                      )}
+                    </div>
+                    {(() => {
+                      const title = (ev.title || '').trim();
+                      if (!title) return null;
+                      if (title === ev.patient_name) return null;
+                      if (title === `Cita con ${ev.patient_name}`) return null;
+                      return <p className="text-sm text-gray-500 mt-0.5">{title}</p>;
+                    })()}
+                  </div>
+
+                  {/* Fecha + acción */}
+                  <div className="flex items-center space-x-4 whitespace-nowrap">
+                    <div className="flex items-center text-sm text-gray-700">
+                      <CalendarClock className="h-4 w-4 mr-1 text-gray-500" />
+                      {format(new Date(ev.start_time), 'EEE dd MMM, HH:mm', { locale: esLocaleDate })}
+                    </div>
+                    <Link
+                      href={`/dashboard/patients/${ev.paciente_id}`}
+                      className="inline-flex items-center px-3 py-1.5 border border-blue-600 text-blue-600 text-xs font-medium rounded-md hover:bg-blue-50 transition"
+                    >
+                      Ver evolución
+                    </Link>
+                  </div>
+                </div>
               </li>
             ))}
           </ul>
@@ -351,6 +374,10 @@ export default function DashboardPage() {
         isOpen={isRiskDrawerOpen}
         onClose={() => setIsRiskDrawerOpen(false)}
         patients={summaryData?.riskPatients || []}
+      />
+      <PendingQuestionnairesModal
+        isOpen={isPendingModalOpen}
+        onClose={() => setIsPendingModalOpen(false)}
       />
     </div>
   );

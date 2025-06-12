@@ -96,6 +96,11 @@ export default function CalendarView() {
         customButtons={{}}
         dayHeaderClassNames={'bg-gray-50 text-gray-700 font-semibold py-2'}
         locale={esLocale}
+        views={{
+          timeGridWeek: {
+            dayHeaderFormat: { weekday: 'short', day: 'numeric' }
+          }
+        }}
         dayHeaderFormat={{
           weekday: 'short'
         }}
@@ -142,6 +147,9 @@ export default function CalendarView() {
           content.style.width = '100%';
           content.style.overflow = 'hidden';
           content.style.padding = '2px';  // Reducir padding general
+          // Fondo azul y borde para visibilidad en vista mensual
+          content.style.backgroundColor = '#2563eb';
+          content.style.borderRadius = '4px';
           
           // ORDEN OPTIMIZADO CON TAMAÑOS REDUCIDOS:
           
@@ -234,6 +242,9 @@ export default function CalendarView() {
               title: ev.title,
               start: ev.start_time,
               end: ev.end_time,
+              backgroundColor: '#2563eb', // Azul Tailwind "blue-600"
+              borderColor: '#2563eb',
+              textColor: '#ffffff',
               extendedProps: {
                 pacienteId: ev.paciente_id,
                 pacienteNombre: ev.paciente_nombre,
