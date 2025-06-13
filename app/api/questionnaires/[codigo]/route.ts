@@ -1,5 +1,4 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import questionnairesMeta from '@/data/questionnaires-meta';
 import { supabaseAdmin } from '@/app/lib/supabaseAdmin';
 
@@ -7,11 +6,8 @@ import { supabaseAdmin } from '@/app/lib/supabaseAdmin';
  * GET /api/questionnaires/[codigo]
  * Returns DB questionnaire row merged with static meta-data (if any).
  */
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: { codigo: string } }
-) {
-  const { codigo } = params;
+export async function GET(request: NextRequest) {
+  const codigo = request.nextUrl.pathname.split('/').pop();
 
   // Fetch questionnaire by codigo
   const { data, error, count } = await supabaseAdmin
