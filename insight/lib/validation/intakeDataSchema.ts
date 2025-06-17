@@ -48,7 +48,7 @@ export const intakeDataSchema = z
 
     // PLAN TERAPÉUTICO
     estrategia: z.string().optional(),
-    posicionTerap: z.number().min(1).max(5),
+        posicionTerap: z.number().min(1).max(5).optional(),
 
     // DERIVED
     urgente: z.boolean().optional(),
