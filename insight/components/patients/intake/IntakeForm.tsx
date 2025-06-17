@@ -141,7 +141,7 @@ const IntakeForm: React.FC<IntakeFormProps> = ({ intakeData, onSaveSuccess, onCa
                     defaultValue={formField.value ? formField.value.toString() : ''}
                   >
                     <SelectTrigger><SelectValue placeholder={`Seleccione ${label.toLowerCase()}`} /></SelectTrigger>
-                    <SelectContent>
+                                      <SelectContent position="popper" className="z-[100]">
                       {selectOptions.map((opt: any) => {
                         const value = isObjectOptions ? opt.value : opt;
                         const displayLabel = isObjectOptions ? opt.label : (key === 'edad' ? `${opt} años` : opt);
