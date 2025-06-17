@@ -129,10 +129,13 @@ const IntakeForm: React.FC<IntakeFormProps> = ({ intakeData, onSaveSuccess, onCa
                     id={key}
                     rows={rows}
                     placeholder={placeholder}
+                    className={rows >= 9 ? 'min-h-36' : undefined}
                   />
                 );
               case 'select':
-                const selectOptions = Array.isArray(options) ? options : [];
+                const selectOptions = key === 'edad'
+  ? Array.from({ length: 91 }, (_, i) => i)
+  : Array.isArray(options) ? options : [];
                 const isObjectOptions = typeof selectOptions[0] === 'object' && selectOptions[0] !== null;
                 
                 return (
@@ -141,7 +144,7 @@ const IntakeForm: React.FC<IntakeFormProps> = ({ intakeData, onSaveSuccess, onCa
                     defaultValue={formField.value ? formField.value.toString() : ''}
                   >
                     <SelectTrigger><SelectValue placeholder={`Seleccione ${label.toLowerCase()}`} /></SelectTrigger>
-                                      <SelectContent position="popper" className="z-[100]">
+                    <SelectContent position="popper" className="z-[9999]">
                       {selectOptions.map((opt: any) => {
                         const value = isObjectOptions ? opt.value : opt;
                         const displayLabel = isObjectOptions ? opt.label : (key === 'edad' ? `${opt} años` : opt);
