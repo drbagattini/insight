@@ -3,167 +3,15 @@ import { z } from "zod";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/lib/auth";
 import { supabaseAdmin } from "@/app/lib/supabaseAdmin";
-import nodemailer, { Transporter } from 'nodemailer';
-import crypto from 'crypto';
-
-// Configurar Brevo SMTP
-let brevoTransporter: Transporter | null = null;
-if (
-  process.env.BREVO_SMTP_HOST &&
-  process.env.BREVO_SMTP_PORT &&
-  process.env.BREVO_SMTP_USER &&
-  process.env.BREVO_SMTP_PASS
-) {
-  brevoTransporter = nodemailer.createTransport({
-    host: process.env.BREVO_SMTP_HOST,
-    port: parseInt(process.env.BREVO_SMTP_PORT, 10),
-    secure: parseInt(process.env.BREVO_SMTP_PORT, 10) === 465, // true for 465, false for other ports
-    auth: {
-      user: process.env.BREVO_SMTP_USER,
-      pass: process.env.BREVO_SMTP_PASS,
-    },
-  });
-} else {
-  console.warn('Faltan variables de entorno para configurar Brevo SMTP');
-}
+import { enviarCuestionarioPorCanal, generarTokenYExpiracion } from "@/app/lib/utils/cuestionarios";
 
 // Schema para validación
 const enviarCuestionarioSchema = z.object({
-  pacienteId: z.string().uuid("ID de paciente inválido"),
+  pacienteId: z.string().uuid(),
   cuestionarioId: z.string().uuid().optional(),
-  canal: z.enum(['email','whatsapp']).optional(),
+  canal: z.enum(["email", "whatsapp"]).optional(),
+  envioProgramadoId: z.string().uuid().optional(), // Nuevo campo opcional
 });
-
-// Función para generar un token único y calcular fecha de expiración
-function generarTokenYExpiracion() {
-  const token = crypto.randomUUID();
-  const expiracion = new Date();
-  expiracion.setDate(expiracion.getDate() + 7); // Expira en 7 días
-  return { token, expiracion: expiracion.toISOString() };
-}
-
-// Función para enviar el cuestionario por email o WhatsApp
-async function enviarCuestionarioPorCanal(
-  email: string | null,
-  whatsapp: string | null,
-  nombrePaciente: string,
-  nombreCuestionario: string,
-  canal: string,
-  linkPublico: string
-) {
-  if (canal === 'email' && email) {
-    console.log('Enviando email:', { to: email, plantilla: nombreCuestionario, link: linkPublico });
-    if (brevoTransporter) {
-      await brevoTransporter.sendMail({
-        from: `"Insight | Centro UNO" <${process.env.EMAIL_SENDER ?? process.env.BREVO_SMTP_USER}>`,
-        to: email,
-        subject: 'Completá tu cuestionario de seguimiento',
-        html: `
-          <p style="margin-bottom: 12px;">Hola <strong>${nombrePaciente}</strong>,</p>
-          <p style="margin-bottom: 12px;">Te invitamos a completar el cuestionario "<strong>${nombreCuestionario}</strong>", como parte de tu proceso en Centro UNO.</p>
-          <p style="margin-bottom: 12px;">Esta información nos permitirá acompañarte mejor en tu evolución.</p>
-          <p style="margin-bottom: 12px;"><strong><a href="${linkPublico}" style="text-decoration: none; color: #007bff;">Haz clic aquí para acceder al cuestionario</a></strong>.</p>
-          <p style="margin-bottom: 12px;">Si tenés dudas, podés consultar con tu profesional o comunicarte con el Centro UNO al 2401 2966.</p>
-          <p style="margin-bottom: 12px;">Gracias por tu tiempo.</p>
-          <p style="margin-bottom: 0;">El equipo de Insight</p>
-        `
-      });
-      console.log('Email enviado con éxito a', email);
-    } else {
-      console.error('Brevo transporter no está configurado. No se pudo enviar email.');
-    }
-  } else if (canal === 'whatsapp' && whatsapp) {
-    // Validar nombre de plantilla (template)
-    const templateName = process.env.WHATSAPP_TEMPLATE_NAME || 'insight';
-    console.log('Env WHATSAPP_TEMPLATE_NAME:', process.env.WHATSAPP_TEMPLATE_NAME);
-    console.log('Using template fallback to:', templateName);
-    console.log('Env NEXT_PUBLIC_APP_URL:', process.env.NEXT_PUBLIC_APP_URL);
-    // Validación de variables de entorno para WhatsApp
-    const phoneNumberIdRaw = process.env.WHATSAPP_PHONE_NUMBER_ID;
-    const accessTokenRaw = process.env.WHATSAPP_ACCESS_TOKEN;
-    if (!phoneNumberIdRaw || !accessTokenRaw) {
-      console.error('Configuración de WhatsApp incompleta:', { phoneNumberIdRaw, accessTokenRaw: accessTokenRaw ? 'set' : 'missing' });
-      throw new Error('Faltan variables de entorno de WhatsApp');
-    }
-    const phoneNumberId = phoneNumberIdRaw;
-    const accessToken = accessTokenRaw;
-    const formattedWhatsapp = whatsapp.startsWith('+') ? whatsapp.slice(1) : whatsapp;
-    console.log("WhatsApp send payload:", { canal, whatsapp: formattedWhatsapp, linkPublico, template: templateName });
-    // envío por WhatsApp usando Meta Graph API y plantilla aprobada
-    let res;
-    try {
-      const payload = {
-        messaging_product: 'whatsapp',
-        to: whatsapp.startsWith('+') ? whatsapp.substring(1) : whatsapp, // Asegurar que no tenga el '+'
-        type: 'template',
-        template: {
-          name: templateName, // Usar la variable de entorno
-          language: { code: 'en' }, // English translation
-          components: [
-            {
-              type: 'body',
-              parameters: [
-                { type: 'text', text: nombrePaciente },
-                { type: 'text', text: nombreCuestionario }
-              ]
-            },
-            {
-              type: 'button',
-              sub_type: 'url',
-              index: '0',
-              parameters: [
-                // Send only the questionnaire ID as the single parameter for the button URL
-                { type: 'text', text: linkPublico.split('/').pop() || '' }
-              ]
-            }
-          ]
-        }
-      };
-
-      console.log('WhatsApp send payload (all params without name):', JSON.stringify(payload, null, 2));
-      res = await fetch(
-        `https://graph.facebook.com/v17.0/${phoneNumberId}/messages`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify(payload),
-        }
-      );
-    } catch (networkError) {
-      console.error('Error de red enviando a Meta API:', networkError);
-      throw new Error('Error de red al enviar WhatsApp');
-    }
-
-    if (!res.ok) {
-      const text = await res.text();
-      let errMsg: string;
-      try {
-        const json = JSON.parse(text);
-        errMsg = json?.error?.message || text;
-      } catch {
-        errMsg = text;
-      }
-      console.error('Error en Meta API:', {
-        status: res.status,
-        statusText: res.statusText,
-        errorResponse: text
-      });
-      throw new Error(`Meta API Error (${res.status}): ${errMsg}`);
-    }
-
-    const responseData = await res.json();
-    console.log('Respuesta exitosa de Meta API:', responseData);
-  } else {
-    console.warn('Medio de envío no soportado o datos faltantes');
-  }
-  return true;
-}
-
-// Exportar la función para pruebas
-export { enviarCuestionarioPorCanal };
 
 export async function POST(req: NextRequest) {
   // 1) Verificar sesión y autorización
@@ -250,19 +98,28 @@ export async function POST(req: NextRequest) {
   const { token, expiracion } = generarTokenYExpiracion();
 
   // 8) Crear el link público en la base de datos
+  const insertData: any = {
+    paciente_id: paciente.id,
+    cuestionario_id: cuestionarioId,
+    token,
+    expira_en: expiracion,
+    enviado_desde: canal, // Guardar el canal por el que se envió efectivamente
+  };
+
+  if (parsed.data.envioProgramadoId) {
+    insertData.envio_programado_id = parsed.data.envioProgramadoId;
+  }
+
   const { data: link, error: linkError } = await supabaseAdmin
     .from("links_cuestionario")
-    .insert({
-      paciente_id: paciente.id,
-      cuestionario_id: cuestionarioId,
-      token,
-      expira_en: expiracion,
-    })
+    .insert(insertData)
     .select("token")
     .single();
 
   if (linkError || !link) {
-    return NextResponse.json({ error: "Error al generar el link" }, { status: 500 });
+    console.error("Database error generating link:", linkError);
+    const dbErrorMessage = linkError ? linkError.message : "No se pudo obtener el token del link insertado.";
+    return NextResponse.json({ error: `Error al generar el link: ${dbErrorMessage}` }, { status: 500 });
   }
 
   // 9) Construir la URL pública

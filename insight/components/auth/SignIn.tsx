@@ -3,6 +3,7 @@ import { signIn } from 'next-auth/react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import InsightLogo from '../common/InsightLogo';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -18,7 +19,7 @@ export function SignIn({ providers = ['google', 'credentials'], error }: SignInP
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [isResetting, setIsResetting] = useState(false);
+
 
   // Map NextAuth error codes to user-friendly messages
   const errorMessages: Record<string, string> = {
@@ -36,40 +37,17 @@ export function SignIn({ providers = ['google', 'credentials'], error }: SignInP
     }
   }, [error]);
 
-  const handlePasswordReset = async () => {
-    if (!supabase) {
-      setMessage({ type: 'error', text: 'Error de configuración del cliente.' });
-      return;
-    }
-    if (!email) {
-      setMessage({ type: 'error', text: 'Por favor, ingresa tu email primero.' });
-      return;
-    }
-    setIsResetting(true);
-    setMessage(null);
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/`,
-      });
-      if (error) {
-        console.error('Error al solicitar reseteo:', error.message);
-        setMessage({ type: 'error', text: `Error: ${error.message}` });
-      } else {
-        setMessage({ type: 'success', text: 'Si el email es válido, recibirás un enlace para resetear tu contraseña.' });
-      }
-    } catch (error) {
-      console.error('Error inesperado en reseteo:', error);
-      setMessage({ type: 'error', text: `Error inesperado: ${error instanceof Error ? error.message : 'Intentelo de nuevo.'}` });
-    } finally {
-      setIsResetting(false);
-    }
-  };
-
   return (
     <div className="auth-container space-y-6 max-w-md w-full mx-auto p-6 bg-white rounded-lg shadow-md">
+      <div className="flex flex-col items-center">
+        <div className="mb-6">
+          <InsightLogo textSize="lg" />
+        </div>
+        <h2 className="text-xl font-semibold text-gray-800">Iniciar sesión en tu cuenta</h2>
+      </div>
       {providers.includes('google') && (
         <button
-          onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
+          onClick={() => signIn('google', { callbackUrl: '/resumen-asistencial' })}
           className="w-full bg-white text-gray-800 border border-gray-300 hover:bg-gray-50 px-4 py-2 rounded-md flex items-center justify-center gap-2 transition-colors"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -98,7 +76,7 @@ export function SignIn({ providers = ['google', 'credentials'], error }: SignInP
               await signIn('credentials', {
                 email,
                 password,
-                callbackUrl: '/dashboard'
+                callbackUrl: '/resumen-asistencial'
               });
               // Este código normalmente no se ejecuta ya que signIn redirecciona
               setMessage({ type: 'success', text: 'Redireccionando...' });
@@ -138,35 +116,29 @@ export function SignIn({ providers = ['google', 'credentials'], error }: SignInP
             )}
             <button
               type="submit"
-              className="w-full bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-white text-black border border-gray-300 hover:bg-gray-100 px-4 py-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Iniciando sesión...' : 'Iniciar sesión'}
             </button>
           </form>
           <div className="text-center text-sm flex flex-col items-center">
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault(); // Prevenir navegación por defecto del href
-                if (!isResetting && email) { // Solo ejecutar si no se está reseteando y hay email
-                  handlePasswordReset();
-                }
-              }}
-              // Aplicar clases de estilo y deshabilitado condicionalmente
-              className={`text-blue-600 hover:text-blue-800 transition-colors ${isResetting || !email ? 'opacity-50 cursor-not-allowed' : ''} mb-2`}
-              // Evitar click si está deshabilitado visualmente
-              style={{ pointerEvents: isResetting || !email ? 'none' : 'auto' }}
-              aria-disabled={isResetting || !email}
-            >
-              {isResetting ? 'Enviando...' : '¿Olvidaste tu contraseña?'}
-            </a>
             <Link
-              href="/auth/register"
-              className="text-blue-600 hover:text-blue-800 transition-colors"
+              href="/auth/forgot-password"
+              className="text-blue-600 hover:text-blue-800 transition-colors mb-2"
             >
-              ¿No tienes cuenta? Regístrate
+              ¿Olvidaste tu contraseña?
             </Link>
+            <div className="mt-4 pt-4 border-t border-gray-200 w-full text-center">
+              <p className="text-sm text-gray-600">¿No tienes cuenta?{' '}
+                <Link
+                  href="/auth/register"
+                  className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                >
+                  Regístrate
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
       )}

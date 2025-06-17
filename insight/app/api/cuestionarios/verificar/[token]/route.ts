@@ -1,11 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/app/lib/supabaseAdmin";
 
 export async function GET(
-  request: Request,
-  { params }: { params: { token: string } }
+  request: NextRequest
 ) {
-  const token = params.token;
+  const token = request.nextUrl.pathname.split('/').pop();
 
   if (!token) {
     return NextResponse.json({ error: "Token no proporcionado" }, { status: 400 });

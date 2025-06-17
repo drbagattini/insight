@@ -1,12 +1,11 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from '@/app/lib/supabaseAdmin';
 
 // DELETE: cancelar un envío programado por ID
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest
 ) {
-  const { id } = params;
+  const id = request.nextUrl.pathname.split('/').pop();
   if (!id) {
     return NextResponse.json({ error: 'Envio programado ID no proporcionado' }, { status: 400 });
   }
