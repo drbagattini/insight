@@ -27,7 +27,7 @@ export default withAuth(
         const requestedPath = req.nextUrl.pathname;
 
         // Rutas públicas no requieren token
-        if (['/'].includes(requestedPath)) {
+        if (['/', '/landing'].includes(requestedPath)) {
           return true;
         }
 

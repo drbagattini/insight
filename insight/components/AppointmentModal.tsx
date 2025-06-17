@@ -4,12 +4,15 @@ import { Fragment, useState, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { DateSelectArg } from '@fullcalendar/core';
+import { useQueryClient } from '@tanstack/react-query';
+import { usePatients } from '@/app/hooks/usePatients';
+import axios from 'axios';
 
 interface AppointmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedDateInfo: DateSelectArg | null;
-  onSave: (appointmentData: { title: string; start: string; end: string }) => void;
+  onSave: (appointmentData: { title: string; start: string; end: string; paciente_id: string; rrule: string | null }) => void;
 }
 
 export default function AppointmentModal({
@@ -19,6 +22,15 @@ export default function AppointmentModal({
   onSave,
 }: AppointmentModalProps) {
   const [title, setTitle] = useState('');
+  const queryClient = useQueryClient();
+  const patientsQuery = usePatients();
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [showNewPatientForm, setShowNewPatientForm] = useState(false);
+  const [newPatientName, setNewPatientName] = useState('');
+  const [newPatientEmail, setNewPatientEmail] = useState('');
+  const [newPatientWhatsapp, setNewPatientWhatsapp] = useState('');
+  // Recurrence state
+  const [recurrenceOption, setRecurrenceOption] = useState<'none'|'daily'|'weekly'|'biweekly'|'monthly'>('none');
 
   useEffect(() => {
     // Reset title when modal is reopened with new selection or closed
@@ -30,11 +42,23 @@ export default function AppointmentModal({
   if (!selectedDateInfo) return null;
 
   const handleSubmit = () => {
-    if (title.trim() && selectedDateInfo) {
+    if (title.trim() && selectedDateInfo && selectedPatientId) {
+      // Compute RRULE string based on recurrence option
+      let rruleStr: string | null = null;
+      if (recurrenceOption !== 'none') {
+        switch (recurrenceOption) {
+          case 'daily': rruleStr = 'RRULE:FREQ=DAILY;INTERVAL=1'; break;
+          case 'weekly': rruleStr = 'RRULE:FREQ=WEEKLY;INTERVAL=1'; break;
+          case 'biweekly': rruleStr = 'RRULE:FREQ=WEEKLY;INTERVAL=2'; break;
+          case 'monthly': rruleStr = 'RRULE:FREQ=MONTHLY;INTERVAL=1'; break;
+        }
+      }
       onSave({
         title: title.trim(),
         start: selectedDateInfo.startStr,
         end: selectedDateInfo.endStr,
+        paciente_id: selectedPatientId,
+        rrule: rruleStr,
       });
       onClose(); // Close modal after save
     }
@@ -84,18 +108,91 @@ export default function AppointmentModal({
                     </Dialog.Title>
                     <div className="mt-4 space-y-4">
                       <div>
+                        <label className="block text-sm font-medium text-gray-700">Paciente</label>
+                        <select
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                          value={selectedPatientId ?? ''}
+                          onChange={(e) => {
+                            if (e.target.value === '__new') {
+                              setShowNewPatientForm(true);
+                            } else {
+                              setShowNewPatientForm(false);
+                              setSelectedPatientId(e.target.value);
+                            }
+                          }}
+                        >
+                          <option value="">Seleccionar paciente...</option>
+                          {patientsQuery.data?.map(p => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                          ))}
+                          <option value="__new">+ Nuevo paciente</option>
+                        </select>
+                      </div>
+                      {showNewPatientForm && (
+                        <div className="space-y-2 border p-2 rounded">
+                          <input
+                            type="text"
+                            placeholder="Nombre del paciente"
+                            className="block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+                            value={newPatientName}
+                            onChange={e => setNewPatientName(e.target.value)}
+                          />
+                          <input
+                            type="email"
+                            placeholder="Email (opcional)"
+                            className="block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+                            value={newPatientEmail}
+                            onChange={e => setNewPatientEmail(e.target.value)}
+                          />
+                          <input
+                            type="text"
+                            placeholder="WhatsApp (opcional)"
+                            className="block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+                            value={newPatientWhatsapp}
+                            onChange={e => setNewPatientWhatsapp(e.target.value)}
+                          />
+                          <button
+                            type="button"
+                            className="mt-2 inline-flex w-full justify-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500"
+                            onClick={async () => {
+                              const res = await axios.post('/api/patients', { name: newPatientName, email: newPatientEmail, whatsapp: newPatientWhatsapp });
+                              const patient = res.data.paciente;
+                              setSelectedPatientId(patient.id);
+                              setShowNewPatientForm(false);
+                              queryClient.invalidateQueries({ queryKey: ['patients'] });
+                            }}
+                          >
+                            Crear paciente
+                          </button>
+                        </div>
+                      )}
+                      <div>
                         <label htmlFor="appointment-title" className="block text-sm font-medium text-gray-700">
-                          Título / Paciente
+                          Título de la cita
                         </label>
                         <input
                           type="text"
-                          name="appointment-title"
                           id="appointment-title"
                           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                           placeholder="Ej: Sesión con Juan Pérez"
                           value={title}
                           onChange={(e) => setTitle(e.target.value)}
                         />
+                      </div>
+                      {/* Recurrence selector */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Repetición</label>
+                        <select
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                          value={recurrenceOption}
+                          onChange={e => setRecurrenceOption(e.target.value as any)}
+                        >
+                          <option value="none">Ninguna</option>
+                          <option value="daily">Diaria</option>
+                          <option value="weekly">Semanal</option>
+                          <option value="biweekly">Quincenal</option>
+                          <option value="monthly">Mensual</option>
+                        </select>
                       </div>
                       <div>
                         <p className="text-sm text-gray-600">
@@ -105,7 +202,6 @@ export default function AppointmentModal({
                           <strong>Fin:</strong> {new Date(selectedDateInfo.endStr).toLocaleString()}
                         </p>
                       </div>
-                       {/* TODO: Add more fields like notes, patient selector, recurrence options */}
                     </div>
                   </div>
                 </div>

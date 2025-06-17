@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { supabaseAdmin } from "@/app/lib/supabaseAdmin";
 
@@ -14,10 +14,9 @@ const respuestasSchema = z.object({
 });
 
 export async function POST(
-  request: Request,
-  { params }: { params: { token: string } }
+  request: NextRequest
 ) {
-  const token = params.token;
+  const token = request.nextUrl.pathname.split('/').pop();
 
   if (!token) {
     return NextResponse.json({ error: "Token no proporcionado" }, { status: 400 });

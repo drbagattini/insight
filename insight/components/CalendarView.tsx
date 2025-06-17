@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -9,9 +9,8 @@ import { DateSelectArg, EventClickArg, EventDropArg } from '@fullcalendar/core';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { formatISO } from 'date-fns';
-import { useSession, signIn } from 'next-auth/react';
 import { AppointmentModal, ModalAppointmentData } from './appointments/AppointmentModal';
-import { useAppointmentMutations } from '@/hooks/useAppointmentMutations';
+import { useAppointmentMutations } from '@/hooks/useAppointmentMutations'; // Use new modal
 
 interface AppointmentEvent {
   id: string;
@@ -55,233 +54,6 @@ const mapDateSelectArgToModalData = (selectInfo: DateSelectArg): ModalAppointmen
   };
 };
 
-// Estilos personalizados para el calendario
-const calendarStyles = `
-  /* Nombres de días en las columnas de la vista mensual - SOLO en vista mensual */
-  .fc-dayGridMonth-view .fc-col-header-cell.fc-day-mon .fc-col-header-cell-cushion::before { content: 'Lunes'; }
-  .fc-dayGridMonth-view .fc-col-header-cell.fc-day-tue .fc-col-header-cell-cushion::before { content: 'Martes'; }
-  .fc-dayGridMonth-view .fc-col-header-cell.fc-day-wed .fc-col-header-cell-cushion::before { content: 'Miércoles'; }
-  .fc-dayGridMonth-view .fc-col-header-cell.fc-day-thu .fc-col-header-cell-cushion::before { content: 'Jueves'; }
-  .fc-dayGridMonth-view .fc-col-header-cell.fc-day-fri .fc-col-header-cell-cushion::before { content: 'Viernes'; }
-  .fc-dayGridMonth-view .fc-col-header-cell.fc-day-sat .fc-col-header-cell-cushion::before { content: 'Sábado'; }
-  .fc-dayGridMonth-view .fc-col-header-cell.fc-day-sun .fc-col-header-cell-cushion::before { content: 'Domingo'; }
-  
-  /* Ocultar texto original SOLO en la vista mensual */
-  .fc-dayGridMonth-view .fc-col-header-cell-cushion {
-    font-size: 0;
-    padding: 8px 4px;
-    width: 100%;
-    text-align: center;
-    display: block;
-  }
-  
-  /* Mostrar los nombres personalizados SOLO en la vista mensual */
-  .fc-dayGridMonth-view .fc-col-header-cell-cushion::before {
-    font-size: 0.95rem;
-    color: #374151;
-    font-weight: 600;
-    display: inline-block;
-  }
-  
-  /* Estilos para los encabezados de día en la vista de mes */
-  .fc-dayGridMonth-view .fc-col-header-cell {
-    padding: 8px 0;
-    background-color: #f5f7f9;
-    border-bottom: 1px solid #e1e7eb;
-  }
-  
-  /* Estilo para los días de la semana */
-  .fc-weekday-only {
-    display: block;
-    text-align: center;
-    width: 100%;
-    padding: 0 2px;
-  }
-  
-  /* Eliminar el borde gris en las celdas vacías */
-  .fc-dayGridMonth-view .fc-day-other {
-    background-color: #f9fafc;
-  }
-  
-  /* Estilos para los botones de Google Calendar */
-  .fc .fc-button-primary.fc-googleCalendar-button,
-  .fc .fc-button-primary.fc-googleCalendarDisconnect-button {
-    /* Estilos comunes */
-    background-color: #ffffff;
-    border-color: #dadce0;
-    color: #3c4043; /* Color por defecto */
-    font-family: 'Google Sans', Roboto, Arial, sans-serif;
-    box-shadow: 0 1px 2px rgba(60, 64, 67, 0.3);
-    height: 36px;
-    width: auto;
-    min-width: 150px; /* Ancho mínimo para garantizar espacio suficiente */
-    padding: 0 16px 0 14px;
-    font-size: 14px;
-    font-weight: 500;
-    letter-spacing: 0.25px;
-    position: relative;
-    
-    /* Configuración para garantizar el centrado del texto */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    flex-direction: row;
-    white-space: nowrap;
-  }
-  
-  /* Estilos específicos para el botón de desvinculación */
-  .fc .fc-button-primary.fc-googleCalendarDisconnect-button {
-    background-color: #fce8e8;
-    border-color: #fadede;
-    color: #d93025;
-    box-shadow: 0 1px 2px rgba(60, 64, 67, 0.1);
-  }
-  
-  /* El icono de Google Calendar en el botón debe estar posicionado al inicio */
-  .fc .fc-button-primary.fc-googleCalendar-button::before {
-    content: '';
-    flex-shrink: 0; /* Evitar que el icono se encoja */
-    width: 18px;
-    height: 18px;
-    margin-right: 8px; /* Espacio entre el icono y el texto */
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M20.0001 6V16C20.0001 17.1 19.1001 18 18.0001 18H6.00006C4.90006 18 4.00006 17.1 4.00006 16V6C4.00006 4.9 4.90006 4 6.00006 4H18.0001C19.1001 4 20.0001 4.9 20.0001 6ZM18.0001 6H6.00006V16H18.0001V6ZM8.00006 10C8.00006 8.9 8.90006 8 10.0001 8C11.1001 8 12.0001 8.9 12.0001 10C12.0001 11.1 11.1001 12 10.0001 12C8.90006 12 8.00006 11.1 8.00006 10ZM10.0001 14C8.00006 14 6.00006 15 6.00006 17H14.0001C14.0001 15 12.0001 14 10.0001 14ZM16.0001 10H18.0001V12H16.0001V10ZM16.0001 14H18.0001V16H16.0001V14Z" fill="currentColor"/></svg>');
-    background-repeat: no-repeat;
-    background-position: center;
-  }
-  
-  /* Ajuste específico para el botón de desvinculación para centrar texto */
-  .fc .fc-button-primary.fc-googleCalendarDisconnect-button::before {
-    display: none; /* Eliminar el icono heredado */
-  }
-
-  /* Agregar un espacio después del texto para balancear visualmente con el icono */
-  .fc .fc-button-primary.fc-googleCalendar-button::after {
-    content: '';
-    width: 18px; /* Mismo ancho que el icono para mantener balance */
-    display: inline-block;
-    margin-left: 0; /* Sin margen para compensar por el padding del botón */
-    opacity: 0; /* Invisible, solo para balance visual */
-  }
-  
-  .fc .fc-button-primary.fc-googleCalendar-button:hover {
-    background-color: #f6f6f6;
-    border-color: #dadce0;
-    color: #202124;
-    box-shadow: 0 1px 3px rgba(60, 64, 67, 0.4);
-  }
-
-  .fc .fc-button-primary.fc-googleCalendarDisconnect-button:hover {
-    background-color: #fad9d9;
-    color: #d93025;
-  }
-  
-  /* Ocultar el número del día en la vista de mes */
-  .fc-dayGridMonth-view .fc-col-header-cell-cushion {
-    display: inline-block;
-  }
-  
-  .fc-dayGridMonth-view .fc-col-header-cell-cushion::after {
-    content: attr(data-short-weekday);
-  }
-  
-  .fc-dayGridMonth-view .fc-col-header-cell-cushion span {
-    display: none;
-  }
-  
-  .fc .fc-button-primary.fc-googleCalendar-button {
-    background-color: #ffffff;
-    border-color: #dadce0;
-    color: #3c4043;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-weight: 500;
-  }
-  
-  .fc .fc-button-primary.fc-googleCalendar-button:hover {
-    background-color: #f6fafe;
-    border-color: #d2e3fc;
-    color: #174ea6;
-  }
-  
-  .fc .fc-button-primary.fc-googleCalendar-button::before {
-    content: '';
-    display: inline-block;
-    width: 18px;
-    height: 18px;
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18px" height="18px"><path fill="none" d="M0 0h24v24H0z"/><path fill="#4285F4" d="M21.56 10.44l-.72.72-6.22 6.22-2.67 1.33c-.5.25-1.11.13-1.44-.33L8.6 16.5a.99.99 0 01.21-1.4l3.7-2.8c.2-.16.38-.28.54-.38l3.14-2.21c.38-.27.63-.83.58-1.25-.06-.42-.1-.77-.64-1.03-.56-.28-1.08-.23-1.62.2l-3.92 2.9c-.21.17-.32.27-.72.27L7.5 10.9c-.39 0-.61-.26-.72-.46-.17-.33-.11-.76.18-1.02l1.7-1.46a5.75 5.75 0 018.65.31c1.03 1.2 1.5 2.75 1.29 4.33-.07.51-.23.97-.48 1.37m-12.95.7l1.98 1.98C10 13.73 9.4 14 9 14l-5.79.95a.59.59 0 01-.23.02c-.12-.01-.45-.09-.64-.33-.15-.2-.21-.45-.17-.7l.78-4.04c.05-.25.23-.46.47-.56A9.21 9.21 0 017.3 8c.77 0 1.55.12 2.31.38.13.05 0 .38-.68 1.04-.82.8-1.12 1.1-1.22 1.22-.1.12-.12.32-.1.5z"/></svg>');
-    background-repeat: no-repeat;
-    background-position: center;
-  }
-  
-  .fc .fc-button-primary.fc-googleCalendarDisconnect-button {
-    background-color: #ffffff;
-    border-color: #dadce0;
-    color: #666;
-    font-size: 0.8em;
-  }
-  
-  .fc .fc-button-primary.fc-googleCalendarDisconnect-button:hover {
-    background-color: #f8f9fa;
-    border-color: #d2d5d9;
-    color: #ea4335;
-  }
-  
-  /* Ajustar el ancho del botón de desvinculación */
-  .fc-googleCalendarDisconnect-button {
-    max-width: fit-content;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  
-  /* Ajustes para la vista de mes */
-  .fc-daygrid-day-frame {
-    min-height: 80px !important;
-    max-height: 120px !important;
-    overflow: hidden;
-  }
-  
-  .fc-daygrid-day-events {
-    margin: 0;
-    max-height: 90px;
-    overflow: hidden;
-  }
-  
-  .fc-daygrid-day-top {
-    padding: 2px 4px;
-    position: relative;
-  }
-  
-  .fc-daygrid-day-number {
-    font-size: 0.85em;
-    padding: 2px;
-  }
-  
-  .fc-daygrid-event {
-    margin: 1px 1px;
-    padding: 0 2px;
-    font-size: 0.75em;
-    line-height: 1.2;
-  }
-  
-  .fc .fc-daygrid-day.fc-day-today {
-    background-color: #f0f7ff;
-  }
-  
-  .fc-daygrid-more-link {
-    font-size: 0.75em;
-    padding: 1px 3px;
-    margin-left: 2px;
-  }
-  
-  .fc-daygrid-event-harness {
-    max-height: 20px;
-    overflow: hidden;
-  }
-`;
-
 export default function CalendarView() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDateInfo, setSelectedDateInfo] = useState<DateSelectArg | null>(null);
@@ -289,100 +61,6 @@ export default function CalendarView() {
   const calendarRef = useRef<FullCalendar>(null);
   const queryClient = useQueryClient();
   const { updateAppointment } = useAppointmentMutations();
-  const { data: session } = useSession();
-  
-  // Aplicar estilos personalizados para el calendario y botones
-  useEffect(() => {
-    // Aplicar estilos personalizados para el calendario y botones
-    const styleElement = document.createElement('style');
-    styleElement.innerHTML = calendarStyles;
-    document.head.appendChild(styleElement);
-
-    return () => {
-      document.head.removeChild(styleElement);
-    };
-  }, []);
-  
-  // Estados para la integración con Google Calendar
-  const [isSynced, setIsSynced] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [isDisconnecting, setIsDisconnecting] = useState(false);
-  
-  // Verificar si está sincronizado con Google Calendar al cargar
-  useEffect(() => {
-    if (session?.user) {
-      checkSyncStatus();
-    }
-  }, [session]);
-  
-  // Función para verificar el estado de sincronización
-  const checkSyncStatus = async () => {
-    try {
-      const response = await fetch('/api/sync/google-calendar/status');
-      const data = await response.json();
-      
-      if (response.ok) {
-        setIsSynced(data.status === 'connected');
-      } else {
-        console.error('Error al verificar estado de sincronización:', data.error);
-        setIsSynced(false);
-      }
-    } catch (error) {
-      console.error('Error al verificar estado de sincronización:', error);
-      setIsSynced(false);
-    }
-  };
-  
-  // Función para conectar con Google Calendar
-  const handleConnectGoogleCalendar = async () => {
-    if (!session?.user) {
-      alert('Debe iniciar sesión para sincronizar con Google Calendar');
-      return;
-    }
-    
-    try {
-      setIsConnecting(true);
-      
-      // Iniciar flujo OAuth para conectar
-      const result = await signIn('google', { 
-        redirect: true, // Cambiado a true para redireccionar a Google y completar la autenticación
-        callbackUrl: window.location.href 
-      });
-      
-      // No hacemos nada más aquí porque el usuario será redirigido a Google
-      // La verificación del estado se hará cuando regrese después de la autenticación
-    } catch (error: any) {
-      console.error('Error durante la conexión con Google Calendar:', error);
-      setIsConnecting(false); // Solo desactivamos si hay un error
-    }
-  };
-  
-  // Función para desvincular Google Calendar
-  const handleDisconnectGoogleCalendar = async () => {
-    if (!session?.user) return;
-    
-    try {
-      setIsDisconnecting(true);
-      
-      const response = await fetch('/api/sync/google-calendar/desync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Error al desvincular Google Calendar');
-      }
-      
-      setIsSynced(false);
-      queryClient.invalidateQueries({ queryKey: ['appointments'] });
-    } catch (error: any) {
-      console.error('Error durante la desvinculación:', error);
-    } finally {
-      setIsDisconnecting(false);
-    }
-  };
 
   // The handleSaveAppointment function is no longer directly needed here, as the new modal handles saving internally.
   // We might bring back parts of it if CalendarView needs to react to save events, e.g., for optimistic updates not handled by React Query's default cache invalidation.
@@ -411,67 +89,21 @@ export default function CalendarView() {
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
         initialView="timeGridWeek"
         headerToolbar={{
-          left: 'dayGridMonth,timeGridWeek,timeGridDay today prev,next',
+          left: 'prev,next today',
           center: 'title',
-          right: isSynced ? 'googleCalendarDisconnect' : 'googleCalendar'
+          right: 'dayGridMonth,timeGridWeek,timeGridDay',
         }}
-        titleFormat={{ year: 'numeric', month: 'short', day: 'numeric' }}
-        // Formato para la cabecera de días
-        // Personalizar el contenido de las cabeceras de día según la vista
-        dayHeaderContent={(args) => {
-          // Asegurarse de tener un objeto date válido para trabajar
-          if (!args.date) return null;
-          
-          // Para la vista de mes, mostrar el nombre completo del día (lunes, martes, etc.)
-          if (args.view.type === 'dayGridMonth') {
-            // Obtener el nombre del día en español (lunes, martes, etc.)
-            const días = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-            const nombreDía = días[args.date.getDay()];
-            return <span className="fc-weekday-only">{nombreDía}</span>;
-          }
-          
-          // Para las vistas de semana y día, mostrar el nombre corto y el número
-          const nombreCorto = new Date(args.date).toLocaleDateString('es-ES', {weekday: 'short'});
-          return (
-            <>
-              {nombreCorto} {args.date.getDate()}
-            </>
-          );
-        }}
-        // Se elimina dayHeaderFormat para evitar conflicto con dayHeaderContent
-        dayMaxEvents={3}
-        dayMaxEventRows={3}
-        views={{
-          dayGrid: {
-            dayMaxEventRows: 3,
-            dayMaxEvents: 3,
-          },
-          timeGrid: {
-            dayMaxEventRows: 6
-          }
-        }}
-        customButtons={{
-          googleCalendar: {
-            text: 'Google Calendar', // Quitamos el emoji ya que usamos CSS para el icono
-            click: function() {
-              if (!isConnecting) {
-                handleConnectGoogleCalendar();
-              }
-            }
-          },
-          googleCalendarDisconnect: {
-            text: 'Desvincular Google',
-            click: function() {
-              if (!isDisconnecting) {
-                handleDisconnectGoogleCalendar();
-              }
-            }
-          }
-        }}
+        customButtons={{}}
         dayHeaderClassNames={'bg-gray-50 text-gray-700 font-semibold py-2'}
         locale={esLocale}
-        firstDay={1} // 1 = Lunes como primer día de la semana
-        // El formato de cabecera de día ya está definido arriba
+        views={{
+          timeGridWeek: {
+            dayHeaderFormat: { weekday: 'short', day: 'numeric' }
+          }
+        }}
+        dayHeaderFormat={{
+          weekday: 'short'
+        }}
         buttonIcons={{
           prev: 'chevron-left',
           next: 'chevron-right',
@@ -515,6 +147,9 @@ export default function CalendarView() {
           content.style.width = '100%';
           content.style.overflow = 'hidden';
           content.style.padding = '2px';  // Reducir padding general
+          // Fondo azul y borde para visibilidad en vista mensual
+          content.style.backgroundColor = '#2563eb';
+          content.style.borderRadius = '4px';
           
           // ORDEN OPTIMIZADO CON TAMAÑOS REDUCIDOS:
           
@@ -607,6 +242,9 @@ export default function CalendarView() {
               title: ev.title,
               start: ev.start_time,
               end: ev.end_time,
+              backgroundColor: '#2563eb', // Azul Tailwind "blue-600"
+              borderColor: '#2563eb',
+              textColor: '#ffffff',
               extendedProps: {
                 pacienteId: ev.paciente_id,
                 pacienteNombre: ev.paciente_nombre,

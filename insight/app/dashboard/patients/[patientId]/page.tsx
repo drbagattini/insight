@@ -1,8 +1,13 @@
 "use client";
 
 import { useParams } from 'next/navigation';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useState, useEffect } from 'react';
 import { Line } from 'react-chartjs-2';
+import { PatientResponsesSection } from '@/components/patients/PatientResponsesSection';
+import { PatientDetails } from '@/components/patients/PatientDetails';
+import { PatientIntakeTab } from '@/components/patients/PatientIntakeTab';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -45,6 +50,7 @@ export default function PatientEvolutionPage() {
     respondido?: boolean;
     // Objeto del cuestionario relacionado
     cuestionarios?: { codigo: string };
+    fecha_inicio_programada?: string;
   }
   const [scheduledSends, setScheduledSends] = useState<ScheduledSend[]>([]);
   const [loadingSends, setLoadingSends] = useState(true);
@@ -55,7 +61,7 @@ export default function PatientEvolutionPage() {
   const [newCanal, setNewCanal] = useState<string>('email');
   const [newFrecuencia, setNewFrecuencia] = useState<string>('mensual');
   const [newProximoEnvio, setNewProximoEnvio] = useState<string>(() =>
-    new Date().toISOString().slice(0, 16)
+    new Date().toISOString().split('T')[0] // Formato YYYY-MM-DD
   );
 
   // Listado de cuestionarios para selector
@@ -77,6 +83,19 @@ export default function PatientEvolutionPage() {
   }, [notification]);
 
   const [highlight, setHighlight] = useState(false);
+  const [showConfirmationModal, setShowConfirmationModal] = useState<boolean>(false);
+  const [pendingScheduleData, setPendingScheduleData] = useState<{
+    pacienteId: string;
+    cuestionarioId: string | undefined;
+    canal: string;
+    frecuencia: string;
+    proximoEnvio: string; // YYYY-MM-DD date string
+  } | null>(null);
+  const [showErrorModal, setShowErrorModal] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (error) setShowErrorModal(true);
+  }, [error]);
 
   useEffect(() => {
     async function loadEvolution() {
@@ -150,7 +169,12 @@ export default function PatientEvolutionPage() {
       const res = await fetch('/api/cuestionarios/enviar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pacienteId: patientId, cuestionarioId: send.cuestionario_id, canal: send.canal }),
+        body: JSON.stringify({
+          pacienteId: patientId,
+          cuestionarioId: send.cuestionario_id,
+          canal: send.canal,
+          envioProgramadoId: send.id,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al enviar');
@@ -169,38 +193,140 @@ export default function PatientEvolutionPage() {
       }, 2000);
     } catch (e) {
       console.error(e);
-      alert((e as Error).message);
+      setError((e as Error).message);
     }
   };
 
-  const createScheduledSend = async () => {
+  const handleScheduleFutureSend = async (scheduleData: any, date: string) => {
+    setError(null);
+    setNotification(null);
     try {
+      const proximoEnvioConHora = `${date}T08:00:00`;
+
       const res = await fetch('/api/envios_programados', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pacienteId: patientId, cuestionarioId: newCuestionarioId, canal: newCanal, frecuencia: newFrecuencia, proximoEnvio: newProximoEnvio }),
+        body: JSON.stringify({
+          ...scheduleData,
+          proximoEnvio: proximoEnvioConHora,
+        }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Error al programar envío');
-      // Refrescar lista completa para obtener campo `codigo`
+      if (!res.ok) {
+        if (data.errorCode === 'PROGRAMACION_RECURRENTE_EXISTENTE') {
+          setError(data.error);
+        } else {
+          setError(data.error || 'Error al programar envío para el futuro');
+        }
+        return;
+      }
+      setNotification(`Envío programado para el ${new Date(proximoEnvioConHora).toLocaleDateString([], { year: 'numeric', month: '2-digit', day: '2-digit' })} a las 08:00 AM.`);
       const listRes = await fetch(`/api/envios_programados?pacienteId=${patientId}`);
       const listData = await listRes.json();
       if (listRes.ok) setScheduledSends(listData);
-      setNewProximoEnvio(new Date().toISOString().slice(0, 16));
-      // Enviar primer cuestionario automáticamente
-      const sendRes = await fetch('/api/cuestionarios/enviar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pacienteId: patientId, cuestionarioId: newCuestionarioId, canal: newCanal }),
-      });
-      const sendData = await sendRes.json();
-      if (!sendRes.ok) throw new Error(sendData.error || 'Error al enviar primer cuestionario');
-      setNotification('Primer cuestionario enviado');
+      setNewProximoEnvio(new Date().toISOString().split('T')[0]);
+      setPendingScheduleData(null);
       setHighlight(true);
       setTimeout(() => setHighlight(false), 1500);
     } catch (e) {
       console.error(e);
-      alert((e as Error).message);
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      setError(errorMessage);
+    }
+  };
+
+  const handleScheduleAndSendNow = async (scheduleData: any, date: string) => {
+    setError(null);
+    setNotification(null);
+    try {
+      const proximoEnvioParaBackend = `${date}T${new Date().toTimeString().split(' ')[0]}`;
+
+      const scheduleRes = await fetch('/api/envios_programados', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...scheduleData,
+          proximoEnvio: proximoEnvioParaBackend,
+        }),
+      });
+      const scheduleResData = await scheduleRes.json();
+      if (!scheduleRes.ok) {
+        if (scheduleResData.errorCode === 'PROGRAMACION_RECURRENTE_EXISTENTE') {
+          setError(scheduleResData.error);
+        } else {
+          setError(scheduleResData.error || 'Error al programar el envío');
+        }
+        return;
+      }
+
+      const envioProgramadoId = scheduleResData.id;
+      if (!envioProgramadoId) {
+        setError("No se pudo obtener el ID del envío programado para el envío inmediato.");
+        return;
+      }
+
+      const sendRes = await fetch('/api/cuestionarios/enviar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pacienteId: scheduleData.pacienteId,
+          cuestionarioId: scheduleData.cuestionarioId,
+          canal: scheduleData.canal,
+          envioProgramadoId: envioProgramadoId,
+        }),
+      });
+      const sendData = await sendRes.json();
+      if (!sendRes.ok) {
+        setError(prevError => prevError ? `${prevError}\n${sendData.error || 'Error al enviar cuestionario inmediatamente'}` : (sendData.error || 'Error al enviar cuestionario inmediatamente'));
+      } else {
+        setNotification('Envío programado y cuestionario enviado inmediatamente.');
+      }
+
+      const listRes = await fetch(`/api/envios_programados?pacienteId=${patientId}`);
+      const listData = await listRes.json();
+      if (listRes.ok) setScheduledSends(listData);
+      setNewProximoEnvio(new Date().toISOString().split('T')[0]);
+      setPendingScheduleData(null);
+      setHighlight(true);
+      setTimeout(() => setHighlight(false), 1500);
+    } catch (e) {
+      console.error(e);
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      setError(errorMessage);
+    }
+  };
+
+  const initiateSchedulingProcess = async () => {
+    setError(null);
+    setNotification(null);
+
+    if (!newProximoEnvio) {
+      setError("Por favor, seleccione una fecha de inicio.");
+      return;
+    }
+
+    const fechaParaEnviar = newProximoEnvio.split('T')[0];
+    const currentScheduleData = {
+      pacienteId: patientId,
+      cuestionarioId: newCuestionarioId || undefined,
+      canal: newCanal,
+      frecuencia: newFrecuencia,
+      proximoEnvio: fechaParaEnviar,
+    };
+    setPendingScheduleData(currentScheduleData);
+
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const [year, month, day] = fechaParaEnviar.split('-').map(Number);
+    const selectedDateObj = new Date(year, month - 1, day);
+
+    if (selectedDateObj.getTime() === hoy.getTime()) {
+      setShowConfirmationModal(true);
+    } else if (selectedDateObj.getTime() > hoy.getTime()) {
+      await handleScheduleFutureSend(currentScheduleData, fechaParaEnviar);
+    } else {
+      setError("No se puede programar un envío para una fecha pasada.");
+      setPendingScheduleData(null); // Clear pending data if error
     }
   };
 
@@ -218,12 +344,13 @@ export default function PatientEvolutionPage() {
       if (listRes.ok) setScheduledSends(listData);
     } catch (e) {
       console.error(e);
-      alert((e as Error).message);
+      setError((e as Error).message);
     }
   };
 
   // Computar próxima fecha según frecuencia
   function computeNextDate(start: string, frequency: string): string {
+    if (frequency === 'unico') return 'N/A'; // No hay próximo envío para 'unico'
     const date = new Date(start);
     if (frequency === 'semanal') date.setDate(date.getDate() + 7);
     else if (frequency === 'mensual') date.setMonth(date.getMonth() + 1);
@@ -232,7 +359,6 @@ export default function PatientEvolutionPage() {
   }
 
   if (loading) return <div className="p-6">Cargando evolución...</div>;
-  if (error) return <div className="p-6 text-red-500">Error: {error}</div>;
 
   const labels = evolution.map(e => new Date(e.creado_en).toLocaleDateString());
   const chartData = {
@@ -252,8 +378,8 @@ export default function PatientEvolutionPage() {
         borderDash: [5,5],
         pointRadius: 0,
         fill: false,
-        borderCapStyle: 'butt',
-        borderJoinStyle: 'miter',
+        borderCapStyle: 'butt' as 'butt',
+        borderJoinStyle: 'miter' as 'miter',
         order: 0,
       },
     ],
@@ -272,17 +398,39 @@ export default function PatientEvolutionPage() {
   };
 
   return (
+    <>
     <div>
       {notification && (
         <div className="fixed top-4 right-4 px-4 py-2 rounded shadow z-50 text-white bg-blue-600">
           {notification}
         </div>
       )}
+      {showErrorModal && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-xs">
+            <h3 className="text-lg font-semibold mb-2">Error</h3>
+            <p className="mb-4">{error}</p>
+            <div className="flex justify-end">
+              <Button variant="default" onClick={() => { setShowErrorModal(false); setError(null); }}>Cerrar</Button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="p-6 space-y-6">
         <h1 className="text-2xl font-semibold">Evolución de {patientName || 'Paciente'}</h1>
+
+            {/* Entrevista Inicial */}
+            <div className="mt-8">
+              <PatientIntakeTab />
+            </div>
         <div className="bg-white p-6 rounded-lg shadow h-96">
           <Line data={chartData} options={options} />
         </div>
+        {/* Patient Responses Section */}
+        <div className="mb-8">
+          <PatientResponsesSection patientId={patientId} />
+        </div>
+
         {/* Programar nuevo envío */}
         <div className="bg-white p-6 rounded-lg shadow mb-6">
           <h3 className="text-lg font-semibold mb-4">Programar nuevo envío</h3>
@@ -323,6 +471,7 @@ export default function PatientEvolutionPage() {
                 onChange={e => setNewFrecuencia(e.target.value)}
                 className="w-full px-2 py-1 border rounded"
               >
+                <option value="unico">Envío único</option>
                 <option value="semanal">Semanal</option>
                 <option value="mensual">Mensual</option>
                 <option value="trimestral">Trimestral</option>
@@ -331,16 +480,31 @@ export default function PatientEvolutionPage() {
             <div>
               <label className="block font-medium mb-1">Fecha de inicio</label>
               <input
-                type="datetime-local"
+                type="date"
                 value={newProximoEnvio}
                 onChange={e => setNewProximoEnvio(e.target.value)}
                 className="w-full px-2 py-1 border rounded"
               />
             </div>
           </div>
-          <button onClick={createScheduledSend} className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
-            Programar
-          </button>
+          {showConfirmationModal && (
+            <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-xs">
+                <h3 className="font-semibold text-lg mb-2">Confirmación</h3>
+                <p className="mb-4">¿Confirmás que se realice el primer envío ahora mismo?</p>
+                <div className="flex justify-end space-x-2">
+                  <Button variant="default" onClick={async () => {
+                    setShowConfirmationModal(false);
+                    if (pendingScheduleData) {
+                      await handleScheduleAndSendNow(pendingScheduleData, pendingScheduleData.proximoEnvio);
+                    }
+                  }}>Confirmar Envío Ahora</Button>
+                  <Button variant="outline" onClick={() => setShowConfirmationModal(false)}>Cancelar</Button>
+                </div>
+              </div>
+            </div>
+          )}
+          <Button onClick={initiateSchedulingProcess} disabled={!newProximoEnvio || showConfirmationModal}>Programar</Button>
         </div>
 
         {/* Tabla de envíos programados */}
@@ -355,7 +519,7 @@ export default function PatientEvolutionPage() {
                   <th className="px-4 py-2 text-center">Cuestionario</th>
                   <th className="px-4 py-2 text-center">Canal</th>
                   <th className="px-4 py-2 text-center">Frecuencia</th>
-                  <th className="px-4 py-2 text-center">Envío inicial</th>
+                  <th className="px-4 py-2 text-center">Fecha de inicio</th>
                   <th className="px-4 py-2 text-center">Próximo envío</th>
                   <th className="px-4 py-2 text-center">Último envío</th>
                   <th className="px-4 py-2 text-center">Estado</th>
@@ -368,8 +532,16 @@ export default function PatientEvolutionPage() {
                     <td className="px-4 py-2 text-center">{send.cuestionarios?.codigo || send.cuestionario_id}</td>
                     <td className="px-4 py-2 text-center">{send.canal}</td>
                     <td className="px-4 py-2 text-center">{send.frecuencia}</td>
-                    <td className="px-4 py-2 text-center">{new Date(send.creado_en).toLocaleDateString()}</td>
-                    <td className="px-4 py-2 text-center">{new Date(computeNextDate(send.lastSent ?? send.creado_en, send.frecuencia)).toLocaleDateString()}</td>
+                    <td className="px-4 py-2 text-center">
+                      {send.fecha_inicio_programada
+                        ? new Date(send.fecha_inicio_programada).toLocaleDateString()
+                        : new Date(send.creado_en).toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-2 text-center">
+                      {send.frecuencia === 'unico' 
+                        ? 'N/A' 
+                        : new Date(computeNextDate(send.lastSent ?? send.proximo_envio ?? send.creado_en, send.frecuencia)).toLocaleDateString()}
+                    </td>
                     <td className="px-4 py-2 text-center">{new Date(send.lastSent ?? send.creado_en).toLocaleDateString()}</td>
                     <td className="px-4 py-2 text-center">
                       <span className={`px-2 py-1 rounded-full text-sm ${
@@ -396,6 +568,8 @@ export default function PatientEvolutionPage() {
             <p>No hay envíos programados</p>
           )}
         </div>
+
+
 
         {/* Modal de confirmación para cancelar envío programado */}
         {cancelSendId && (
@@ -425,5 +599,6 @@ export default function PatientEvolutionPage() {
         )}
       </div>
     </div>
+    </>
   );
 }

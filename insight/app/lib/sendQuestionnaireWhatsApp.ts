@@ -1,4 +1,4 @@
-import { sendWhatsAppTemplate, WhatsAppParameter } from './whatsapp';
+import { sendWhatsAppTemplate, WhatsAppParameter, WhatsAppButtonParameter } from './whatsapp';
 
 export async function sendQuestionnaireWhatsApp(
   phone: string,
@@ -6,15 +6,19 @@ export async function sendQuestionnaireWhatsApp(
   token: string,          // Parameter for the dynamic part of the button URL
   language: string = 'es'
 ): Promise<void> {
-  const parametersForTemplate: WhatsAppParameter[] = [
-    { type: 'text', text: nombrePaciente },       // For body placeholder, e.g., {{1}}
-    { type: 'button_payload', text: token }   // Special type for button URL's dynamic part
+  const bodyParams: WhatsAppParameter[] = [
+    { type: 'text', text: nombrePaciente },
+  ];
+
+  const buttonParams: WhatsAppButtonParameter[] = [
+    { type: 'payload', payload: token }, 
   ];
 
   await sendWhatsAppTemplate({
     to: phone,
     templateName: process.env.WHATSAPP_TEMPLATE_NAME || 'insight',
-    language,
-    parameters: parametersForTemplate,
+    languageCode: language,
+    bodyParameters: bodyParams,
+    buttonParameters: buttonParams,
   });
 }
