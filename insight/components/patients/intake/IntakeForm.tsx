@@ -206,7 +206,7 @@ const IntakeForm: React.FC<IntakeFormProps> = ({ intakeData, onSaveSuccess, onCa
 
           <Tab.Panels className="w-3/4 pl-4">
             {WIZARD_STEPS.map(step => (
-              <Tab.Panel key={step.id}>
+              <Tab.Panel key={step.id} className="static">
                 <h3 className="text-lg font-semibold mb-4">{step.name}</h3>
                 {intakeFieldsDefinition
                   .filter(field => field.step === step.id)

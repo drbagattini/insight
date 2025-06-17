@@ -62,8 +62,8 @@ export const intakeSchema = z.object({
   medicacionPrev: z.string().optional(),
   antecedentesSM: z.string().optional(),
   biologicos: z.string().optional(),
-  estrategia: z.string().min(1, 'Este campo es requerido'),
-  posicionTerap: z.string().min(1, 'Este campo es requerido'),
+  estrategia: z.string().optional(),
+  posicionTerap: z.string().optional(),
   derivacion: z.enum(['Sin derivaciones', 'Psiquiatra', 'Asistente social', 'Psicopedagogo', 'Pediatra', 'Neuropediatra']).optional(),
 }).superRefine((data, ctx) => {
   if (data.ayudaBuscada?.includes('7') && (!data.ayudaBuscadaOtro || data.ayudaBuscadaOtro.trim() === '')) {
