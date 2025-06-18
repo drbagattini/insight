@@ -11,9 +11,9 @@ interface RouteHandlerParams {
 
 export async function GET(
   request: NextRequest,
-  context: any
+  { params: paramsPromise }: { params: Promise<RouteHandlerParams> }
 ) {
-  const { patientId: id, qcode } = context.params as RouteHandlerParams;
+  const { patientId: id, qcode } = await paramsPromise;
   console.log(`[API /response-dates] Called for id: ${id}, qcode: ${qcode}`);
 
   const session = await getServerSession(authOptions) as Session;
