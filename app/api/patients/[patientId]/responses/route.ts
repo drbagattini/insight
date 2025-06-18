@@ -1,5 +1,4 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
-import { cookies } from 'next/headers'; 
+import { createClient } from '@supabase/supabase-js';
 import { NextResponse, NextRequest } from 'next/server'; 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/lib/auth';
@@ -20,9 +19,9 @@ interface RouteHandlerParams {
 
 export async function GET(
   request: NextRequest,
-  context: any
+  { params: paramsPromise }: { params: Promise<RouteHandlerParams> }
 ) {
-  const { patientId } = (context.params as RouteHandlerParams);
+  const { patientId } = await paramsPromise;
   console.log('[API /patients/[id]/responses] Route called for patientId:', patientId);
 
   const nextAuthSession = await getServerSession(authOptions) as CustomSession | null;
@@ -40,7 +39,6 @@ export async function GET(
   console.log('[API /patients/[id]/responses] NextAuth session found. User ID (Psychologist ID):', psychologistId);
 
   const supabaseAccessToken = nextAuthSession.sbAccessToken;
-  const supabaseRefreshToken = nextAuthSession.sbRefreshToken; 
 
   if (!supabaseAccessToken) {
     console.error('[API /patients/[id]/responses] Supabase access token not found in NextAuth session.');
@@ -50,30 +48,13 @@ export async function GET(
 
   let supabase;
   try {
-    supabase = createServerClient<Database>(
+    supabase = createClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
-        cookies: {
-          async get(name: string) { 
-            const cookieStore = await cookies(); 
-            return cookieStore.get(name)?.value;
-          },
-          async set(name: string, value: string, options: CookieOptions) {
-            try {
-              const cookieStore = await cookies();
-              cookieStore.set({ name, value, ...options });
-            } catch (error) {
-              console.warn(`[API /patients/[id]/responses] Error setting cookie (set: ${name}):`, error);
-            }
-          },
-          async remove(name: string, options: CookieOptions) {
-            try {
-              const cookieStore = await cookies();
-              cookieStore.set({ name, value: '', ...options, maxAge: 0 });
-            } catch (error) {
-              console.warn(`[API /patients/[id]/responses] Error removing cookie (remove: ${name}):`, error);
-            }
+        global: {
+          headers: {
+            Authorization: `Bearer ${supabaseAccessToken}`,
           },
         },
       }
@@ -83,28 +64,20 @@ export async function GET(
     return NextResponse.json({ error: 'Failed to initialize Supabase client', details: e.message }, { status: 500 });
   }
 
-  console.log('[API /patients/[id]/responses] Attempting to set Supabase session manually with token...');
-  const { error: setSessionError } = await supabase.auth.setSession({
-    access_token: supabaseAccessToken,
-    refresh_token: supabaseRefreshToken || '', 
-  });
-
-  if (setSessionError) {
-    console.error('[API /patients/[id]/responses] Error setting Supabase session:', setSessionError.message);
-    return NextResponse.json({ error: 'Failed to set Supabase session', details: setSessionError.message }, { status: 500 });
-  }
-  console.log('[API /patients/[id]/responses] Supabase session presumably set. Verifying user...');
-
+  console.log('[API /patients/[id]/responses] Initialized Supabase client with Bearer token. Verifying user...');
   const { data: { user: supabaseUser }, error: getUserError } = await supabase.auth.getUser();
 
   if (getUserError || !supabaseUser) {
-    console.error('[API /patients/[id]/responses] Error verifying Supabase user or no user found after setSession:', getUserError?.message);
+    console.error('[API /patients/[id]/responses] Error verifying Supabase user via Bearer token:', getUserError?.message);
     return NextResponse.json({ error: 'Unauthorized: Failed to verify Supabase user', details: getUserError?.message }, { status: 401 });
   }
+  console.log('[API /patients/[id]/responses] Supabase user verified via Bearer token:', supabaseUser.id);
 
-  console.log('[API /patients/[id]/responses] Supabase user verified:', supabaseUser.id);
+  
+
+  console.log('[API /patients/[id]/responses] Supabase user verified via Bearer token (post-check):', supabaseUser.id);
   if (supabaseUser.id !== psychologistId) {
-    console.error(`[API /patients/[id]/responses] Mismatch between NextAuth user ID (${psychologistId}) and Supabase user ID (${supabaseUser.id}) after setSession.`);
+    console.error(`[API /patients/[id]/responses] Mismatch between NextAuth user ID (${psychologistId}) and Supabase user ID (${supabaseUser.id}) after Bearer verification.`);
     return NextResponse.json({ error: 'User ID mismatch after session synchronization' }, { status: 500 });
   }
 
