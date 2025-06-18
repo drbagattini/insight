@@ -19,9 +19,10 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
         canal: 'email',
         frecuencia: 'mensual'
       },
-      sendInitial: patient?.metadata?.sendInitial ?? true,
+      // sendInitial removed from here
       whatsappConsent: patient?.metadata?.whatsappConsent ?? false
     },
+    sendInitial: patient?.sendInitial ?? patient?.metadata?.sendInitial ?? true, // Initialize sendInitial at top-level
   }));
   const [error, setError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -273,14 +274,11 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
                     name="sendInitial"
                     type="checkbox"
                     className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    checked={!!(formData.metadata as any).sendInitial}
+                    checked={!!formData.sendInitial} // Read from top-level
                     onChange={(e) =>
                       setFormData((prev) => ({
                         ...prev,
-                        metadata: {
-                          ...prev.metadata,
-                          sendInitial: e.target.checked
-                        }
+                        sendInitial: e.target.checked // Update top-level
                       }))
                     }
                   />

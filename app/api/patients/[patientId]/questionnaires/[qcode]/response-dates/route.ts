@@ -5,7 +5,7 @@ import { authOptions } from '@/app/lib/auth';
 import { supabaseAdmin } from '@/app/lib/supabaseAdmin';
 
 interface RouteHandlerParams {
-  id: string;
+  patientId: string;
   qcode: string;
 }
 
@@ -13,7 +13,7 @@ export async function GET(
   request: NextRequest,
   context: any
 ) {
-  const { id, qcode } = (context.params as RouteHandlerParams);
+  const { patientId: id, qcode } = context.params as RouteHandlerParams;
   console.log(`[API /response-dates] Called for id: ${id}, qcode: ${qcode}`);
 
   const session = await getServerSession(authOptions) as Session;

@@ -18,7 +18,7 @@ export async function GET() {
 
   const { data, error } = await supabaseAdmin
     .from('cuestionarios')
-    .select('id, codigo, nombre:titulo') // Aliasing titulo to nombre
+    .select('id, codigo, titulo') // Select titulo directly
     .eq('activo', true)
     .order('titulo', { ascending: true });
 

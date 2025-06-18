@@ -390,7 +390,19 @@ export const authOptions: AuthOptions = {
     async jwt({ token, user, account, profile, trigger, session: updateData }: { token: JWT; user?: NextAuthUser | undefined; account?: Account | null; profile?: any; trigger?: "signIn" | "signUp" | "update" | undefined; session?: any }): Promise<JWT> {
       console.log("[JWT] Callback - START", { userId: user?.id, accountProvider: account?.provider, currentTokenId: token.id, trigger });
 
-      if (user) {
+      // Ensure Supabase expiry is set even on token reloads
+  if (token.sbAccessToken && typeof token.sbExpiresAt !== 'number') {
+    try {
+      const payload = JSON.parse(Buffer.from(token.sbAccessToken.split('.')[1], 'base64').toString('utf8'));
+      if (payload.exp) {
+        token.sbExpiresAt = payload.exp; // seconds since epoch
+      }
+    } catch (e) {
+      console.error('[JWT] Failed to decode sbAccessToken exp claim:', e);
+    }
+  }
+
+  if (user) {
         console.log('[JWT] User object received during sign-in/sign-up:', JSON.stringify({
           id: user.id,
           email: user.email,
@@ -532,6 +544,44 @@ export const authOptions: AuthOptions = {
           delete token.googleCalendarAccessToken;
           delete token.googleCalendarExpiresAt;
           token.googleCalendarScopeGranted = false;
+        }
+      }
+
+      // --- SUPABASE ACCESS TOKEN REFRESH LOGIC ---
+      if (token.sbAccessToken && token.sbRefreshToken) {
+        try {
+          const nowSec = Math.floor(Date.now() / 1000);
+          if (typeof token.sbExpiresAt === 'number' && (token.sbExpiresAt - nowSec) < 60) {
+            console.log('[JWT] Supabase access token expiring soon. Attempting refresh.');
+
+            const refreshResponse = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'apikey': process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+              },
+              body: JSON.stringify({ refresh_token: token.sbRefreshToken })
+            });
+
+            if (refreshResponse.ok) {
+              const refreshData = await refreshResponse.json();
+              if (typeof refreshData.access_token === 'string') {
+                token.sbAccessToken = refreshData.access_token;
+                token.sbExpiresAt = nowSec + (typeof refreshData.expires_in === 'number' ? refreshData.expires_in : 3600);
+                if (typeof refreshData.refresh_token === 'string') {
+                  token.sbRefreshToken = refreshData.refresh_token;
+                }
+                console.log('[JWT] Supabase token refreshed successfully');
+              } else {
+                console.error('[JWT] Supabase refresh: access_token missing in response', refreshData);
+              }
+            } else {
+              const errorTxt = await refreshResponse.text();
+              console.error('[JWT] Supabase refresh failed:', errorTxt);
+            }
+          }
+        } catch (err) {
+          console.error('[JWT] Error while refreshing Supabase token:', err);
         }
       }
 

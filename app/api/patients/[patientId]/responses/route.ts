@@ -15,14 +15,14 @@ interface CustomSession extends NextAuthSession {
 export const dynamic = 'force-dynamic'; // Force dynamic to ensure latest data
 
 interface RouteHandlerParams {
-  id: string;
+  patientId: string;
 }
 
 export async function GET(
   request: NextRequest,
   context: any
 ) {
-  const { id: patientId } = (context.params as RouteHandlerParams);
+  const { patientId } = (context.params as RouteHandlerParams);
   console.log('[API /patients/[id]/responses] Route called for patientId:', patientId);
 
   const nextAuthSession = await getServerSession(authOptions) as CustomSession | null;

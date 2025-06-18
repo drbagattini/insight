@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from 'react';
 import { Line } from 'react-chartjs-2';
-import { PatientResponsesSection } from '@/components/patients/PatientResponsesSection';
-import { PatientDetails } from '@/components/patients/PatientDetails';
-import { PatientIntakeTab } from '@/components/patients/PatientIntakeTab';
+import { Tab } from '@headlessui/react';
+import { PatientResponsesSection } from '@/components/patient/PatientResponsesSection';
+import { PatientIntakeTab } from '@/components/patient/PatientIntakeTab';
+import { PatientDetails } from '@/components/patient/PatientDetails';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -30,7 +31,7 @@ ChartJS.register(
   Legend
 );
 
-export default function PatientEvolutionPage() {
+export default function PatientProfilePage() {
   const params = useParams() as { patientId: string };
   const patientId = params.patientId;
   const [loading, setLoading] = useState(true);
@@ -92,6 +93,7 @@ export default function PatientEvolutionPage() {
     proximoEnvio: string; // YYYY-MM-DD date string
   } | null>(null);
   const [showErrorModal, setShowErrorModal] = useState<boolean>(false);
+  const [selectedTabIndex, setSelectedTabIndex] = useState(0);
 
   useEffect(() => {
     if (error) setShowErrorModal(true);
@@ -142,8 +144,10 @@ export default function PatientEvolutionPage() {
         setLoadingSends(false);
       }
     }
-    loadScheduled();
-  }, [patientId]);
+    if (selectedTabIndex === 1) { // Only load if Cuestionarios tab is active
+      loadScheduled();
+    }
+  }, [patientId, selectedTabIndex]);
 
   // Cargar cuestionarios activos
   useEffect(() => {
@@ -160,8 +164,10 @@ export default function PatientEvolutionPage() {
         setLoadingQuestionnaires(false);
       }
     }
-    loadQuestionnaires();
-  }, []);
+    if (selectedTabIndex === 1) { // Only load if Cuestionarios tab is active
+      loadQuestionnaires();
+    }
+  }, [selectedTabIndex]);
 
   // Enviar ahora (manual)
   const sendNow = async (send: ScheduledSend) => {
@@ -183,7 +189,7 @@ export default function PatientEvolutionPage() {
       setReminderSent(prev => ({ ...prev, [send.id]: true }));
       setScheduledSends(prev =>
         prev.map(s => (s.id === send.id ? { ...s, lastSent: new Date().toISOString() } : s))
-      );
+      ); 
       setTimeout(() => {
         setReminderSent(prev => {
           const newState = { ...prev };
@@ -399,7 +405,7 @@ export default function PatientEvolutionPage() {
 
   return (
     <>
-    <div>
+      {/* Notification and Error Modals will be outside Tab.Group for page-level display */}
       {notification && (
         <div className="fixed top-4 right-4 px-4 py-2 rounded shadow z-50 text-white bg-blue-600">
           {notification}
@@ -417,22 +423,41 @@ export default function PatientEvolutionPage() {
         </div>
       )}
       <div className="p-6 space-y-6">
-        <h1 className="text-2xl font-semibold">Evolución de {patientName || 'Paciente'}</h1>
+        <h1 className="text-2xl font-semibold mb-4">Perfil del paciente</h1>
+        <Tab.Group selectedIndex={selectedTabIndex} onChange={setSelectedTabIndex}>
+          <Tab.List className="flex space-x-1 rounded-xl bg-blue-900/20 p-1">
+            {['Entrevista inicial', 'Cuestionarios psicométricos'].map((category) => (
+              <Tab
+                key={category}
+                className={({ selected }) =>
+                  `w-full rounded-lg py-2.5 text-sm font-medium leading-5 text-blue-700 ` +
+                  `ring-white ring-opacity-60 ring-offset-2 ring-offset-blue-400 focus:outline-none focus:ring-2 ` +
+                  `${selected ? 'bg-white shadow' : 'text-blue-100 hover:bg-white/[0.12] hover:text-white'}`
+                }
+              >
+                {category}
+              </Tab>
+            ))}
+          </Tab.List>
+          <Tab.Panels className="mt-2">
+            <Tab.Panel className="rounded-xl bg-white p-3 min-h-[600px] overflow-y-auto ring-white ring-opacity-60 ring-offset-2 ring-offset-blue-400 focus:outline-none focus:ring-2">
+              <h2 className="text-xl font-semibold mb-3">Evolución de {patientName || 'Paciente'}</h2>
+              {/* Entrevista Inicial Content */}
+              <div className="mt-4">
+                <PatientIntakeTab /> {/* Assuming this contains Wizard and Summary */}
+              </div>
+            </Tab.Panel>
+            <Tab.Panel className="rounded-xl bg-white p-3 min-h-[600px] overflow-y-auto ring-white ring-opacity-60 ring-offset-2 ring-offset-blue-400 focus:outline-none focus:ring-2">
+              {/* Cuestionarios Psicométricos Content */}
+              <div className="bg-white p-6 rounded-lg shadow h-96 mb-6">
+                <Line data={chartData} options={options} />
+              </div>
+              <div className="mb-8">
+                <PatientResponsesSection patientId={patientId} />
+              </div>
 
-            {/* Entrevista Inicial */}
-            <div className="mt-8">
-              <PatientIntakeTab />
-            </div>
-        <div className="bg-white p-6 rounded-lg shadow h-96">
-          <Line data={chartData} options={options} />
-        </div>
-        {/* Patient Responses Section */}
-        <div className="mb-8">
-          <PatientResponsesSection patientId={patientId} />
-        </div>
-
-        {/* Programar nuevo envío */}
-        <div className="bg-white p-6 rounded-lg shadow mb-6">
+              {/* Programar nuevo envío - Moved into Tab.Panel */}
+              <div className="bg-white p-6 rounded-lg shadow mb-6 mt-6">
           <h3 className="text-lg font-semibold mb-4">Programar nuevo envío</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             <div>
@@ -507,8 +532,8 @@ export default function PatientEvolutionPage() {
           <Button onClick={initiateSchedulingProcess} disabled={!newProximoEnvio || showConfirmationModal}>Programar</Button>
         </div>
 
-        {/* Tabla de envíos programados */}
-        <div className={`p-6 rounded-lg shadow ${highlight ? 'bg-yellow-100' : 'bg-white'} transition-colors duration-700`}>
+        {/* Tabla de envíos programados - Moved into Tab.Panel */}
+        <div className={`p-6 rounded-lg shadow ${highlight ? 'bg-yellow-100' : 'bg-white'} transition-colors duration-700 mt-6`}>
           <h2 className="text-xl font-semibold mb-4">Envíos programados</h2>
           {loadingSends ? (
             <p>Cargando envíos...</p>
@@ -568,10 +593,11 @@ export default function PatientEvolutionPage() {
             <p>No hay envíos programados</p>
           )}
         </div>
+      </Tab.Panel>
+    </Tab.Panels>
+  </Tab.Group>
 
-
-
-        {/* Modal de confirmación para cancelar envío programado */}
+        {/* Modal de confirmación para cancelar envío programado - keep at page level or move if tab-specific */}
         {cancelSendId && (
           <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-xs">
@@ -598,7 +624,8 @@ export default function PatientEvolutionPage() {
           </div>
         )}
       </div>
-    </div>
+    {/* Removed outer div, Tab.Group is now main content wrapper within p-6 space-y-6 */}
     </>
   );
 }
+
