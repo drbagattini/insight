@@ -6,9 +6,9 @@ import { JWT } from 'next-auth/jwt';
 import { UserRoleType } from '@/types/roles';
 import { SupabaseAdapter } from "@next-auth/supabase-adapter";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL ?? '';
 const anonKey = process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_KEY ?? '';
 
 // Log de variables de entorno críticas para depuración
 console.log('AUTH CONFIG - Variables de entorno NextAuth:');
@@ -24,7 +24,16 @@ const BASE_URL = 'https://insight-roan.vercel.app';
 console.log(`- URL de callback para Google (derivada de NEXTAUTH_URL) debería ser: ${process.env.NEXTAUTH_URL}/api/auth/callback/google`);
 console.log('- ASEGÚRATE de que esta URL exacta esté agregada en Google Cloud Console y que NEXTAUTH_URL esté correctamente configurado en Vercel GUI.')
 
+if (!supabaseUrl) {
+  throw new Error('Missing Supabase URL. Set NEXT_PUBLIC_SUPABASE_URL or SUPABASE_URL in your environment.');
+}
+if (!anonKey) {
+  throw new Error('Missing Supabase anon/public key. Set SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY in your environment.');
+}
 const supabase = createClient(supabaseUrl, anonKey);
+if (!serviceKey) {
+  throw new Error('Missing Supabase service key. Set SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SERVICE_KEY in your environment.');
+}
 const supabaseAdmin = createClient(supabaseUrl, serviceKey, {
   auth: { autoRefreshToken: false, persistSession: false }
 });
