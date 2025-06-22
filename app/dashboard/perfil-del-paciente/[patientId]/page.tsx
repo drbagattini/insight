@@ -247,7 +247,8 @@ export default function PatientProfilePage() {
     try {
       const proximoEnvioParaBackend = `${date}T${new Date().toTimeString().split(' ')[0]}`;
 
-      const scheduleRes = await fetch('/api/envios_programados', {
+      console.log('[handleScheduleAndSendNow] Posting to /api/envios_programados', { ...scheduleData, proximoEnvio: proximoEnvioParaBackend });
+    const scheduleRes = await fetch('/api/envios_programados', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -256,22 +257,28 @@ export default function PatientProfilePage() {
         }),
       });
       const scheduleResData = await scheduleRes.json();
-      if (!scheduleRes.ok) {
+    console.log('[handleScheduleAndSendNow] scheduleResData', scheduleResData);
+      console.log('[handleScheduleAndSendNow] scheduleRes status', scheduleRes.status);
+    if (!scheduleRes.ok) {
         if (scheduleResData.errorCode === 'PROGRAMACION_RECURRENTE_EXISTENTE') {
           setError(scheduleResData.error);
         } else {
           setError(scheduleResData.error || 'Error al programar el envío');
+        console.error('[handleScheduleAndSendNow] Error al programar', scheduleResData.error);
         }
         return;
       }
 
       const envioProgramadoId = scheduleResData.id;
+    console.log('[handleScheduleAndSendNow] envioProgramadoId', envioProgramadoId);
       if (!envioProgramadoId) {
         setError("No se pudo obtener el ID del envío programado para el envío inmediato.");
+      console.error('[handleScheduleAndSendNow] Missing envioProgramadoId, aborting sendNow');
         return;
       }
 
-      const sendRes = await fetch('/api/cuestionarios/enviar', {
+      console.log('[handleScheduleAndSendNow] Posting to /api/cuestionarios/enviar');
+    const sendRes = await fetch('/api/cuestionarios/enviar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -321,14 +328,14 @@ export default function PatientProfilePage() {
     };
     setPendingScheduleData(currentScheduleData);
 
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    const [year, month, day] = fechaParaEnviar.split('-').map(Number);
-    const selectedDateObj = new Date(year, month - 1, day);
+    const hoyStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local TZ
 
-    if (selectedDateObj.getTime() === hoy.getTime()) {
+    console.log('[initiateSchedulingProcess] fechaParaEnviar', fechaParaEnviar, 'hoyStr', hoyStr);
+    if (fechaParaEnviar === hoyStr) {
+      console.log('[initiateSchedulingProcess] Fecha es hoy, mostrando modal');
       setShowConfirmationModal(true);
-    } else if (selectedDateObj.getTime() > hoy.getTime()) {
+    } else if (fechaParaEnviar > hoyStr) {
+      console.log('[initiateSchedulingProcess] Fecha futura, programando sin modal');
       await handleScheduleFutureSend(currentScheduleData, fechaParaEnviar);
     } else {
       setError("No se puede programar un envío para una fecha pasada.");
@@ -458,174 +465,186 @@ export default function PatientProfilePage() {
 
               {/* Programar nuevo envío - Moved into Tab.Panel */}
               <div className="bg-white p-6 rounded-lg shadow mb-6 mt-6">
-          <h3 className="text-lg font-semibold mb-4">Programar nuevo envío</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-            <div>
-              <label className="block font-medium mb-1">Cuestionario</label>
-              {loadingQuestionnaires ? (
-                <p>Cargando cuestionarios...</p>
-              ) : (
-                <select
-                  value={newCuestionarioId}
-                  onChange={e => setNewCuestionarioId(e.target.value)}
-                  className="w-full px-2 py-1 border rounded"
-                >
-                  {questionnaires.map(q => (
-                    <option key={q.id} value={q.id}>
-                      {q.codigo}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-            <div>
-              <label className="block font-medium mb-1">Canal</label>
-              <select
-                value={newCanal}
-                onChange={e => setNewCanal(e.target.value)}
-                className="w-full px-2 py-1 border rounded"
-              >
-                <option value="email">Email</option>
-                <option value="whatsapp">WhatsApp</option>
-              </select>
-            </div>
-            <div>
-              <label className="block font-medium mb-1">Frecuencia</label>
-              <select
-                value={newFrecuencia}
-                onChange={e => setNewFrecuencia(e.target.value)}
-                className="w-full px-2 py-1 border rounded"
-              >
-                <option value="unico">Envío único</option>
-                <option value="semanal">Semanal</option>
-                <option value="mensual">Mensual</option>
-                <option value="trimestral">Trimestral</option>
-              </select>
-            </div>
-            <div>
-              <label className="block font-medium mb-1">Fecha de inicio</label>
-              <input
-                type="date"
-                value={newProximoEnvio}
-                onChange={e => setNewProximoEnvio(e.target.value)}
-                className="w-full px-2 py-1 border rounded"
-              />
-            </div>
-          </div>
-          {showConfirmationModal && (
-            <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-xs">
-                <h3 className="font-semibold text-lg mb-2">Confirmación</h3>
-                <p className="mb-4">¿Confirmás que se realice el primer envío ahora mismo?</p>
-                <div className="flex justify-end space-x-2">
-                  <Button variant="default" onClick={async () => {
-                    setShowConfirmationModal(false);
-                    if (pendingScheduleData) {
-                      await handleScheduleAndSendNow(pendingScheduleData, pendingScheduleData.proximoEnvio);
-                    }
-                  }}>Confirmar Envío Ahora</Button>
-                  <Button variant="outline" onClick={() => setShowConfirmationModal(false)}>Cancelar</Button>
+                <h3 className="text-lg font-semibold mb-4">Programar nuevo envío</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div>
+                    <label className="block font-medium mb-1">Cuestionario</label>
+                    {loadingQuestionnaires ? (
+                      <p>Cargando cuestionarios...</p>
+                    ) : (
+                      <select
+                        value={newCuestionarioId}
+                        onChange={e => setNewCuestionarioId(e.target.value)}
+                        className="w-full px-2 py-1 border rounded"
+                        data-testid="questionnaire-select"
+                      >
+                        {questionnaires.map(q => (
+                          <option key={q.id} value={q.id}>
+                            {q.codigo}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block font-medium mb-1">Canal</label>
+                    <select
+                      value={newCanal}
+                      onChange={e => setNewCanal(e.target.value)}
+                      className="w-full px-2 py-1 border rounded"
+                    >
+                      <option value="email">Email</option>
+                      <option value="whatsapp">WhatsApp</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-medium mb-1">Frecuencia</label>
+                    <select
+                      data-testid="frequency-select"
+                      value={newFrecuencia}
+                      onChange={e => setNewFrecuencia(e.target.value)}
+                      className="w-full px-2 py-1 border rounded"
+                    >
+                      <option value="unico">Envío único</option>
+                      <option value="semanal">Semanal</option>
+                      <option value="mensual">Mensual</option>
+                      <option value="trimestral">Trimestral</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-medium mb-1">Fecha de inicio</label>
+                    <input
+                      type="date"
+                      value={newProximoEnvio}
+                      onChange={e => setNewProximoEnvio(e.target.value)}
+                      className="w-full px-2 py-1 border rounded"
+                    />
+                  </div>
                 </div>
+                {showConfirmationModal && (
+                  <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-xs">
+                      <h3 className="font-semibold text-lg mb-2">Confirmación</h3>
+                      <p className="mb-4">¿Confirmás que se realice el primer envío ahora mismo?</p>
+                      <div className="flex justify-end space-x-2">
+                        <Button
+                          variant="default"
+                          type="button"
+                          data-testid="confirm-send-now-btn"
+                          onClick={async () => {
+                            console.log('[PatientProfilePage] Confirmar Envío Ahora clicked');
+                            setShowConfirmationModal(false);
+                            const scheduleToUse = pendingScheduleData ?? {
+                              pacienteId: patientId,
+                              cuestionarioId: newCuestionarioId || undefined,
+                              canal: newCanal,
+                              frecuencia: newFrecuencia,
+                              proximoEnvio: newProximoEnvio.split('T')[0],
+                            };
+                            await handleScheduleAndSendNow(scheduleToUse, scheduleToUse.proximoEnvio);
+                          }}
+                        >
+                          Confirmar Envío Ahora
+                        </Button>
+                        <Button variant="outline" onClick={() => setShowConfirmationModal(false)}>Cancelar</Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <Button onClick={initiateSchedulingProcess} disabled={!newProximoEnvio || showConfirmationModal}>Programar</Button>
               </div>
-            </div>
-          )}
-          <Button onClick={initiateSchedulingProcess} disabled={!newProximoEnvio || showConfirmationModal}>Programar</Button>
-        </div>
 
-        {/* Tabla de envíos programados - Moved into Tab.Panel */}
-        <div className={`p-6 rounded-lg shadow ${highlight ? 'bg-yellow-100' : 'bg-white'} transition-colors duration-700 mt-6`}>
-          <h2 className="text-xl font-semibold mb-4">Envíos programados</h2>
-          {loadingSends ? (
-            <p>Cargando envíos...</p>
-          ) : scheduledSends.length > 0 ? (
-            <table className="min-w-full table-auto">
-              <thead>
-                <tr>
-                  <th className="px-4 py-2 text-center">Cuestionario</th>
-                  <th className="px-4 py-2 text-center">Canal</th>
-                  <th className="px-4 py-2 text-center">Frecuencia</th>
-                  <th className="px-4 py-2 text-center">Fecha de inicio</th>
-                  <th className="px-4 py-2 text-center">Próximo envío</th>
-                  <th className="px-4 py-2 text-center">Último envío</th>
-                  <th className="px-4 py-2 text-center">Estado</th>
-                  <th className="px-4 py-2 text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {scheduledSends.map(send => (
-                  <tr key={send.id} className="border-t">
-                    <td className="px-4 py-2 text-center">{send.cuestionarios?.codigo || send.cuestionario_id}</td>
-                    <td className="px-4 py-2 text-center">{send.canal}</td>
-                    <td className="px-4 py-2 text-center">{send.frecuencia}</td>
-                    <td className="px-4 py-2 text-center">
-                      {send.fecha_inicio_programada
-                        ? new Date(send.fecha_inicio_programada).toLocaleDateString()
-                        : new Date(send.creado_en).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-2 text-center">
-                      {send.frecuencia === 'unico' 
-                        ? 'N/A' 
-                        : new Date(computeNextDate(send.lastSent ?? send.proximo_envio ?? send.creado_en, send.frecuencia)).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-2 text-center">{new Date(send.lastSent ?? send.creado_en).toLocaleDateString()}</td>
-                    <td className="px-4 py-2 text-center">
-                      <span className={`px-2 py-1 rounded-full text-sm ${
-                        send.respondido ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {send.respondido ? 'respondido' : 'pendiente de respuesta'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2 text-center space-x-2">
-                      <button onClick={() => sendNow(send)} disabled={!!reminderSent[send.id]} title="Envía un recordatorio amable para que el paciente complete el cuestionario" className={`px-2 py-1 rounded text-white ${
-                        reminderSent[send.id] ? 'bg-gray-400' : 'bg-blue-500 hover:bg-blue-600'
-                      }`}>
-                        {reminderSent[send.id] ? 'Recordatorio enviado' : 'Enviar Recordatorio'}
-                      </button>
-                      <button onClick={() => setCancelSendId(send.id)} title="Cancela todo el ciclo de envíos programados" className="px-2 py-1 bg-gray-300 rounded">
-                        Cancelar envíos programados
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <p>No hay envíos programados</p>
-          )}
-        </div>
-      </Tab.Panel>
-    </Tab.Panels>
-  </Tab.Group>
-
-        {/* Modal de confirmación para cancelar envío programado - keep at page level or move if tab-specific */}
-        {cancelSendId && (
-          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-xs">
-              <h3 className="text-lg font-semibold mb-2">Cancelar envío programado</h3>
-              <p className="mb-4">¿Seguro que deseas cancelar este envío programado?</p>
-              <div className="flex justify-end space-x-2">
-                <button
-                  onClick={() => setCancelSendId(null)}
-                  className="px-3 py-1 bg-gray-200 rounded"
-                >
-                  Volver
-                </button>
-                <button
-                  onClick={() => {
-                    cancelSendInternal(cancelSendId);
-                    setCancelSendId(null);
-                  }}
-                  className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-                >
-                  Confirmar
-                </button>
+              {/* Tabla de envíos programados - Moved into Tab.Panel */}
+              <div className={`p-6 rounded-lg shadow ${highlight ? 'bg-yellow-100' : 'bg-white'} transition-colors duration-700 mt-6`}>
+                <h2 className="text-xl font-semibold mb-4">Envíos programados</h2>
+                {loadingSends ? (
+                  <p>Cargando envíos...</p>
+                ) : scheduledSends.length > 0 ? (
+                  <table className="min-w-full table-auto">
+                    <thead>
+                      <tr>
+                        <th className="px-4 py-2 text-center">Cuestionario</th>
+                        <th className="px-4 py-2 text-center">Canal</th>
+                        <th className="px-4 py-2 text-center">Frecuencia</th>
+                        <th className="px-4 py-2 text-center">Fecha de inicio</th>
+                        <th className="px-4 py-2 text-center">Próximo envío</th>
+                        <th className="px-4 py-2 text-center">Último envío</th>
+                        <th className="px-4 py-2 text-center">Estado</th>
+                        <th className="px-4 py-2 text-center">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {scheduledSends.map(send => (
+                        <tr key={send.id} className="border-t">
+                          <td className="px-4 py-2 text-center">{send.cuestionarios?.codigo || send.cuestionario_id}</td>
+                          <td className="px-4 py-2 text-center">{send.canal}</td>
+                          <td className="px-4 py-2 text-center">{send.frecuencia}</td>
+                          <td className="px-4 py-2 text-center">
+                            {send.fecha_inicio_programada
+                              ? new Date(send.fecha_inicio_programada).toLocaleDateString()
+                              : new Date(send.creado_en).toLocaleDateString()}
+                          </td>
+                          <td className="px-4 py-2 text-center">
+                            {send.frecuencia === 'unico' 
+                              ? 'N/A' 
+                              : new Date(computeNextDate(send.lastSent ?? send.proximo_envio ?? send.creado_en, send.frecuencia)).toLocaleDateString()}
+                          </td>
+                          <td className="px-4 py-2 text-center">{new Date(send.lastSent ?? send.creado_en).toLocaleDateString()}</td>
+                          <td className="px-4 py-2 text-center">
+                            <span className={`px-2 py-1 rounded-full text-sm ${
+                              send.respondido ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {send.respondido ? 'respondido' : 'pendiente de respuesta'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2 text-center space-x-2">
+                            <button onClick={() => sendNow(send)} disabled={!!reminderSent[send.id]} title="Envía un recordatorio amable para que el paciente complete el cuestionario" className={`px-2 py-1 rounded text-white ${
+                              reminderSent[send.id] ? 'bg-gray-400' : 'bg-blue-500 hover:bg-blue-600'
+                            }`}>
+                              {reminderSent[send.id] ? 'Recordatorio enviado' : 'Enviar Recordatorio'}
+                            </button>
+                            <button onClick={() => setCancelSendId(send.id)} title="Cancela todo el ciclo de envíos programados" className="px-2 py-1 bg-gray-300 rounded">
+                              Cancelar envíos programados
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p>No hay envíos programados</p>
+                )}
               </div>
+            </Tab.Panel>
+          </Tab.Panels>
+        </Tab.Group>
+      </div>
+      {/* Modal de confirmación para cancelar envío programado - keep at page level or move if tab-specific */}
+      {cancelSendId && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-xs">
+            <h3 className="text-lg font-semibold mb-2">Cancelar envío programado</h3>
+            <p className="mb-4">¿Seguro que deseas cancelar este envío programado?</p>
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={() => setCancelSendId(null)}
+                className="px-3 py-1 bg-gray-200 rounded"
+              >
+                Volver
+              </button>
+              <button
+                onClick={() => {
+                  cancelSendInternal(cancelSendId);
+                  setCancelSendId(null);
+                }}
+                className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+              >
+                Confirmar
+              </button>
             </div>
           </div>
-        )}
-      </div>
-    {/* Removed outer div, Tab.Group is now main content wrapper within p-6 space-y-6 */}
+        </div>
+      )}
     </>
   );
 }
-

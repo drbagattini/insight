@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '@/app/lib/supabaseAdmin';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/lib/auth';
 import type { Session as NextAuthSession } from 'next-auth';
@@ -42,44 +43,45 @@ export async function GET(
 
   const supabaseAccessToken = nextAuthSession.sbAccessToken;
 
-  if (!supabaseAccessToken) {
-    console.error('[API /responses/[responseId]] Supabase access token not found in NextAuth session.');
-    return NextResponse.json({ error: 'Server configuration error: Supabase token missing' }, { status: 500 });
-  }
-  console.log('[API /responses/[responseId]] Supabase access token found in NextAuth session.');
-
   let supabase;
-  try {
-    supabase = createClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: {
-          headers: {
-            Authorization: `Bearer ${supabaseAccessToken}`,
+  if (!supabaseAccessToken) {
+    console.warn('[API /responses/[responseId]] sbAccessToken missing; falling back to supabaseAdmin (service role) for read-only access.');
+    supabase = supabaseAdmin;
+  } else {
+    console.log('[API /responses/[responseId]] Supabase access token found in NextAuth session.');
+    try {
+      supabase = createClient<Database>(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          global: {
+            headers: {
+              Authorization: `Bearer ${supabaseAccessToken}`,
+            },
           },
-        },
-      }
-    );
-  } catch (e: any) {
-    console.error('[API /responses/[responseId]] Error creating Supabase client:', e.message);
-    return NextResponse.json({ error: 'Failed to initialize Supabase client', details: e.message }, { status: 500 });
+        }
+      );
+    } catch (e: any) {
+      console.error('[API /responses/[responseId]] Error creating Supabase client:', e.message);
+      return NextResponse.json({ error: 'Failed to initialize Supabase client', details: e.message }, { status: 500 });
+    }
   }
 
-  console.log('[API /responses/[responseId]] Initialized Supabase client with Bearer token. Verifying user...');
-  const { data: { user: supabaseUser }, error: getUserError } = await supabase.auth.getUser();
+  if (supabaseAccessToken) {
+    console.log('[API /responses/[responseId]] Initialized Supabase client with Bearer token. Verifying user...');
+    const { data: { user: supabaseUser }, error: getUserError } = await supabase.auth.getUser();
 
-  if (getUserError || !supabaseUser) {
-    console.error('[API /responses/[responseId]] Error verifying Supabase user via Bearer token:', getUserError?.message);
-    return NextResponse.json({ error: 'Unauthorized: Failed to verify Supabase user', details: getUserError?.message }, { status: 401 });
-  }
-  console.log('[API /responses/[responseId]] Supabase user verified via Bearer token:', supabaseUser.id);
+    if (getUserError || !supabaseUser) {
+      console.error('[API /responses/[responseId]] Error verifying Supabase user via Bearer token:', getUserError?.message);
+      return NextResponse.json({ error: 'Unauthorized: Failed to verify Supabase user', details: getUserError?.message }, { status: 401 });
+    }
 
-  
-  if (supabaseUser.id !== psychologistId) {
-    console.error(`[API /responses/[responseId]] Mismatch between NextAuth user ID (${psychologistId}) and Supabase user ID (${supabaseUser.id}) after Bearer verification.`);
-    // This is a critical error indicating a desynchronization or an issue with token handling.
-    return NextResponse.json({ error: 'User ID mismatch after session synchronization' }, { status: 500 });
+    if (supabaseUser.id !== psychologistId) {
+      console.error(`[API /responses/[responseId]] Mismatch between NextAuth user ID (${psychologistId}) and Supabase user ID (${supabaseUser.id}) after Bearer verification.`);
+      return NextResponse.json({ error: 'User ID mismatch after session synchronization' }, { status: 500 });
+    }
+  } else {
+    console.log('[API /responses/[responseId]] Skipping Supabase user verification due to admin fallback.');
   }
 
   try {

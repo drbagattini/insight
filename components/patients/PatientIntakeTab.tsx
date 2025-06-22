@@ -1,4 +1,5 @@
-'use client';
+export { PatientIntakeTab } from "../patient/PatientIntakeTab";
+export { PatientIntakeTab as default } from "../patient/PatientIntakeTab";
 
 import React from 'react';
 import { useParams } from 'next/navigation';

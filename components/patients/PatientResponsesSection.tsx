@@ -1,5 +1,6 @@
 // /Users/NICOBAGA/CascadeProjects/windsurf-project/insight/components/patients/PatientResponsesSection.tsx
-'use client';
+export { PatientResponsesSection } from "../patient/PatientResponsesSection";
+export { PatientResponsesSection as default } from "../patient/PatientResponsesSection";
 
 import React from 'react';
 import { usePatientResponses } from '@/hooks/usePatientResponses';

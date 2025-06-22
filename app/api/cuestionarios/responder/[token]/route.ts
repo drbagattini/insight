@@ -10,7 +10,7 @@ const respuestasSchema = z.object({
       valor: z.number().min(0).max(5),
     })
   ),
-  puntuacion: z.number(),
+
 });
 
 export async function POST(
@@ -31,7 +31,7 @@ export async function POST(
       return NextResponse.json({ error: validacion.error.flatten() }, { status: 400 });
     }
     
-    const { respuestas, puntuacion } = validacion.data;
+    const { respuestas } = validacion.data;
 
     // 2. Obtener informaciu00f3n del link
     const { data: linkData, error: linkError } = await supabaseAdmin
@@ -56,7 +56,21 @@ export async function POST(
       return NextResponse.json({ error: "Este cuestionario ya ha sido respondido" }, { status: 400 });
     }
 
-    // 4. Registrar las respuestas
+    // 4. Calcular puntuación según el código del cuestionario
+    const answersNumeric = respuestas.map((r) => r.valor);
+
+    // Obtener el código del cuestionario
+    const { data: cuestionarioRow } = await supabaseAdmin
+      .from("cuestionarios")
+      .select("codigo")
+      .eq("id", linkData.cuestionario_id)
+      .single();
+
+    const codigo = cuestionarioRow?.codigo || "WHO-5";
+    const { scores } = await import("@/scoring");
+    const puntuacion = scores[codigo] ? scores[codigo](answersNumeric) : null;
+
+    // 5. Registrar las respuestas
     const { data: respuestaData, error: respuestaError } = await supabaseAdmin
       .from("respuestas")
       .insert({
@@ -64,7 +78,7 @@ export async function POST(
         cuestionario_id: linkData.cuestionario_id,
         enviado_desde: "email", // Por defecto, se podru00eda determinar mejor
         respuestas: respuestas,
-        puntuacion: puntuacion,
+        puntuacion: puntuacion
       })
       .select("id")
       .single();
@@ -74,7 +88,7 @@ export async function POST(
       return NextResponse.json({ error: "Error al guardar respuestas" }, { status: 500 });
     }
 
-    // 5. Marcar el link como consumido
+    // 6. Marcar el link como consumido
     const { error: updateError } = await supabaseAdmin
       .from("links_cuestionario")
       .update({ consumido: true })
