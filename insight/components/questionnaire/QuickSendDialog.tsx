@@ -1,7 +1,6 @@
 "use client";
 
-import { Fragment, useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { Fragment } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import { X } from "lucide-react";
 import QuickSendForm from "@/components/QuickSendForm";
@@ -9,7 +8,7 @@ import QuickSendForm from "@/components/QuickSendForm";
 interface QuickSendDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  cuestionarioId?: string;
+  cuestionarioId: string;
 }
 
 export default function QuickSendDialog({
@@ -17,27 +16,8 @@ export default function QuickSendDialog({
   onClose,
   cuestionarioId,
 }: QuickSendDialogProps) {
-  const [selectedId, setSelectedId] = useState<string>(cuestionarioId ?? "");
-
-  const { data: questionnaires = [], isLoading: loadingQuestionnaires } = useQuery<{ id: string; codigo: string }[]>({
-    queryKey: ["questionnaires"],
-    queryFn: async () => {
-      const res = await fetch("/api/questionnaires");
-      if (!res.ok) throw new Error("Error al cargar cuestionarios");
-      return res.json();
-    },
-    enabled: !cuestionarioId, // solo cargar si no viene predefinido
-  });
-
-  useEffect(() => {
-    if (!cuestionarioId && questionnaires.length > 0 && !selectedId) {
-      setSelectedId(questionnaires[0].id);
-    }
-  }, [cuestionarioId, questionnaires, selectedId]);
-
-  const idToSend = cuestionarioId ?? selectedId;
   return (
-    <Transition appear show={isOpen} as={Fragment}>
+    <Transition.Root show={isOpen} as={Fragment}>
       <Dialog as="div" className="relative z-50" onClose={onClose}>
         <Transition.Child
           as={Fragment}
@@ -82,37 +62,15 @@ export default function QuickSendDialog({
                   Enviar cuestionario
                 </Dialog.Title>
 
-                {!cuestionarioId && (
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Cuestionario</label>
-                    {loadingQuestionnaires ? (
-                      <p className="text-gray-500">Cargando cuestionarios...</p>
-                    ) : (
-                      <select
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-4"
-                        value={selectedId}
-                        onChange={(e) => setSelectedId(e.target.value)}
-                      >
-                        {questionnaires.map((q) => (
-                          <option key={q.id} value={q.id}>
-                            {q.codigo}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-                )}
-                {idToSend && (
-                  <QuickSendForm
-                  cuestionarioId={idToSend}
+                <QuickSendForm
+                  cuestionarioId={cuestionarioId}
                   onSuccess={onClose}
                 />
-                )}
               </Dialog.Panel>
             </Transition.Child>
           </div>
         </div>
       </Dialog>
-    </Transition>
+    </Transition.Root>
   );
 }

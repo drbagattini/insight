@@ -11,7 +11,7 @@ import Icd11Autocomplete from "./Icd11Autocomplete";
 import { Button } from "@/components/ui/button";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { IntakeWizard as WizardLayout, type Step } from "@/components/patients/intake/IntakeWizard";
+import { WizardLayout, type Step } from "@/components/ui/wizard-layout";
 import { useToast } from "@/components/providers/ToastProvider";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 

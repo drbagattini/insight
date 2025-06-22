@@ -1,5 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
-import { supabaseAdmin } from '@/app/lib/supabaseAdmin';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/lib/auth';
 import type { Session as NextAuthSession } from 'next-auth';
@@ -20,9 +20,9 @@ interface RouteHandlerParams {
 
 export async function GET(
   request: NextRequest,
-  { params: paramsPromise }: { params: Promise<RouteHandlerParams> }
+  context: any // Using 'any' for context due to Next.js 15.3.0 typing issues
 ) {
-  const { responseId } = await paramsPromise;
+  const { responseId } = (context.params as RouteHandlerParams); // Type assertion for params
   if (!responseId) {
     return NextResponse.json({ error: 'Response ID is required' }, { status: 400 });
   }
@@ -42,46 +42,81 @@ export async function GET(
   console.log('[API /responses/[responseId]] NextAuth session found. User ID (Psychologist ID):', psychologistId);
 
   const supabaseAccessToken = nextAuthSession.sbAccessToken;
+  const supabaseRefreshToken = nextAuthSession.sbRefreshToken; 
+
+  if (!supabaseAccessToken) {
+    console.error('[API /responses/[responseId]] Supabase access token not found in NextAuth session.');
+    return NextResponse.json({ error: 'Server configuration error: Supabase token missing' }, { status: 500 });
+  }
+  console.log('[API /responses/[responseId]] Supabase access token found in NextAuth session.');
 
   let supabase;
-  if (!supabaseAccessToken) {
-    console.warn('[API /responses/[responseId]] sbAccessToken missing; falling back to supabaseAdmin (service role) for read-only access.');
-    supabase = supabaseAdmin;
-  } else {
-    console.log('[API /responses/[responseId]] Supabase access token found in NextAuth session.');
-    try {
-      supabase = createClient<Database>(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-          global: {
-            headers: {
-              Authorization: `Bearer ${supabaseAccessToken}`,
-            },
+  try {
+    supabase = createServerClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          async get(name: string) { 
+            const cookieStore = await cookies(); 
+            return cookieStore.get(name)?.value;
           },
-        }
-      );
-    } catch (e: any) {
-      console.error('[API /responses/[responseId]] Error creating Supabase client:', e.message);
-      return NextResponse.json({ error: 'Failed to initialize Supabase client', details: e.message }, { status: 500 });
-    }
+          async set(name: string, value: string, options: CookieOptions) {
+            try {
+              const cookieStore = await cookies();
+              cookieStore.set({ name, value, ...options });
+            } catch (error) {
+              // The `set` method was called from a Server Component.
+              // This can be ignored if you have middleware refreshing
+              // user sessions.
+              console.warn(`[API /responses/[responseId]] Error setting cookie (set: ${name}):`, error);
+            }
+          },
+          async remove(name: string, options: CookieOptions) {
+            try {
+              const cookieStore = await cookies();
+              cookieStore.set({ name, value: '', ...options, maxAge: 0 });
+            } catch (error) {
+              // The `delete` method was called from a Server Component.
+              // This can be ignored if you have middleware refreshing
+              // user sessions.
+              console.warn(`[API /responses/[responseId]] Error removing cookie (remove: ${name}):`, error);
+            }
+          },
+        },
+      }
+    );
+  } catch (e: any) {
+    console.error('[API /responses/[responseId]] Error creating Supabase client:', e.message);
+    return NextResponse.json({ error: 'Failed to initialize Supabase client', details: e.message }, { status: 500 });
   }
 
-  if (supabaseAccessToken) {
-    console.log('[API /responses/[responseId]] Initialized Supabase client with Bearer token. Verifying user...');
-    const { data: { user: supabaseUser }, error: getUserError } = await supabase.auth.getUser();
+  console.log('[API /responses/[responseId]] Attempting to set Supabase session manually with token...');
+  const { error: setSessionError } = await supabase.auth.setSession({
+    access_token: supabaseAccessToken,
+    refresh_token: supabaseRefreshToken || '', 
+  });
 
-    if (getUserError || !supabaseUser) {
-      console.error('[API /responses/[responseId]] Error verifying Supabase user via Bearer token:', getUserError?.message);
-      return NextResponse.json({ error: 'Unauthorized: Failed to verify Supabase user', details: getUserError?.message }, { status: 401 });
-    }
+  if (setSessionError) {
+    console.error('[API /responses/[responseId]] Error setting Supabase session:', setSessionError.message);
+    // It's important to check the type of error. If it's 'invalid_grant', the refresh token might be bad.
+    // If it's 'user_not_found', there's a sync issue.
+    return NextResponse.json({ error: 'Failed to set Supabase session', details: setSessionError.message }, { status: 500 });
+  }
+  console.log('[API /responses/[responseId]] Supabase session presumably set. Verifying user...');
 
-    if (supabaseUser.id !== psychologistId) {
-      console.error(`[API /responses/[responseId]] Mismatch between NextAuth user ID (${psychologistId}) and Supabase user ID (${supabaseUser.id}) after Bearer verification.`);
-      return NextResponse.json({ error: 'User ID mismatch after session synchronization' }, { status: 500 });
-    }
-  } else {
-    console.log('[API /responses/[responseId]] Skipping Supabase user verification due to admin fallback.');
+  const { data: { user: supabaseUser }, error: getUserError } = await supabase.auth.getUser();
+
+  if (getUserError || !supabaseUser) {
+    console.error('[API /responses/[responseId]] Error verifying Supabase user or no user found after setSession:', getUserError?.message);
+    return NextResponse.json({ error: 'Unauthorized: Failed to verify Supabase user', details: getUserError?.message }, { status: 401 });
+  }
+
+  console.log('[API /responses/[responseId]] Supabase user verified:', supabaseUser.id);
+  if (supabaseUser.id !== psychologistId) {
+    console.error(`[API /responses/[responseId]] Mismatch between NextAuth user ID (${psychologistId}) and Supabase user ID (${supabaseUser.id}) after setSession.`);
+    // This is a critical error indicating a desynchronization or an issue with token handling.
+    return NextResponse.json({ error: 'User ID mismatch after session synchronization' }, { status: 500 });
   }
 
   try {

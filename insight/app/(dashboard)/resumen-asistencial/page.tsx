@@ -19,7 +19,6 @@ import axios from 'axios';
 import { format, subDays } from 'date-fns'; 
 import { es as esLocaleDate } from 'date-fns/locale';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   Users, 
   CalendarClock, 
@@ -36,6 +35,25 @@ import RiskPatientsDrawer from '@/components/dashboard/RiskPatientsDrawer';
 import PendingQuestionnairesModal from '@/components/dashboard/PendingQuestionnairesModal';
 import { useDashboardSummary } from '@/hooks/useDashboardSummary';
 import { Dialog, Transition } from '@headlessui/react';
+import { LegendItem, TooltipItem } from 'chart.js';
+
+// Define specific types for our data to avoid using 'any'
+interface Who5TrendPoint {
+  x: string; // ISO date string
+  y: number;
+  patientName?: string;
+}
+
+interface UpcomingAppointment {
+  id: string;
+  start_time: string;
+  end_time: string;
+  title: string;
+  patient_name: string;
+  paciente_id: string;
+  // Assuming riskPatientIds is an array of strings
+  riskPatientIds?: string[];
+}
 
 // Register Chart.js components
 ChartJS.register(
@@ -50,7 +68,6 @@ ChartJS.register(
 );
 
 export default function DashboardPage() {
-  const router = useRouter();
   const [showPatientForm, setShowPatientForm] = useState(false);
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
   const [currentAppointmentData, setCurrentAppointmentData] = useState<ModalAppointmentData | null>(null);
@@ -68,32 +85,32 @@ export default function DashboardPage() {
   const { data: summaryData, isLoading: loadingSummary } = useDashboardSummary();
 
   // Fetch WHO-5 trend data
-  const fetchWho5TrendData = async (start: string, end: string): Promise<any[]> => {
-    const { data } = await axios.get('/api/dashboard/who5-trend', {
+  const fetchWho5TrendData = async (start: string, end: string): Promise<Who5TrendPoint[]> => {
+    const { data } = await axios.get<{ x: string; y: number; patientName?: string }[]>('/api/dashboard/who5-trend', {
       params: { startDate: start, endDate: end },
     });
-    return data.map((point: any) => ({
+    return data.map(point => ({
       x: point.x, 
       y: point.y, 
       patientName: point.patientName || 'Desconocido',
     }));
   };
 
-  const { data: who5ScatterData = [], isLoading: loadingWho5Data } = useQuery<any[], Error>({
+  const { data: who5ScatterData = [], isLoading: loadingWho5Data } = useQuery<Who5TrendPoint[], Error>({
     queryKey: ['who5Trend', startDate, endDate],
     queryFn: () => fetchWho5TrendData(startDate, endDate),
     enabled: !!startDate && !!endDate,
   });
 
   // Fetch Upcoming Appointments
-  const { data: upcomingAppointments = [], isLoading: loadingUpcoming } = useQuery<any[]>({    
+  const { data: upcomingAppointments = [], isLoading: loadingUpcoming } = useQuery<UpcomingAppointment[]>({    
     queryKey: ['upcomingAppointmentsDashboard'], 
     queryFn: async () => {
       const now = new Date().toISOString();
       // Buscar próximas citas en los próximos 30 días
       const endPeriod = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); 
-      const res = await axios.get('/api/appointments', { params: { start: now, end: endPeriod, limit: 5, sortBy: 'start_time_asc' } });
-      return (res.data as any[])
+      const res = await axios.get<UpcomingAppointment[]>('/api/appointments', { params: { start: now, end: endPeriod, limit: 5, sortBy: 'start_time_asc' } });
+      return res.data
         .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
         .slice(0, 5); 
     },
@@ -107,10 +124,9 @@ export default function DashboardPage() {
         body: JSON.stringify(data),
       });
       if (!response.ok) throw new Error('Error al crear paciente');
-      const { paciente } = await response.json();
       setShowPatientForm(false);
-      // Redirigir a la página del nuevo paciente
-      router.push(`/dashboard/perfil-del-paciente/${paciente.id}`);
+      summaryData?.activePatients && summaryData.activePatients++; 
+      // Consider refetching summaryData or patient list
     } catch (error) {
       console.error('Error creating patient:', error);
       // Handle error appropriately in UI
@@ -204,8 +220,8 @@ export default function DashboardPage() {
                     label: 'Umbral de Referencia (25)',
                     hidden: true,
                     data: who5ScatterData.length > 0 
-                          ? [{ x: who5ScatterData[0].x, y: 25 }, { x: who5ScatterData[who5ScatterData.length - 1].x, y: 25 }] 
-                          : [], 
+                          ? ([{ x: who5ScatterData[0].x, y: 25 }, { x: who5ScatterData[who5ScatterData.length - 1].x, y: 25 }] as Who5TrendPoint[])
+                          : [],  
                     borderColor: 'rgb(255, 99, 132)',
                     backgroundColor: 'rgba(255, 99, 132, 0.5)',
                     borderWidth: 1,
@@ -234,13 +250,13 @@ export default function DashboardPage() {
                     beginAtZero: true,
                     suggestedMax: 100,
                     ticks: { stepSize: 10 }
-                  },
+                  }
                 },
                 plugins: {
                   legend: {
                     position: 'top' as const,
                     labels: {
-                      filter: function(legendItem, chartData) {
+                      filter: (legendItem: LegendItem) => {
                         if (legendItem.text && legendItem.text.includes('Umbral de Referencia')) {
                           return false;
                         }
@@ -250,14 +266,15 @@ export default function DashboardPage() {
                   },
                   tooltip: {
                     callbacks: {
-                      label: function(context: any) {
+                      label: (context: TooltipItem<'scatter'>) => {
                         let label = context.dataset.label || '';
-                        if (label.includes('Umbral de Referencia')) return null;
+                        if (label.includes('Umbral de Referencia')) return undefined;
                         if (label) label += ': ';
                         if (context.parsed.y !== null) label += context.parsed.y;
-                        const dataPoint = context.raw as { patientName?: string };
-                        if (dataPoint && dataPoint.patientName) label += ` (${dataPoint.patientName})`;
-                        return label;
+                        const dataPoint = context.raw as Who5TrendPoint;
+                        if (dataPoint && dataPoint.patientName) {
+                          label += ` (${dataPoint.patientName})`;
+                        }
                       }
                     }
                   }
@@ -278,7 +295,7 @@ export default function DashboardPage() {
           </div>
         ) : upcomingAppointments.length > 0 ? (
           <ul className="divide-y divide-gray-300 border-t border-gray-300">
-            {upcomingAppointments.map((ev: any) => (
+            {upcomingAppointments.map((ev: UpcomingAppointment) => (
               <li
                 key={ev.id}
                 className={`first:pt-2 last:pb-0 py-4 px-4 transition-colors hover:bg-gray-50 ${riskPatientIds.includes(ev.paciente_id) ? 'bg-red-50' : ''}`}

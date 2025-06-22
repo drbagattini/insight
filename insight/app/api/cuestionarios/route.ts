@@ -18,7 +18,7 @@ export async function GET() {
 
   const { data, error } = await supabaseAdmin
     .from('cuestionarios')
-    .select('id, codigo, nombre:titulo') // Select titulo and alias as nombre to match frontend QuestionnaireType
+    .select('id, codigo, nombre:titulo') // Aliasing titulo to nombre
     .eq('activo', true)
     .order('titulo', { ascending: true });
 
