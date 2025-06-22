@@ -18,8 +18,8 @@ export interface QuestionnaireChartProps {
     chartType?: "line" | "bar" | string;
     nombre?: string;
     scoring?: {
-      rango?: [number, number];
-      puntosDeCorte?: { umbral: number; label?: string }[];
+      rango?: readonly [number, number];
+      puntosDeCorte?: readonly { readonly umbral: number; readonly label?: string }[];
     };
   };
   /** Optional override for height (in Tailwind / CSS units) */

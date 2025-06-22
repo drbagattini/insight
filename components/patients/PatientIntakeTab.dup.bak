@@ -1,15 +1,21 @@
+
+
+
+// Re-export canonical component to avoid duplicate implementation
 export { PatientIntakeTab } from "../patient/PatientIntakeTab";
 export { PatientIntakeTab as default } from "../patient/PatientIntakeTab";
 
-import React from 'react';
-import { useParams } from 'next/navigation';
-import { useIntake } from '@/app/hooks/useIntake';
-import IntakeWizard from './intake/IntakeWizard';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
 
-export const PatientIntakeTab = () => {
+/* duplicate file kept just as re-export */
+/* Duplicate implementation removed */ { useParams } from 'next/navigation';
+/* Duplicate implementation removed */ { useIntake } from '@/app/hooks/useIntake';
+/* Duplicate implementation removed */ IntakeWizard from './intake/IntakeWizard';
+/* Duplicate implementation removed */ { Button } from '@/components/ui/button';
+/* Duplicate implementation removed */ { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+/* Duplicate implementation removed */ { Loader2 } from 'lucide-react';
+
+
+// export const PatientIntakeTab = () => {
   const params = useParams();
   const patientId = params.patientId as string;
 
@@ -76,6 +82,5 @@ export const PatientIntakeTab = () => {
   }
 
   // Estado: La entrevista existe (puede tener contenido o no)
-  return <IntakeWizard intakeData={intakeData!} intakeHasContent={intakeHasContent} />; // intakeData no será null aquí
-};
+  */
 

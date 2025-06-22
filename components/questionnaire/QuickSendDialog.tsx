@@ -37,7 +37,7 @@ export default function QuickSendDialog({
 
   const idToSend = cuestionarioId ?? selectedId;
   return (
-    <Transition.Root show={isOpen} as={Fragment}>
+    <Transition appear show={isOpen} as={Fragment}>
       <Dialog as="div" className="relative z-50" onClose={onClose}>
         <Transition.Child
           as={Fragment}
@@ -107,11 +107,12 @@ export default function QuickSendDialog({
                   cuestionarioId={idToSend}
                   onSuccess={onClose}
                 />
+                )}
               </Dialog.Panel>
             </Transition.Child>
           </div>
         </div>
       </Dialog>
-    </Transition.Root>
+    </Transition>
   );
 }

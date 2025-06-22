@@ -6,9 +6,9 @@ import { Input } from "@/components/ui/input";
 import { useState, useEffect } from 'react';
 import QuestionnaireChart from '@/components/QuestionnaireChart';
 import questionnairesMeta from '@/data/questionnaires-meta';
-import { PatientResponsesSection } from '@/components/patients/PatientResponsesSection';
-import { PatientDetails } from '@/components/patients/PatientDetails';
-import { PatientIntakeTab } from '@/components/patients/PatientIntakeTab';
+import { PatientResponsesSection } from '@/components/patient/PatientResponsesSection';
+import { PatientDetails } from '@/components/patient/PatientDetails';
+import { PatientIntakeTab } from '@/components/patient/PatientIntakeTab';
 
 
 
