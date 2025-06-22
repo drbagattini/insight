@@ -1,0 +1,86 @@
+
+
+
+// Re-export canonical component to avoid duplicate implementation
+export { PatientIntakeTab } from "../patient/PatientIntakeTab";
+export { PatientIntakeTab as default } from "../patient/PatientIntakeTab";
+
+
+/* duplicate file kept just as re-export */
+/* Duplicate implementation removed */ { useParams } from 'next/navigation';
+/* Duplicate implementation removed */ { useIntake } from '@/app/hooks/useIntake';
+/* Duplicate implementation removed */ IntakeWizard from './intake/IntakeWizard';
+/* Duplicate implementation removed */ { Button } from '@/components/ui/button';
+/* Duplicate implementation removed */ { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+/* Duplicate implementation removed */ { Loader2 } from 'lucide-react';
+
+
+// export const PatientIntakeTab = () => {
+  const params = useParams();
+  const patientId = params.patientId as string;
+
+  const { 
+    intakeData,
+    isLoading,
+    error,
+    intakeRowExists,
+    intakeHasContent,
+    createIntake,
+    isCreating 
+  } = useIntake(patientId);
+
+  const handleCreateInterview = async () => {
+    try {
+      await createIntake();
+    } catch (err) {
+      console.error('Failed to create interview:', err);
+      // Aquí se podría mostrar una notificación de error al usuario
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+        <p className="ml-2">Cargando datos de la entrevista...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-red-500 p-8">
+        Error al cargar la entrevista: {error.message}
+      </div>
+    );
+  }
+
+  // Estado: No existe una fila de entrevista en la BD
+  if (!intakeRowExists) {
+    return (
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle>Entrevista Inicial</CardTitle>
+          <CardDescription>
+            Aún no se ha registrado la primera entrevista para este paciente.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={handleCreateInterview} disabled={isCreating}>
+            {isCreating ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creando...
+              </>
+            ) : (
+              'Registrar primera entrevista'
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Estado: La entrevista existe (puede tener contenido o no)
+  */
+

@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { NextResponse, NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
+import { supabaseAdmin } from '@/app/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,24 +15,25 @@ export async function GET(request: NextRequest, { params }: any) {
   // Obtenemos el token JWT de NextAuth que contiene sbAccessToken
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
 
-  // Si no hay token o no contiene sbAccessToken, retornar 401
-  if (!token || !token.sbAccessToken) {
+  // Si no hay token, retornar 401
+  if (!token) {
     console.error('No se encontró token de NextAuth o sbAccessToken en GET', { tokenExists: !!token });
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
 
-  // Crear cliente Supabase usando el token de Supabase almacenado en el JWT de NextAuth
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, // Usar anon key aquí es seguro, la autorización la impone el token Bearer
-    {
-      global: {
-        headers: {
-          Authorization: `Bearer ${token.sbAccessToken}`
+  // Crear cliente Supabase usando el token de Supabase si está presente; de lo contrario, usa supabaseAdmin (rol de servicio)
+  const supabase = token?.sbAccessToken ?
+    createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token.sbAccessToken}`
+          }
         }
       }
-    }
-  );
+    ) : supabaseAdmin;
 
   try {
     // Se obtienen todas las entrevistas para el paciente, ordenadas por fecha de creación descendente.
@@ -68,24 +70,24 @@ export async function POST(request: NextRequest, { params }: any) {
   // Obtenemos el token JWT de NextAuth que contiene sbAccessToken
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
   
-  // Si no hay token o no contiene sbAccessToken, retornar 401
-  if (!token || !token.sbAccessToken) {
+  // Si no hay token, retornar 401
+  if (!token) {
     console.error('No se encontró token de NextAuth o sbAccessToken', { token });
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
   
   // Crear cliente Supabase usando el token de Supabase almacenado en el JWT de NextAuth
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      global: {
-        headers: {
-          Authorization: `Bearer ${token.sbAccessToken}`
+  const supabase = token?.sbAccessToken
+    ? createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          global: {
+            headers: { Authorization: `Bearer ${token.sbAccessToken}` }
+          }
         }
-      }
-    }
-  );
+      )
+    : supabaseAdmin;
 
   try {
     // Ya tenemos una sesión autenticada mediante el token
@@ -123,24 +125,24 @@ export async function PATCH(request: NextRequest, { params }: any) {
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
   const updateData = await request.json();
   
-  // Si no hay token o no contiene sbAccessToken, retornar 401
-  if (!token || !token.sbAccessToken) {
+  // Si no hay token, retornar 401
+  if (!token) {
     console.error('No se encontró token de NextAuth o sbAccessToken', { token });
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
   
   // Crear cliente Supabase usando el token de Supabase almacenado en el JWT de NextAuth
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      global: {
-        headers: {
-          Authorization: `Bearer ${token.sbAccessToken}`
+  const supabase = token?.sbAccessToken
+    ? createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          global: {
+            headers: { Authorization: `Bearer ${token.sbAccessToken}` }
+          }
         }
-      }
-    }
-  );
+      )
+    : supabaseAdmin;
 
   try {
 

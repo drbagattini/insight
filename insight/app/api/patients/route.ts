@@ -17,8 +17,8 @@ const supabaseAdmin = createClient(
 // Schema Zod
 const newPatientSchema = z.object({
   name: z.string().min(1, "Nombre requerido"),
-  email: z.string().email().optional(),
-  whatsapp: z.string().optional(),
+  email: z.string().email().nullable().optional(),
+  whatsapp: z.string().nullable().optional(),
   metadata: z.record(z.unknown()).optional().default({}),
   sendInitial: z.boolean().optional().default(true),
 });

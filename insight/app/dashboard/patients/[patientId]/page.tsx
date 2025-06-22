@@ -4,31 +4,14 @@ import { useParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from 'react';
-import { Line } from 'react-chartjs-2';
-import { PatientResponsesSection } from '@/components/patients/PatientResponsesSection';
-import { PatientDetails } from '@/components/patients/PatientDetails';
-import { PatientIntakeTab } from '@/components/patients/PatientIntakeTab';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-} from 'chart.js';
+import QuestionnaireChart from '@/components/QuestionnaireChart';
+import questionnairesMeta from '@/data/questionnaires-meta';
+import { PatientResponsesSection } from '@/components/patient/PatientResponsesSection';
+import { PatientDetails } from '@/components/patient/PatientDetails';
+import { PatientIntakeTab } from '@/components/patient/PatientIntakeTab';
 
-// Registrar componentes de Chart.js
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
+
+
 
 export default function PatientEvolutionPage() {
   const params = useParams() as { patientId: string };
@@ -360,42 +343,7 @@ export default function PatientEvolutionPage() {
 
   if (loading) return <div className="p-6">Cargando evolución...</div>;
 
-  const labels = evolution.map(e => new Date(e.creado_en).toLocaleDateString());
-  const chartData = {
-    labels,
-    datasets: [
-      {
-        label: 'Puntuación WHO-5',
-        data: evolution.map(e => e.puntuacion),
-        borderColor: 'rgb(59, 130, 246)',
-        backgroundColor: 'rgba(59, 130, 246, 0.5)',
-      },
-      {
-        label: '', // Oculta leyenda
-        data: labels.map(() => 13),
-        borderColor: 'red',
-        borderWidth: 1,
-        borderDash: [5,5],
-        pointRadius: 0,
-        fill: false,
-        borderCapStyle: 'butt' as 'butt',
-        borderJoinStyle: 'miter' as 'miter',
-        order: 0,
-      },
-    ],
-  };
-
-  const options = {
-    maintainAspectRatio: false,
-    scales: { y: { beginAtZero: true, max: 100 } },
-    plugins: {
-      legend: {
-        labels: {
-          filter: (item: any) => item.text !== '', // Oculta leyenda vacía
-        },
-      },
-    },
-  };
+    const meta = questionnairesMeta['WHO-5'];
 
   return (
     <>
@@ -424,7 +372,7 @@ export default function PatientEvolutionPage() {
               <PatientIntakeTab />
             </div>
         <div className="bg-white p-6 rounded-lg shadow h-96">
-          <Line data={chartData} options={options} />
+          <QuestionnaireChart data={evolution} meta={meta} />
         </div>
         {/* Patient Responses Section */}
         <div className="mb-8">

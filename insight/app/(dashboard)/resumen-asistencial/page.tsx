@@ -19,6 +19,7 @@ import axios from 'axios';
 import { format, subDays } from 'date-fns'; 
 import { es as esLocaleDate } from 'date-fns/locale';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Users, 
   CalendarClock, 
@@ -49,6 +50,7 @@ ChartJS.register(
 );
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [showPatientForm, setShowPatientForm] = useState(false);
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
   const [currentAppointmentData, setCurrentAppointmentData] = useState<ModalAppointmentData | null>(null);
@@ -105,9 +107,10 @@ export default function DashboardPage() {
         body: JSON.stringify(data),
       });
       if (!response.ok) throw new Error('Error al crear paciente');
+      const { paciente } = await response.json();
       setShowPatientForm(false);
-      summaryData?.activePatients && summaryData.activePatients++; 
-      // Consider refetching summaryData or patient list
+      // Redirigir a la página del nuevo paciente
+      router.push(`/dashboard/perfil-del-paciente/${paciente.id}`);
     } catch (error) {
       console.error('Error creating patient:', error);
       // Handle error appropriately in UI
