@@ -22,7 +22,7 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
       // sendInitial removed from here
       whatsappConsent: patient?.metadata?.whatsappConsent ?? false
     },
-    sendInitial: patient?.sendInitial ?? patient?.metadata?.sendInitial ?? true, // Initialize sendInitial at top-level
+    sendInitial: patient ? false : true, // Default to false for existing, true for new
   }));
   const [error, setError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,6 +47,7 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log('[PatientForm] handleSubmit triggered'); // Debug log
     e.preventDefault();
     setError('');
     setIsSubmitting(true);
@@ -61,7 +62,7 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} data-testid="patient-form" className="space-y-6">
       {error && (
         <div className="rounded-md bg-red-50 p-4 mb-4">
           <div className="flex">
@@ -306,7 +307,8 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
             Cancelar
           </button>
           <button
-            type="submit"
+            type="button"
+            onClick={handleSubmit}
             disabled={isSubmitting}
             className="inline-flex items-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
           >

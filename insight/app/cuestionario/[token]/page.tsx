@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { scores } from "@/scoring";
 import { useRouter, useParams } from "next/navigation";
 
 type Pregunta = {
@@ -138,15 +139,19 @@ export default function CuestionarioPage() {
         valor,
       }));
 
-      // Calcular puntuación total (para WHO-5 es la suma * 4)
-      const puntuacionTotal = Object.values(respuestas).reduce((sum, val) => sum + val, 0) * 4;
+      // Calcular puntuación utilizando el mapa de scoring genérico
+      const codigo = (linkInfo.cuestionario as any)?.codigo || "WHO-5";
+      const answersNumeric = Object.values(respuestas).map(Number);
+      const puntuacionTotal = scores[codigo]
+        ? scores[codigo](answersNumeric)
+        : null;
 
       const res = await fetch(`/api/cuestionarios/responder/${token}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           respuestas: respuestasArray,
-          puntuacion: puntuacionTotal,
+          // Ya no enviamos la puntuación; esta se calculará también en el backend.
         }),
       });
 

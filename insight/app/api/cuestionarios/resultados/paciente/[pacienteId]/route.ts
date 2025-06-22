@@ -10,14 +10,18 @@ export async function GET(
     return NextResponse.json({ error: 'pacienteId no proporcionado' }, { status: 400 });
   }
 
-  // 1) Obtener ID de cuestionario WHO-5
+  // Obtener el código a consultar (query param)
+  const url = new URL(request.url);
+  const codigoParam = url.searchParams.get('codigo') || 'WHO-5';
+
+  // 1) Obtener ID de cuestionario solicitado
   const { data: cuestionario, error: cuestionarioError } = await supabaseAdmin
     .from('cuestionarios')
     .select('id')
-    .eq('codigo', 'WHO-5')
+    .eq('codigo', codigoParam)
     .single();
   if (cuestionarioError || !cuestionario) {
-    return NextResponse.json({ error: 'Cuestionario WHO-5 no encontrado' }, { status: 404 });
+    return NextResponse.json({ error: `Cuestionario ${codigoParam} no encontrado` }, { status: 404 });
   }
   const cuestionarioId = cuestionario.id;
 

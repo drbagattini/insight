@@ -6,9 +6,9 @@ import { JWT } from 'next-auth/jwt';
 import { UserRoleType } from '@/types/roles';
 import { SupabaseAdapter } from "@next-auth/supabase-adapter";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL ?? '';
 const anonKey = process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_KEY ?? '';
 
 // Log de variables de entorno críticas para depuración
 console.log('AUTH CONFIG - Variables de entorno NextAuth:');
@@ -24,7 +24,16 @@ const BASE_URL = 'https://insight-roan.vercel.app';
 console.log(`- URL de callback para Google (derivada de NEXTAUTH_URL) debería ser: ${process.env.NEXTAUTH_URL}/api/auth/callback/google`);
 console.log('- ASEGÚRATE de que esta URL exacta esté agregada en Google Cloud Console y que NEXTAUTH_URL esté correctamente configurado en Vercel GUI.')
 
+if (!supabaseUrl) {
+  throw new Error('Missing Supabase URL. Set NEXT_PUBLIC_SUPABASE_URL or SUPABASE_URL in your environment.');
+}
+if (!anonKey) {
+  throw new Error('Missing Supabase anon/public key. Set SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY in your environment.');
+}
 const supabase = createClient(supabaseUrl, anonKey);
+if (!serviceKey) {
+  throw new Error('Missing Supabase service key. Set SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SERVICE_KEY in your environment.');
+}
 const supabaseAdmin = createClient(supabaseUrl, serviceKey, {
   auth: { autoRefreshToken: false, persistSession: false }
 });
@@ -93,6 +102,8 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
     };
   }
 }
+
+const TOKEN_REFRESH_BUFFER_SEC = 60;
 
 export const authOptions: AuthOptions = {
   // Las URL de callback se derivan de NEXTAUTH_URL
@@ -391,18 +402,21 @@ export const authOptions: AuthOptions = {
       console.log("[JWT] Callback - START", { userId: user?.id, accountProvider: account?.provider, currentTokenId: token.id, trigger });
 
       // Ensure Supabase expiry is set even on token reloads
-  if (token.sbAccessToken && typeof token.sbExpiresAt !== 'number') {
-    try {
-      const payload = JSON.parse(Buffer.from(token.sbAccessToken.split('.')[1], 'base64').toString('utf8'));
-      if (payload.exp) {
-        token.sbExpiresAt = payload.exp; // seconds since epoch
+      // Ensure sbExpiresAt is a number if sbAccessToken exists
+      if (token.sbAccessToken && typeof token.sbExpiresAt !== 'number') {
+        console.log('[JWT] sbAccessToken exists but sbExpiresAt is not a number or missing. Attempting to parse exp claim from sbAccessToken.');
+        try {
+          const payload = JSON.parse(Buffer.from(token.sbAccessToken.split('.')[1], 'base64').toString('utf8'));
+          if (payload.exp) {
+            token.sbExpiresAt = payload.exp; // seconds since epoch
+          }
+        } catch (e) {
+          console.error('[JWT] Failed to parse sbAccessToken for exp claim. Deleting sbExpiresAt.:', e);
+          delete token.sbExpiresAt;
+        }
       }
-    } catch (e) {
-      console.error('[JWT] Failed to decode sbAccessToken exp claim:', e);
-    }
-  }
 
-  if (user) {
+      if (user) {
         console.log('[JWT] User object received during sign-in/sign-up:', JSON.stringify({
           id: user.id,
           email: user.email,
@@ -452,7 +466,6 @@ export const authOptions: AuthOptions = {
             console.warn('[JWT - Credentials Login] sbAccessToken was NOT found or was invalid on the user object from authorize. This is unexpected for credentials login. Both sbAccessToken and sbRefreshToken will be undefined in JWT.');
           }
         }
-      // Extraneous brace was here, causing syntax errors below.
       }
 
       if (trigger === "update" && updateData) {
@@ -548,41 +561,113 @@ export const authOptions: AuthOptions = {
       }
 
       // --- SUPABASE ACCESS TOKEN REFRESH LOGIC ---
+      console.log('[JWT] Checking Supabase token state before refresh logic. sbAccessToken exists:', !!token.sbAccessToken, 'sbRefreshToken exists:', !!token.sbRefreshToken, 'sbExpiresAt:', token.sbExpiresAt, 'Current error state:', token.error);
       if (token.sbAccessToken && token.sbRefreshToken) {
-        try {
-          const nowSec = Math.floor(Date.now() / 1000);
-          if (typeof token.sbExpiresAt === 'number' && (token.sbExpiresAt - nowSec) < 60) {
-            console.log('[JWT] Supabase access token expiring soon. Attempting refresh.');
-
-            const refreshResponse = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'apikey': process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-              },
-              body: JSON.stringify({ refresh_token: token.sbRefreshToken })
-            });
-
-            if (refreshResponse.ok) {
-              const refreshData = await refreshResponse.json();
-              if (typeof refreshData.access_token === 'string') {
-                token.sbAccessToken = refreshData.access_token;
-                token.sbExpiresAt = nowSec + (typeof refreshData.expires_in === 'number' ? refreshData.expires_in : 3600);
-                if (typeof refreshData.refresh_token === 'string') {
-                  token.sbRefreshToken = refreshData.refresh_token;
-                }
-                console.log('[JWT] Supabase token refreshed successfully');
-              } else {
-                console.error('[JWT] Supabase refresh: access_token missing in response', refreshData);
-              }
+        const nowSec = Math.floor(Date.now() / 1000);
+        if (typeof token.sbExpiresAt === 'number' && (token.sbExpiresAt - nowSec) < TOKEN_REFRESH_BUFFER_SEC) {
+          console.log('[JWT] Supabase token needs refresh. Current time:', nowSec, 'Expires at:', token.sbExpiresAt, 'Refresh buffer (s):', TOKEN_REFRESH_BUFFER_SEC);
+          try {
+            const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+            if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !supabaseAnonKey) {
+              console.error('[JWT] CRITICAL: NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY is not set. Cannot refresh Supabase token.');
+              token.error = 'SupabaseConfigError';
+              // Delete tokens because config is missing, refresh is impossible
+              delete token.sbAccessToken;
+              delete token.sbRefreshToken;
+              delete token.sbExpiresAt;
             } else {
-              const errorTxt = await refreshResponse.text();
-              console.error('[JWT] Supabase refresh failed:', errorTxt);
+              const refreshResponse = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'apikey': supabaseAnonKey,
+                },
+                body: JSON.stringify({ refresh_token: token.sbRefreshToken })
+              });
+
+              console.log(`[JWT] Supabase refresh fetch completed. Status: ${refreshResponse.status}, OK: ${refreshResponse.ok}`);
+
+              let parsedResponseData: any;
+              try {
+                parsedResponseData = await refreshResponse.json();
+                console.log('[JWT] Supabase refresh response JSON parsed successfully:', parsedResponseData);
+              } catch (parseError) {
+                let responseText = '';
+                try {
+                  responseText = await refreshResponse.text();
+                } catch (textError) {
+                  console.error('[JWT] Failed to even get text response after JSON parse failed:', textError);
+                }
+                console.error(`[JWT] Supabase refresh response JSON parsing failed. Status: ${refreshResponse.status}. Response Text: ${responseText}. Parse Error:`, parseError);
+                token.error = 'SupabaseRefreshResponseMalformed';
+                delete token.sbAccessToken;
+                delete token.sbRefreshToken;
+                delete token.sbExpiresAt;
+                // End refresh attempt here as response is unparsable
+                return token; 
+              }
+
+              if (refreshResponse.ok) {
+                if (parsedResponseData && typeof parsedResponseData.access_token === 'string' && parsedResponseData.access_token.length > 0) {
+                  console.log('[JWT] Supabase token refreshed successfully.');
+                  token.sbAccessToken = parsedResponseData.access_token;
+                  token.sbExpiresAt = nowSec + (typeof parsedResponseData.expires_in === 'number' ? parsedResponseData.expires_in : 3600);
+                  if (typeof parsedResponseData.refresh_token === 'string' && parsedResponseData.refresh_token.length > 0) {
+                    token.sbRefreshToken = parsedResponseData.refresh_token;
+                    console.log('[JWT] New Supabase refresh_token received and updated in JWT.');
+                  } else {
+                    console.warn('[JWT] Supabase refresh response OK, but new refresh_token was NOT found. Old refresh_token will persist in JWT.');
+                  }
+                  if (typeof token.error === 'string' && token.error.startsWith('Supabase')) {
+                    delete token.error; // Clear any previous Supabase specific error
+                  }
+                } else {
+                  // refreshResponse.ok was true, but access_token was missing or invalid in parsedResponseData
+                  console.error('[JWT] Supabase refresh response OK, but access_token was missing or invalid in parsed response. Parsed Data:', parsedResponseData);
+                  token.error = 'SupabaseRefreshNoToken';
+                  delete token.sbAccessToken;
+                  delete token.sbRefreshToken;
+                  delete token.sbExpiresAt;
+                }
+              } else {
+                // refreshResponse.ok is false, handle error based on parsedResponseData (which is the error object from Supabase)
+                const errorData = parsedResponseData; // parsedResponseData is the error object from Supabase
+                console.error(`[JWT] Supabase token refresh failed. Status: ${refreshResponse.status}. Error Data:`, errorData);
+
+                if (errorData && errorData.error_description && errorData.error_description.includes('Refresh token already used')) {
+                  token.error = 'SupabaseRefreshTokenAlreadyUsedError';
+                  console.warn('[JWT] Refresh token already used. Not deleting sbAccessToken/sbRefreshToken to allow other requests to potentially succeed.');
+                  // DO NOT delete sbAccessToken or sbRefreshToken here
+                } else if (errorData && (errorData.error === 'invalid_grant' || errorData.error === 'invalid_request' || errorData.code === '401')) {
+                  token.error = 'SupabaseInvalidRefreshToken';
+                  console.warn(`[JWT] Invalid Supabase refresh token (error: ${errorData.error}, description: ${errorData.error_description}, code: ${errorData.code}). Deleting Supabase tokens.`);
+                  delete token.sbAccessToken;
+                  delete token.sbRefreshToken;
+                  delete token.sbExpiresAt;
+                } else {
+                  token.error = 'SupabaseRefreshFailed'; // Fallback for other non-200 responses
+                  console.warn(`[JWT] Uncategorized Supabase refresh failure (status ${refreshResponse.status}). Error: ${errorData?.error}, Desc: ${errorData?.error_description}. Deleting Supabase tokens.`);
+                  delete token.sbAccessToken;
+                  delete token.sbRefreshToken;
+                  delete token.sbExpiresAt;
+                }
+              }
             }
+          } catch (err: any) { 
+            console.error('[JWT] Outer error/exception during Supabase token refresh logic:', err.message, err.stack);
+            token.error = 'SupabaseRefreshOuterError'; 
+            delete token.sbAccessToken;
+            delete token.sbRefreshToken;
+            delete token.sbExpiresAt;
+            console.warn('[JWT] Cleared Supabase tokens due to outer error/exception in refresh logic.');
           }
-        } catch (err) {
-          console.error('[JWT] Error while refreshing Supabase token:', err);
+        } else if (typeof token.sbExpiresAt === 'number') {
+          console.log(`[JWT] Supabase token present but not yet within refresh window. Expires in ${token.sbExpiresAt - nowSec}s. Buffer: ${TOKEN_REFRESH_BUFFER_SEC}s.`);
+        } else {
+          console.warn('[JWT] Supabase token present but sbExpiresAt is not a number. Cannot determine if refresh is needed. sbExpiresAt:', token.sbExpiresAt);
         }
+      } else {
+        console.log('[JWT] Skipping Supabase token refresh logic: sbAccessToken or sbRefreshToken is missing.');
       }
 
       console.log('[JWT] JWT Callback - END. Returning token:', JSON.stringify({
@@ -613,16 +698,23 @@ export const authOptions: AuthOptions = {
       session.user.image_url = token.image_url || session.user.image_url;
       session.user.name = token.name || [token.firstName, token.lastName].filter(Boolean).join(' ') || session.user.name;
 
-      if (token.sbAccessToken) {
-        console.log('[Session] sbAccessToken FOUND on JWT token. Adding to session.');
+      // Propagate Supabase access token to session only if no critical Supabase token error occurred in JWT
+      const hasSupabaseTokenError = typeof token.error === 'string' && token.error.startsWith('Supabase');
+
+      if (token.sbAccessToken && !hasSupabaseTokenError) {
+        console.log('[Session] sbAccessToken FOUND on JWT token and no Supabase error. Adding to session.');
         session.sbAccessToken = token.sbAccessToken as string;
-        session.sbRefreshToken = token.sbRefreshToken as string;
-        // No podemos saber aquí fácilmente si el login original fue por credenciales sin añadir más info al token,
-        // pero si sbAccessToken está presente, es un buen signo.
+      } else if (token.sbAccessToken && hasSupabaseTokenError) {
+        console.warn(`[Session] sbAccessToken FOUND on JWT token, but a Supabase error ('${token.error}') exists. NOT adding sbAccessToken to session.`);
+        delete session.sbAccessToken; // Ensure it's not there from a previous session state if session object is reused
       } else {
-        console.log('[Session] sbAccessToken NOT FOUND on JWT token.');
-        // Este log es genérico. El warning específico para credenciales estaría en el callback JWT.
+        console.log('[Session] sbAccessToken NOT FOUND on JWT token or a Supabase error is present. sbAccessToken will not be in session.');
+        delete session.sbAccessToken; // Ensure it's not there
       }
+      
+      // NEVER propagate sbRefreshToken to the client-side session for security reasons.
+      // The client should never need the refresh token directly.
+      delete session.sbRefreshToken;
 
       if (token.googleLoginAccessToken) session.googleLoginAccessToken = token.googleLoginAccessToken;
       if (token.googleCalendarAccessToken) session.googleCalendarAccessToken = token.googleCalendarAccessToken;
