@@ -3,15 +3,32 @@
 import { useParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState, useEffect } from 'react';
-import QuestionnaireChart from '@/components/QuestionnaireChart';
-import questionnairesMeta from '@/data/questionnaires-meta';
-import { PatientResponsesSection } from '@/components/patient/PatientResponsesSection';
-import { PatientDetails } from '@/components/patient/PatientDetails';
-import { PatientIntakeTab } from '@/components/patient/PatientIntakeTab';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Line } from 'react-chartjs-2';
+import { PatientResponsesSection } from '@/components/patients/PatientResponsesSection';
+import IntakeWizardSkeleton from '@/insight/app/components/intake/IntakeWizardSkeleton';
+import IntakeWizardEditor from '@/insight/app/components/intake/IntakeWizardEditor';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+} from 'chart.js';
 
-
-
+// Registrar componentes de Chart.js
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 export default function PatientEvolutionPage() {
   const params = useParams() as { patientId: string };
@@ -20,6 +37,139 @@ export default function PatientEvolutionPage() {
   const [evolution, setEvolution] = useState<{ puntuacion: number; creado_en: string }[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [patientName, setPatientName] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<'evolution' | 'intake'>('intake');
+  
+  // Separate state variables for better control
+  const [intakeRowExists, setIntakeRowExists] = useState<boolean | null>(null);
+  const [intakeHasContent, setIntakeHasContent] = useState<boolean>(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [creating, setCreating] = useState(false);
+
+  const checkIntakeExists = useCallback(async () => {
+    if (!patientId) return;
+    console.log('Checking for intake interview...');
+    try {
+      const response = await fetch(`/api/patients/${patientId}/evolutions/intake`);
+      if (response.ok) {
+        try {
+          const intakeData = await response.json();
+          const actualData = intakeData.data || intakeData;
+          
+          // Row exists if we got a successful response
+          setIntakeRowExists(true);
+          
+          if (!actualData || Object.keys(actualData).length === 0) {
+            setIntakeHasContent(false);
+            return;
+          }
+          
+          // Check if the interview has meaningful content beyond defaults
+          const isDefaultInterview = actualData && 
+            (!actualData.motivoConsulta || actualData.motivoConsulta.trim() === '') &&
+            (!actualData.presentacion || actualData.presentacion.trim() === '') &&
+            (!actualData.diagnosticoTexto || actualData.diagnosticoTexto.trim() === '') &&
+            (!actualData.diagnosticoCodigo || actualData.diagnosticoCodigo.trim() === '') &&
+            (!actualData.estrategia || actualData.estrategia.trim() === '') &&
+            (!actualData.antecedentesSM || actualData.antecedentesSM.trim() === '') &&
+            (!actualData.biologicos || actualData.biologicos.trim() === '') &&
+            (!actualData.medicacionPrev || actualData.medicacionPrev.trim() === '') &&
+            (!actualData.grupoFamiliar || actualData.grupoFamiliar.trim() === '') &&
+            (!actualData.conviveCon || actualData.conviveCon.trim() === '') &&
+            (!actualData.ocupacion || actualData.ocupacion === 'Estudiante' || actualData.ocupacion.trim() === '') &&
+            (actualData.malestarPaciente === 1 || actualData.malestarPaciente === undefined) &&
+            (actualData.gaf === 1 || actualData.gaf === undefined) &&
+            (actualData.apoyoSocial === 1 || actualData.apoyoSocial === undefined);
+          
+          setIntakeHasContent(!isDefaultInterview);
+          
+        } catch (jsonErr) {
+          console.warn('Non-JSON response when checking intake.');
+          setIntakeRowExists(true); // Response was OK, so row exists
+          setIntakeHasContent(false);
+        }
+      } else {
+        if (response.status === 404) {
+          console.log('No intake interview found (404).');
+        } else {
+          const errorText = await response.text().catch(() => 'Could not read error response body');
+          console.error(`API error checking intake: ${response.status}`, errorText.substring(0, 200));
+        }
+        setIntakeRowExists(false);
+        setIntakeHasContent(false);
+      }
+    } catch (error) {
+      console.error('Error checking intake exists:', error);
+      setIntakeRowExists(false);
+      setIntakeHasContent(false);
+    }
+  }, [patientId]);
+
+  const handleCreateInterview = useCallback(async () => {
+    if (!patientId || creating) return;
+    
+    setCreating(true);
+    setError(null);
+    
+    try {
+      const defaultData = {
+        fechaEntrevista: new Date().toISOString().split('T')[0],
+        sexo: 'Femenino',
+        edad: 25,
+        estadoCivil: 'Soltero/a',
+        ocupacion: 'Estudiante',
+        motivoConsulta: '',
+        presentacion: '',
+        diagnosticoTexto: '',
+        diagnosticoCodigo: '',
+        estrategia: '',
+        antecedentesSM: '',
+        biologicos: '',
+        medicacionPrev: '',
+        grupoFamiliar: '',
+        conviveCon: '',
+        malestarPaciente: 1,
+        gaf: 1,
+        apoyoSocial: 1,
+        posicionTerap: 'Predominantemente interpretativa'
+      };
+
+      const response = await fetch(`/api/patients/${patientId}/evolutions/intake`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(defaultData)
+      });
+
+      if (response.ok) {
+        // Optimistic update: we know the row exists now, but content is minimal
+        setIntakeRowExists(true);
+        setIntakeHasContent(false);
+        setIsEditing(true);
+        
+        // Refresh the data to get the latest state
+        await checkIntakeExists();
+      } else {
+        const errorText = await response.text();
+        setError(`Error creating interview: ${errorText}`);
+        console.error('Error creating interview:', errorText);
+      }
+    } catch (error) {
+      console.error('Error creating interview:', error);
+      setError('Error creating interview. Please try again.');
+    } finally {
+      setCreating(false);
+    }
+  }, [patientId, creating, checkIntakeExists]);
+
+  const handleSaveSuccess = useCallback(() => {
+    setIsEditing(false);
+    checkIntakeExists();
+  }, [checkIntakeExists]);
+
+  useEffect(() => {
+    if (activeTab === 'intake' && patientId) {
+      checkIntakeExists();
+    }
+  }, [patientId, activeTab, checkIntakeExists]);
 
   // Tipado y estados para envíos programados
   interface ScheduledSend {
@@ -343,7 +493,42 @@ export default function PatientEvolutionPage() {
 
   if (loading) return <div className="p-6">Cargando evolución...</div>;
 
-    const meta = questionnairesMeta['WHO-5'];
+  const labels = evolution.map(e => new Date(e.creado_en).toLocaleDateString());
+  const chartData = {
+    labels,
+    datasets: [
+      {
+        label: 'Puntuación WHO-5',
+        data: evolution.map(e => e.puntuacion),
+        borderColor: 'rgb(59, 130, 246)',
+        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+      },
+      {
+        label: '', // Oculta leyenda
+        data: labels.map(() => 13),
+        borderColor: 'red',
+        borderWidth: 1,
+        borderDash: [5,5],
+        pointRadius: 0,
+        fill: false,
+        borderCapStyle: 'butt' as 'butt',
+        borderJoinStyle: 'miter' as 'miter',
+        order: 0,
+      },
+    ],
+  };
+
+  const options = {
+    maintainAspectRatio: false,
+    scales: { y: { beginAtZero: true, max: 100 } },
+    plugins: {
+      legend: {
+        labels: {
+          filter: (item: any) => item.text !== '', // Oculta leyenda vacía
+        },
+      },
+    },
+  };
 
   return (
     <>
@@ -366,183 +551,229 @@ export default function PatientEvolutionPage() {
       )}
       <div className="p-6 space-y-6">
         <h1 className="text-2xl font-semibold">Evolución de {patientName || 'Paciente'}</h1>
-
-            {/* Entrevista Inicial */}
-            <div className="mt-8">
-              <PatientIntakeTab />
-            </div>
-        <div className="bg-white p-6 rounded-lg shadow h-96">
-          <QuestionnaireChart data={evolution} meta={meta} />
+        <div className="flex space-x-6 border-b border-gray-200">
+          <button
+            onClick={() => setActiveTab('intake')}
+            className={`pb-2 ${activeTab==='intake' ? 'border-b-2 border-blue-600 text-blue-600 font-semibold' : 'text-gray-600 hover:text-gray-900'}`}
+            data-testid="intake-tab"
+          >
+            Entrevista Inicial
+          </button>
+          <button
+            onClick={() => setActiveTab('evolution')}
+            className={`pb-2 ${activeTab==='evolution' ? 'border-b-2 border-blue-600 text-blue-600 font-semibold' : 'text-gray-600 hover:text-gray-900'}`}
+            data-testid="evolution-tab"
+          >
+            Evolución
+          </button>
         </div>
-        {/* Patient Responses Section */}
-        <div className="mb-8">
-          <PatientResponsesSection patientId={patientId} />
-        </div>
-
-        {/* Programar nuevo envío */}
-        <div className="bg-white p-6 rounded-lg shadow mb-6">
-          <h3 className="text-lg font-semibold mb-4">Programar nuevo envío</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-            <div>
-              <label className="block font-medium mb-1">Cuestionario</label>
-              {loadingQuestionnaires ? (
-                <p>Cargando cuestionarios...</p>
-              ) : (
+        {activeTab === 'evolution' && (
+          <div className="bg-white p-6 rounded-lg shadow h-96">
+            <Line data={chartData} options={options} />
+          </div>
+        )}
+        {activeTab === 'evolution' && (
+          <div className="mb-8">
+            <PatientResponsesSection patientId={patientId} />
+          </div>
+        )}
+        {activeTab === 'evolution' && (
+          <div className="bg-white p-6 rounded-lg shadow mb-6">
+            <h3 className="text-lg font-semibold mb-4">Programar nuevo envío</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+              <div>
+                <label className="block font-medium mb-1">Cuestionario</label>
+                {loadingQuestionnaires ? (
+                  <p>Cargando cuestionarios...</p>
+                ) : (
+                  <select
+                    value={newCuestionarioId}
+                    onChange={e => setNewCuestionarioId(e.target.value)}
+                    className="w-full px-2 py-1 border rounded"
+                  >
+                    {questionnaires.map(q => (
+                      <option key={q.id} value={q.id}>
+                        {q.codigo}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Canal</label>
                 <select
-                  value={newCuestionarioId}
-                  onChange={e => setNewCuestionarioId(e.target.value)}
+                  value={newCanal}
+                  onChange={e => setNewCanal(e.target.value)}
                   className="w-full px-2 py-1 border rounded"
                 >
-                  {questionnaires.map(q => (
-                    <option key={q.id} value={q.id}>
-                      {q.codigo}
-                    </option>
-                  ))}
+                  <option value="email">Email</option>
+                  <option value="whatsapp">WhatsApp</option>
                 </select>
-              )}
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Frecuencia</label>
+                <select
+                  value={newFrecuencia}
+                  onChange={e => setNewFrecuencia(e.target.value)}
+                  className="w-full px-2 py-1 border rounded"
+                >
+                  <option value="unico">Envío único</option>
+                  <option value="semanal">Semanal</option>
+                  <option value="mensual">Mensual</option>
+                  <option value="trimestral">Trimestral</option>
+                </select>
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Fecha de inicio</label>
+                <input
+                  type="date"
+                  value={newProximoEnvio}
+                  onChange={e => setNewProximoEnvio(e.target.value)}
+                  className="w-full px-2 py-1 border rounded"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block font-medium mb-1">Canal</label>
-              <select
-                value={newCanal}
-                onChange={e => setNewCanal(e.target.value)}
-                className="w-full px-2 py-1 border rounded"
-              >
-                <option value="email">Email</option>
-                <option value="whatsapp">WhatsApp</option>
-              </select>
-            </div>
-            <div>
-              <label className="block font-medium mb-1">Frecuencia</label>
-              <select
-                value={newFrecuencia}
-                onChange={e => setNewFrecuencia(e.target.value)}
-                className="w-full px-2 py-1 border rounded"
-              >
-                <option value="unico">Envío único</option>
-                <option value="semanal">Semanal</option>
-                <option value="mensual">Mensual</option>
-                <option value="trimestral">Trimestral</option>
-              </select>
-            </div>
-            <div>
-              <label className="block font-medium mb-1">Fecha de inicio</label>
-              <input
-                type="date"
-                value={newProximoEnvio}
-                onChange={e => setNewProximoEnvio(e.target.value)}
-                className="w-full px-2 py-1 border rounded"
-              />
-            </div>
-          </div>
-          {showConfirmationModal && (
-            <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-xs">
-                <h3 className="font-semibold text-lg mb-2">Confirmación</h3>
-                <p className="mb-4">¿Confirmás que se realice el primer envío ahora mismo?</p>
-                <div className="flex justify-end space-x-2">
-                  <Button variant="default" onClick={async () => {
-                    setShowConfirmationModal(false);
-                    if (pendingScheduleData) {
-                      await handleScheduleAndSendNow(pendingScheduleData, pendingScheduleData.proximoEnvio);
-                    }
-                  }}>Confirmar Envío Ahora</Button>
-                  <Button variant="outline" onClick={() => setShowConfirmationModal(false)}>Cancelar</Button>
+            {showConfirmationModal && (
+              <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-xs">
+                  <h3 className="font-semibold text-lg mb-2">Confirmación</h3>
+                  <p className="mb-4">¿Confirmás que se realice el primer envío ahora mismo?</p>
+                  <div className="flex justify-end space-x-2">
+                    <Button variant="default" onClick={async () => {
+                      setShowConfirmationModal(false);
+                      if (pendingScheduleData) {
+                        await handleScheduleAndSendNow(pendingScheduleData, pendingScheduleData.proximoEnvio);
+                      }
+                    }}>Confirmar Envío Ahora</Button>
+                    <Button variant="outline" onClick={() => setShowConfirmationModal(false)}>Cancelar</Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-          <Button onClick={initiateSchedulingProcess} disabled={!newProximoEnvio || showConfirmationModal}>Programar</Button>
-        </div>
-
-        {/* Tabla de envíos programados */}
-        <div className={`p-6 rounded-lg shadow ${highlight ? 'bg-yellow-100' : 'bg-white'} transition-colors duration-700`}>
-          <h2 className="text-xl font-semibold mb-4">Envíos programados</h2>
-          {loadingSends ? (
-            <p>Cargando envíos...</p>
-          ) : scheduledSends.length > 0 ? (
-            <table className="min-w-full table-auto">
-              <thead>
-                <tr>
-                  <th className="px-4 py-2 text-center">Cuestionario</th>
-                  <th className="px-4 py-2 text-center">Canal</th>
-                  <th className="px-4 py-2 text-center">Frecuencia</th>
-                  <th className="px-4 py-2 text-center">Fecha de inicio</th>
-                  <th className="px-4 py-2 text-center">Próximo envío</th>
-                  <th className="px-4 py-2 text-center">Último envío</th>
-                  <th className="px-4 py-2 text-center">Estado</th>
-                  <th className="px-4 py-2 text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {scheduledSends.map(send => (
-                  <tr key={send.id} className="border-t">
-                    <td className="px-4 py-2 text-center">{send.cuestionarios?.codigo || send.cuestionario_id}</td>
-                    <td className="px-4 py-2 text-center">{send.canal}</td>
-                    <td className="px-4 py-2 text-center">{send.frecuencia}</td>
-                    <td className="px-4 py-2 text-center">
-                      {send.fecha_inicio_programada
-                        ? new Date(send.fecha_inicio_programada).toLocaleDateString()
-                        : new Date(send.creado_en).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-2 text-center">
-                      {send.frecuencia === 'unico' 
-                        ? 'N/A' 
-                        : new Date(computeNextDate(send.lastSent ?? send.proximo_envio ?? send.creado_en, send.frecuencia)).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-2 text-center">{new Date(send.lastSent ?? send.creado_en).toLocaleDateString()}</td>
-                    <td className="px-4 py-2 text-center">
-                      <span className={`px-2 py-1 rounded-full text-sm ${
-                        send.respondido ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {send.respondido ? 'respondido' : 'pendiente de respuesta'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2 text-center space-x-2">
-                      <button onClick={() => sendNow(send)} disabled={!!reminderSent[send.id]} title="Envía un recordatorio amable para que el paciente complete el cuestionario" className={`px-2 py-1 rounded text-white ${
-                        reminderSent[send.id] ? 'bg-gray-400' : 'bg-blue-500 hover:bg-blue-600'
-                      }`}>
-                        {reminderSent[send.id] ? 'Recordatorio enviado' : 'Enviar Recordatorio'}
-                      </button>
-                      <button onClick={() => setCancelSendId(send.id)} title="Cancela todo el ciclo de envíos programados" className="px-2 py-1 bg-gray-300 rounded">
-                        Cancelar envíos programados
-                      </button>
-                    </td>
+            )}
+            <Button onClick={initiateSchedulingProcess} disabled={!newProximoEnvio || showConfirmationModal}>Programar</Button>
+          </div>
+        )}
+        {activeTab === 'evolution' && (
+          <div className={`p-6 rounded-lg shadow ${highlight ? 'bg-yellow-100' : 'bg-white'} transition-colors duration-700`}>
+            <h2 className="text-xl font-semibold mb-4">Envíos programados</h2>
+            {loadingSends ? (
+              <p>Cargando envíos...</p>
+            ) : scheduledSends.length > 0 ? (
+              <table className="min-w-full table-auto">
+                <thead>
+                  <tr>
+                    <th className="px-4 py-2 text-center">Cuestionario</th>
+                    <th className="px-4 py-2 text-center">Canal</th>
+                    <th className="px-4 py-2 text-center">Frecuencia</th>
+                    <th className="px-4 py-2 text-center">Fecha de inicio</th>
+                    <th className="px-4 py-2 text-center">Próximo envío</th>
+                    <th className="px-4 py-2 text-center">Último envío</th>
+                    <th className="px-4 py-2 text-center">Estado</th>
+                    <th className="px-4 py-2 text-center">Acciones</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <p>No hay envíos programados</p>
-          )}
-        </div>
-
-
-
-        {/* Modal de confirmación para cancelar envío programado */}
-        {cancelSendId && (
-          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-xs">
-              <h3 className="text-lg font-semibold mb-2">Cancelar envío programado</h3>
-              <p className="mb-4">¿Seguro que deseas cancelar este envío programado?</p>
-              <div className="flex justify-end space-x-2">
-                <button
-                  onClick={() => setCancelSendId(null)}
-                  className="px-3 py-1 bg-gray-200 rounded"
-                >
-                  Volver
-                </button>
-                <button
-                  onClick={() => {
-                    cancelSendInternal(cancelSendId);
-                    setCancelSendId(null);
-                  }}
-                  className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-                >
-                  Confirmar
-                </button>
-              </div>
+                </thead>
+                <tbody>
+                  {scheduledSends.map(send => (
+                    <tr key={send.id} className="border-t">
+                      <td className="px-4 py-2 text-center">{send.cuestionarios?.codigo || send.cuestionario_id}</td>
+                      <td className="px-4 py-2 text-center">{send.canal}</td>
+                      <td className="px-4 py-2 text-center">{send.frecuencia}</td>
+                      <td className="px-4 py-2 text-center">
+                        {send.fecha_inicio_programada
+                          ? new Date(send.fecha_inicio_programada).toLocaleDateString()
+                          : new Date(send.creado_en).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-2 text-center">
+                        {send.frecuencia === 'unico' 
+                          ? 'N/A' 
+                          : new Date(computeNextDate(send.lastSent ?? send.proximo_envio ?? send.creado_en, send.frecuencia)).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-2 text-center">{new Date(send.lastSent ?? send.creado_en).toLocaleDateString()}</td>
+                      <td className="px-4 py-2 text-center">
+                        <span className={`px-2 py-1 rounded-full text-sm ${
+                          send.respondido ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {send.respondido ? 'respondido' : 'pendiente de respuesta'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-center space-x-2">
+                        <button onClick={() => sendNow(send)} disabled={!!reminderSent[send.id]} title="Envía un recordatorio amable para que el paciente complete el cuestionario" className={`px-2 py-1 rounded text-white ${
+                          reminderSent[send.id] ? 'bg-gray-400' : 'bg-blue-500 hover:bg-blue-600'
+                        }`}>
+                          {reminderSent[send.id] ? 'Recordatorio enviado' : 'Enviar Recordatorio'}
+                        </button>
+                        <button onClick={() => setCancelSendId(send.id)} title="Cancela todo el ciclo de envíos programados" className="px-2 py-1 bg-gray-300 rounded">
+                          Cancelar envíos programados
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p>No hay envíos programados</p>
+            )}
+          </div>
+        )}
+        {activeTab === 'intake' && (
+          <div className="w-full">
+            {/* Header with buttons */}
+            <div className="flex justify-between items-center mb-4">
+              {intakeRowExists === null ? (
+                <Button size="sm" variant="outline" disabled>
+                  Cargando...
+                </Button>
+              ) : intakeRowExists && intakeHasContent ? (
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setIsEditing(!isEditing)} data-testid="edit-interview-btn">
+                    {isEditing ? 'Cancelar y Ver' : 'Editar Entrevista'}
+                  </Button>
+                  {/* Optional: Allow creating a new interview even when one exists */}
+                  {!isEditing && (
+                    <Button size="sm" variant="secondary" onClick={handleCreateInterview} disabled={creating} data-testid="register-new-interview-btn">
+                      {creating ? 'Creando...' : 'Registrar Nueva Entrevista'}
+                    </Button>
+                  )}
+                </div>
+              ) : intakeRowExists && !intakeHasContent ? (
+                <Button size="sm" variant="default" onClick={() => setIsEditing(true)} data-testid="complete-interview-btn">
+                  Completar Entrevista
+                </Button>
+              ) : (
+                <div></div> // Empty div to maintain layout when no row exists
+              )}
             </div>
+
+            {/* Main content: Editor, Skeleton, or Empty State */}
+            {isEditing ? (
+              <IntakeWizardEditor
+                patientId={patientId}
+                onSaveSuccess={handleSaveSuccess}
+                data-testid="intake-wizard-editor"
+              />
+            ) : intakeRowExists && intakeHasContent ? (
+              <IntakeWizardSkeleton patientId={patientId} data-testid="intake-wizard-skeleton" />
+            ) : intakeRowExists && !intakeHasContent ? (
+              <div className="text-center py-10 border-2 border-dashed border-gray-300 rounded-lg" data-testid="incomplete-interview-state">
+                <p className="text-gray-500">Entrevista creada pero incompleta</p>
+                <p className="text-sm text-gray-400 mt-2">Haz clic en "Completar Entrevista" para continuar</p>
+                {error && <p className="text-red-500 mt-2">{error}</p>}
+              </div>
+            ) : (
+              <div className="text-center py-10 border-2 border-dashed border-gray-300 rounded-lg" data-testid="empty-interview-state">
+                <p className="text-gray-500">No hay entrevista inicial registrada</p>
+                {error && <p className="text-red-500 mt-2">{error}</p>}
+                <Button
+                  className="mt-6"
+                  variant="default"
+                  onClick={handleCreateInterview}
+                  disabled={creating}
+                  data-testid="register-first-interview-btn"
+                >
+                  {creating ? 'Creando primera entrevista...' : 'Registrar primera entrevista'}
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>

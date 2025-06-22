@@ -9,7 +9,6 @@ const questionnairesMeta = {
       'Cuestionario de 5 ítems que evalúa el bienestar subjetivo durante las últimas dos semanas. Traducción española oficial (WHO-5, versión 1998).',
     poblacion: 'Adolescentes y adultos',
     tiempoMin: 1,
-    chartType: 'line',
     items: [
       { orden: 1, texto: 'Me he sentido alegre y de buen humor' },
       { orden: 2, texto: 'Me he sentido tranquilo y relajado' },
