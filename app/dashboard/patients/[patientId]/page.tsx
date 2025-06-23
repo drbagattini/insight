@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import React, { useState, useEffect, useCallback } from 'react';
 import { Line } from 'react-chartjs-2';
 import { PatientResponsesSection } from '@/components/patients/PatientResponsesSection';
-import IntakeWizardSkeleton from '@/app/components/intake/IntakeWizardSkeleton';
-import IntakeWizardEditor from '@/app/components/intake/IntakeWizardEditor';
+import IntakeWizardSkeleton from '@/insight/insight/app/components/intake/IntakeWizardSkeleton';
+import IntakeWizardEditor from '@/insight/insight/app/components/intake/IntakeWizardEditor';
 import {
   Chart as ChartJS,
   CategoryScale,
