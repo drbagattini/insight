@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
-import PatientForm from '../../patients/PatientForm';
+import PatientForm from '../../patient/PatientForm';
 import { Patient, NewPatient } from '@/types/patients';
 import { useQueryClient } from '@tanstack/react-query';
 import { QUERY_KEYS } from '@/lib/constants';

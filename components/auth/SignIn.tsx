@@ -1,14 +1,8 @@
 'use client';
-import { signIn } from 'next-auth/react';
+import { signIn, getCsrfToken } from 'next-auth/react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import InsightLogo from '../common/InsightLogo';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
 type SignInProps = {
   providers?: string[];
@@ -16,12 +10,14 @@ type SignInProps = {
 };
 
 export function SignIn({ providers = ['google', 'credentials'], error }: SignInProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [email, setEmail] = useState('');
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [csrfToken, setCsrfToken] = useState<string | undefined>();
+  const [message, setMessage] = useState<{ type: 'error'; text: string } | null>(null);
 
+  useEffect(() => {
+    // Fetch the CSRF token from NextAuth on component mount
+    getCsrfToken().then(setCsrfToken);
+  }, []);
 
-  // Map NextAuth error codes to user-friendly messages
   const errorMessages: Record<string, string> = {
     CredentialsSignin: 'Credenciales inválidas. Inténtalo de nuevo.',
     EmailNotFound: 'Email no encontrado. Por favor regístrate o verifica tu email.',
@@ -29,8 +25,6 @@ export function SignIn({ providers = ['google', 'credentials'], error }: SignInP
     default: 'Error desconocido de autenticación.'
   };
 
-  // Show error coming from query string once on mount
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (error) {
       setMessage({ type: 'error', text: errorMessages[error] ?? errorMessages.default });
@@ -62,31 +56,10 @@ export function SignIn({ providers = ['google', 'credentials'], error }: SignInP
 
       {providers.includes('credentials') && (
         <div className="space-y-6">
-          <form onSubmit={async (e) => {
-            e.preventDefault();
-            setIsSubmitting(true);
-            setMessage(null);
-            
-            try {
-              // Método simple: usar formulario estándar
-              const formData = new FormData(e.currentTarget);
-              const email = formData.get('email') as string;
-              const password = formData.get('password') as string;
-              
-              await signIn('credentials', {
-                email,
-                password,
-                callbackUrl: '/resumen-asistencial'
-              });
-              // Este código normalmente no se ejecuta ya que signIn redirecciona
-              setMessage({ type: 'success', text: 'Redireccionando...' });
-            } catch (error) {
-              console.error('Error en inicio de sesión:', error);
-              setMessage({ type: 'error', text: 'Error inesperado' });
-            } finally {
-              setIsSubmitting(false);
-            }
-          }} className="space-y-4">
+          {/* This is a standard form that POSTs to the NextAuth endpoint */}
+          <form method="post" action="/api/auth/callback/credentials" className="space-y-4">
+            {/* The CSRF token is required for security */}
+            <input name="csrfToken" type="hidden" defaultValue={csrfToken} />
             <div>
               <input
                 name="email"
@@ -94,8 +67,6 @@ export function SignIn({ providers = ['google', 'credentials'], error }: SignInP
                 placeholder="Email"
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div>
@@ -109,7 +80,7 @@ export function SignIn({ providers = ['google', 'credentials'], error }: SignInP
             </div>
             {message && (
               <div
-                className={`p-3 rounded-md text-sm ${message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
+                className={`p-3 rounded-md text-sm bg-red-100 text-red-800`}
               >
                 {message.text}
               </div>
@@ -117,9 +88,9 @@ export function SignIn({ providers = ['google', 'credentials'], error }: SignInP
             <button
               type="submit"
               className="w-full bg-white text-black border border-gray-300 hover:bg-gray-100 px-4 py-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={isSubmitting}
+              disabled={!csrfToken} // Disable button until CSRF token is loaded
             >
-              {isSubmitting ? 'Iniciando sesión...' : 'Iniciar sesión'}
+              {!csrfToken ? 'Cargando...' : 'Iniciar sesión'}
             </button>
           </form>
           <div className="text-center text-sm flex flex-col items-center">

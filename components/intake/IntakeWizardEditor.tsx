@@ -3,14 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useForm, FormProvider, useWatch, Controller, useFormContext } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { IntakeData, intakeDataSchema } from "@/lib/validation/intakeDataSchema";
+import { intakeDataSchema, type IntakeFormValues } from '@/lib/validation/intakeDataSchema';
 import { z } from "zod";
 
 import { Input } from "@/components/ui/input";
 import Icd11Autocomplete from "./Icd11Autocomplete";
 import { Button } from "@/components/ui/button";
 import { Loader2, AlertTriangle } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useIntake } from "@/app/hooks/useIntake";
+import { useQueryClient } from "@tanstack/react-query";
 import { WizardLayout, type Step } from "@/components/ui/wizard-layout";
 import { useToast } from "@/components/providers/ToastProvider";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -41,7 +42,7 @@ interface IntakeWizardEditorProps {
 }
 
 // Helper to compute urgente client-side (same logic as backend)
-function computeUrgente(data: Partial<IntakeData>) {
+function computeUrgente(data: Partial<IntakeFormValues>) {
   return (
     (data.gravedadTerapeuta === "Grave" || data.gravedadTerapeuta === "Extrema") &&
     (data.apoyoSocial ?? 3) <= 2
@@ -50,175 +51,316 @@ function computeUrgente(data: Partial<IntakeData>) {
 
 // eslint-disable-next-line sonarjs/cognitive-complexity
 export default function IntakeWizardEditor({ patientId, onSaveSuccess }: IntakeWizardEditorProps) {
-  const [published, setPublished] = useState(false);
-  const [isCreatingInterview, setIsCreatingInterview] = useState(false);
-  const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const {
+    intakeData,
+    isLoading,
+    isUpdating,
+    error,
+    updateIntake,
+    createIntake,
+  } = useIntake(patientId);
 
-  // 1. Fetch existing draft/final
-  const { data: fetched, isLoading, error } = useQuery<{ data?: IntakeData } | IntakeData>({
-    queryKey: ["intake", patientId],
-    queryFn: async () => {
-      const res = await fetch(`/api/patients/${patientId}/evolutions/intake`, { cache: "no-store" });
-      if (res.status === 404) return null;
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error('Fetch error - Initial Data:', errorText);
-        throw new Error(`API Error: ${res.status} - ${errorText.substring(0,100)}`);
-      }
-      // Try to parse as JSON, but catch if it's not
-      const responseText = await res.text();
-      try {
-        const json = JSON.parse(responseText);
-        return json.data ?? json;
-      } catch (e) {
-        console.error('Failed to parse JSON response - Initial Data:', responseText);
-        throw new Error('Invalid JSON response from server.');
-      }
-    },
-  });
+  const [isPublishing, setIsPublishing] = useState(false);
+  const published = intakeData?.status === 'final';
 
-  // 2. Setup React Hook Form
-  const methods = useForm<IntakeData>({
-    resolver: zodResolver(intakeDataSchema as z.ZodType<any, any, any>),
-    mode: "onChange",
-    defaultValues: {
-      fechaEntrevista: new Date().toISOString().split('T')[0],
-      // Initialize other fields with their schema defaults or leave undefined
-      // to be explicitly set by fetched data or user input.
-      // Example: nombrePaciente: '', // if it should default to empty string
-    } as Partial<IntakeData>,
-  });
-
-  // When fetched data or loading state changes, reset form accordingly
-  useEffect(() => {
-    if (isLoading) return; // Wait for loading to complete
-
-    if (fetched && Object.keys(fetched).length > 0) {
-      // Existing data, API might return { data: IntakeData } or just IntakeData
-      const actualFetchedData = (fetched as any).data || fetched;
-      methods.reset({
-        ...actualFetchedData,
-        fechaEntrevista: actualFetchedData.fechaEntrevista || new Date().toISOString().split('T')[0],
-      });
-    } else {
-      // New intake or no data found, ensure fechaEntrevista is set to today
-      // and other fields are reset to their initial default state from schema or defaultValues
-      methods.reset({
-        ...(methods.formState.defaultValues || {}), // Resets to initial defaultValues
-        fechaEntrevista: new Date().toISOString().split('T')[0],
-      });
-    }
-    if (fetched && (fetched as any).published) {
-      setPublished(true);
-    }
-  }, [fetched, isLoading, methods]);
-
-  // 3. Autosave mutation
-  const saveMutation = useMutation({
-    mutationFn: async (values: IntakeData) => {
-      const method = fetched ? "PATCH" : "POST";
-      const body: any = { data: values };
-      const res = await fetch(`/api/patients/${patientId}/evolutions/intake`, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error('Fetch error - Autosave:', errorText);
-        throw new Error(`API Error during save: ${res.status} - ${errorText.substring(0,100)}`);
-      }
-      const responseText = await res.text();
-      try {
-        const json = JSON.parse(responseText);
-        return json;
-      } catch (e) {
-        console.error('Failed to parse JSON response - Autosave:', responseText);
-        throw new Error('Invalid JSON response from server during save.');
-      }
-    },
-    onSuccess: () => {
-      showToast("Cambios guardados", "success");
-      queryClient.invalidateQueries({ queryKey: ["intake", patientId] });
-      onSaveSuccess?.();
-    },
-    onError: (err: any) => {
-      showToast(err?.message || "Error al guardar", "error");
-    }
-  });
-
-  // Debounced autosave every 5s if form is dirty & valid
-  const values = useWatch({ control: methods.control });
-  const ayudaEsperadaWatch = useWatch({ control: methods.control, name: "ayudaEsperada" }) as string[] | undefined;
-  const isValid = methods.formState.isValid;
-  const isDirty = methods.formState.isDirty;
-  useEffect(() => {
-    if (!isDirty || !isValid) return;
-    const timeout = setTimeout(() => {
-      saveMutation.mutate({ ...(values as IntakeData), urgente: computeUrgente(values as IntakeData) });
-    }, 5000);
-    return () => clearTimeout(timeout);
-  }, [values, isValid, isDirty]);
-
-  // Publish mutation
-  // Helper to validate and publish with scroll-to-error
-  const handlePublish = async () => {
-    console.log('🚀 handlePublish called');
-    const isValidSubmission = await methods.trigger();
-    console.log('✅ Validation result:', isValidSubmission);
-    
-    if (!isValidSubmission) {
-      console.log('❌ Validation failed, errors:', methods.formState.errors);
-      const firstErrorKey = Object.keys(methods.formState.errors)[0] as keyof IntakeData | undefined;
-      if (firstErrorKey) {
-        const el = document.querySelector<HTMLElement>(`[name="${firstErrorKey}"]`);
-        if (el) {
-          el.scrollIntoView({ behavior: "smooth", block: "center" });
-          el.focus({ preventScroll: true });
-        }
-      }
-      return;
-    }
-    
-    console.log('📡 Calling publishMutation.mutate()');
-    publishMutation.mutate();
+  const defaultIntakeValues: IntakeFormValues = {
+    nombrePaciente: '',
+    edad: 0,
+    sexo: 'Masculino',
+    estadoCivil: '',
+    ocupacion: '',
+    motivoConsulta: '',
+    descripcionProblematica: '',
+    objetivosTerapia: '',
+    historiaClinica: '',
+    tratamientosPrevios: '',
+    historiaFamiliar: '',
+    malestarPaciente: 1,
+    gravedadTerapeuta: 'Ausencia',
+    gaf: 1,
+    apoyoSocial: 1,
+    diagnosticoPresuntivo: '',
+    conceptualizacionCaso: '',
+    tipoAyuda: [],
+    frecuenciaSesiones: 'Semanal',
+    modalidadTerapia: 'Individual',
+    posicionTerap: null,
+    observaciones: '',
+    // Inicializar fechaEntrevista con la fecha actual como Date
+    fechaEntrevista: new Date(),
+    grupoFamiliar: '',
+    conviveCon: '',
+    derivante: '',
+    presentacion: '',
+    diagnosticoTexto: '',
+    diagnosticoCodigo: '',
+    nivelPersonalidad: '',
+    etiologia: '',
+    atribucionPaciente: '',
+    ayudaEsperada: [],
+    ayudaOtros: '',
+    duracionTratPrevio: '',
+    medicacionPrev: '',
+    antecedentesSM: '',
+    biologicos: '',
+    estrategia: '',
+    urgente: false,
   };
 
-  const publishMutation = useMutation({
-    mutationFn: async () => {
-      const currentValues = methods.getValues();
-      const res = await fetch(`/api/patients/${patientId}/evolutions/intake`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ data: currentValues, publish: true }),
-      });
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error('Fetch error - Publish:', errorText);
-        throw new Error(`API Error during publish: ${res.status} - ${errorText.substring(0,100)}`);
-      }
-      const responseText = await res.text();
-      try {
-        const json = JSON.parse(responseText);
-        return json;
-      } catch (e) {
-        console.error('Failed to parse JSON response - Publish:', responseText);
-        throw new Error('Invalid JSON response from server during publish.');
-      }
-    },
-    onSuccess: () => {
-      showToast("Entrevista publicada", "success");
-      setPublished(true);
-      queryClient.invalidateQueries({ queryKey: ["intake", patientId] });
-      onSaveSuccess?.();
-    },
-    onError: (err: any) => {
-      showToast(err?.message || "Error al publicar", "error");
-    }
+  const methods = useForm<IntakeFormValues>({
+    resolver: zodResolver(intakeDataSchema),
+    mode: 'onChange',
+    defaultValues: defaultIntakeValues,
   });
 
-  // Stepper state
+  // Función para normalizar los valores de enums y selects
+  const normalizeEnumValues = (data: any): IntakeFormValues => {
+    const normalized = { ...data };
+
+    // Normalizar valores de enums - convertir strings vacíos a undefined o valor por defecto
+    // Sexo
+    if (normalized.sexo === '') {
+      normalized.sexo = defaultIntakeValues.sexo;
+    } else if (normalized.sexo && !['Masculino', 'Femenino', 'Otro'].includes(normalized.sexo)) {
+      normalized.sexo = defaultIntakeValues.sexo;
+    }
+
+    // Estado civil
+    if (normalized.estadoCivil === '') {
+      normalized.estadoCivil = undefined;
+    } else if (normalized.estadoCivil && !['Soltero/a', 'Casado/a', 'Concubinato estable'].includes(normalized.estadoCivil)) {
+      normalized.estadoCivil = undefined;
+    }
+
+    // Ocupación
+    if (normalized.ocupacion === '') {
+      normalized.ocupacion = undefined;
+    } else if (normalized.ocupacion && !['Estudiante', 'Trabajo dependiente', 'Trabajo independiente', 'Desempleado', 'Otra'].includes(normalized.ocupacion)) {
+      normalized.ocupacion = undefined;
+    }
+    
+    // Gravedad terapeuta
+    if (normalized.gravedadTerapeuta === '') {
+      normalized.gravedadTerapeuta = defaultIntakeValues.gravedadTerapeuta;
+    } else if (normalized.gravedadTerapeuta && !['Ausencia', 'Leve', 'Moderada', 'Grave', 'Extrema'].includes(normalized.gravedadTerapeuta)) {
+      normalized.gravedadTerapeuta = defaultIntakeValues.gravedadTerapeuta;
+    }
+
+    // Nivel personalidad
+    if (normalized.nivelPersonalidad === '') {
+      normalized.nivelPersonalidad = undefined;
+    } else if (normalized.nivelPersonalidad && !['Saludable', 'Neurótico', 'Borderline', 'Psicótico'].includes(normalized.nivelPersonalidad)) {
+      normalized.nivelPersonalidad = undefined;
+    }
+
+    // Frecuencia sesiones
+    if (normalized.frecuenciaSesiones === '') {
+      normalized.frecuenciaSesiones = defaultIntakeValues.frecuenciaSesiones;
+    } else if (normalized.frecuenciaSesiones && !['Semanal', 'Quincenal', 'Mensual'].includes(normalized.frecuenciaSesiones)) {
+      normalized.frecuenciaSesiones = defaultIntakeValues.frecuenciaSesiones;
+    }
+
+    // Modalidad terapia
+    if (normalized.modalidadTerapia === '') {
+      normalized.modalidadTerapia = defaultIntakeValues.modalidadTerapia;
+    } else if (normalized.modalidadTerapia && !['Individual', 'Pareja', 'Familiar'].includes(normalized.modalidadTerapia)) {
+      normalized.modalidadTerapia = defaultIntakeValues.modalidadTerapia;
+    }
+
+    // Derivación
+    if (normalized.derivacion === '') {
+      normalized.derivacion = undefined;
+    } else if (normalized.derivacion && !['Sin derivaciones', 'Psiquiatra', 'Asistente social', 'Psicopedagogo', 'Pediatra', 'Neuropediatra'].includes(normalized.derivacion)) {
+      normalized.derivacion = undefined;
+    }
+
+    // Asegurar que los valores numéricos sean realmente números
+    if (typeof normalized.edad === 'string') {
+      normalized.edad = parseInt(normalized.edad, 10) || defaultIntakeValues.edad;
+    }
+
+    if (typeof normalized.malestarPaciente === 'string') {
+      normalized.malestarPaciente = parseInt(normalized.malestarPaciente, 10) || defaultIntakeValues.malestarPaciente;
+    }
+
+    if (typeof normalized.gaf === 'string') {
+      normalized.gaf = parseInt(normalized.gaf, 10) || defaultIntakeValues.gaf;
+    }
+
+    if (typeof normalized.apoyoSocial === 'string') {
+      normalized.apoyoSocial = parseInt(normalized.apoyoSocial, 10) || defaultIntakeValues.apoyoSocial;
+    }
+
+    if (typeof normalized.posicionTerap === 'string' && normalized.posicionTerap.trim() === '') {
+      normalized.posicionTerap = null;
+    } else if (typeof normalized.posicionTerap === 'string') {
+      const parsed = parseInt(normalized.posicionTerap, 10);
+      normalized.posicionTerap = !isNaN(parsed) ? parsed : null;
+    }
+
+    // Asegurar que los arrays sean realmente arrays
+    if (!Array.isArray(normalized.tipoAyuda)) {
+      normalized.tipoAyuda = normalized.tipoAyuda ? [String(normalized.tipoAyuda)] : [];
+    }
+
+    if (!Array.isArray(normalized.ayudaEsperada)) {
+      normalized.ayudaEsperada = normalized.ayudaEsperada ? [String(normalized.ayudaEsperada)] : [];
+    }
+
+    return normalized as IntakeFormValues;
+  };
+
+  // Sync form with fetched data con normalización de valores
+  useEffect(() => {
+    // Si intakeData existe y methods está listo, actualizar el formulario
+    if (intakeData && methods) {
+      const mergedData = { ...defaultIntakeValues, ...intakeData.data };
+      
+      // Si fechaEntrevista existe y es un string, convertirlo a Date
+      if (mergedData.fechaEntrevista && typeof mergedData.fechaEntrevista === 'string') {
+        try {
+          const parsedDate = new Date(mergedData.fechaEntrevista);
+          if (!isNaN(parsedDate.getTime())) {
+            mergedData.fechaEntrevista = parsedDate;
+          } else {
+            // Si la fecha no es válida, usar la fecha actual
+            mergedData.fechaEntrevista = new Date();
+          }
+        } catch (e) {
+          // Si hay error al parsear, usar la fecha actual
+          mergedData.fechaEntrevista = new Date();
+        }
+      } else if (!mergedData.fechaEntrevista) {
+        // Si no hay fecha, usar la fecha actual
+        mergedData.fechaEntrevista = new Date();
+      }
+
+      // Normalizar los valores de enums y selects
+      const normalized = normalizeEnumValues(mergedData);
+      methods.reset(normalized);
+    }
+  }, [intakeData, methods]);
+
+  // Preparar los datos antes de enviarlos a la API - versión minimalista
+  const prepareDataForApi = (data: Partial<IntakeFormValues>): Partial<IntakeFormValues> => {
+    // Crear un objeto nuevo completamente limpio
+    const apiData: Partial<IntakeFormValues> = {};
+    
+    // Extraer solo los campos que sabemos que no dan problemas
+    // Datos personales
+    apiData.nombrePaciente = data.nombrePaciente || '';
+    apiData.edad = data.edad || 0;
+    apiData.sexo = data.sexo || 'Masculino';
+    apiData.estadoCivil = data.estadoCivil || '';
+    apiData.ocupacion = data.ocupacion || '';
+    
+    // Motivo de consulta
+    apiData.motivoConsulta = data.motivoConsulta || '';
+    apiData.descripcionProblematica = data.descripcionProblematica || '';
+    apiData.objetivosTerapia = data.objetivosTerapia || '';
+    
+    // Historia clínica
+    apiData.historiaClinica = data.historiaClinica || '';
+    apiData.tratamientosPrevios = data.tratamientosPrevios || '';
+    apiData.historiaFamiliar = data.historiaFamiliar || '';
+    
+    // Evaluación
+    apiData.malestarPaciente = data.malestarPaciente || 1;
+    apiData.gravedadTerapeuta = data.gravedadTerapeuta || 'Ausencia';
+    apiData.gaf = data.gaf || 1;
+    apiData.apoyoSocial = data.apoyoSocial || 1;
+    apiData.diagnosticoPresuntivo = data.diagnosticoPresuntivo || '';
+    apiData.conceptualizacionCaso = data.conceptualizacionCaso || '';
+    
+    // Plan
+    apiData.tipoAyuda = data.tipoAyuda || [];
+    apiData.frecuenciaSesiones = data.frecuenciaSesiones || 'Semanal';
+    apiData.modalidadTerapia = data.modalidadTerapia || 'Individual';
+    apiData.posicionTerap = data.posicionTerap === null ? null : (data.posicionTerap || 1);
+    apiData.observaciones = data.observaciones || '';
+    
+    // Siempre usar una fecha actual nueva
+    apiData.fechaEntrevista = new Date();
+    
+    // Campos adicionales
+    apiData.grupoFamiliar = data.grupoFamiliar || '';
+    apiData.conviveCon = data.conviveCon || '';
+    apiData.derivante = data.derivante || '';
+    apiData.presentacion = data.presentacion || '';
+    apiData.diagnosticoTexto = data.diagnosticoTexto || '';
+    apiData.diagnosticoCodigo = data.diagnosticoCodigo || '';
+    apiData.nivelPersonalidad = data.nivelPersonalidad || '';
+    apiData.etiologia = data.etiologia || '';
+    apiData.atribucionPaciente = data.atribucionPaciente || '';
+    apiData.ayudaEsperada = data.ayudaEsperada || [];
+    apiData.ayudaOtros = data.ayudaOtros || '';
+    apiData.duracionTratPrevio = data.duracionTratPrevio || '';
+    apiData.medicacionPrev = data.medicacionPrev || '';
+    apiData.antecedentesSM = data.antecedentesSM || '';
+    apiData.biologicos = data.biologicos || '';
+    apiData.estrategia = data.estrategia || '';
+    apiData.urgente = !!data.urgente;
+    
+    console.log('Datos preparados para API:', apiData);
+    return apiData;
+  };
+  
+  // Función auxiliar para verificar si un valor es una fecha válida
+  const isValidDate = (value: any): boolean => {
+    return value instanceof Date && !isNaN(value.getTime());
+  };
+
+  const handleSave = async (data: Partial<IntakeFormValues>, publish = false) => {
+    try {
+      // Preparar los datos antes de enviar a la API
+      const preparedData = prepareDataForApi(data);
+      
+      // Para debugging detallado
+      console.log('Datos antes de preparar:', JSON.stringify(data));
+      console.log('Datos a enviar a la API:', JSON.stringify(preparedData));
+      console.log('Tipo de fechaEntrevista:', preparedData.fechaEntrevista instanceof Date ? 'Date' : typeof preparedData.fechaEntrevista);
+      
+      // IMPORTANTE: La API espera la estructura { data: updateData, publish }
+      // Esto es manejado internamente por updateIntake, solo pasamos los datos preparados
+      await updateIntake({ updateData: preparedData, publish });
+      showToast(publish ? 'Entrevista publicada' : 'Cambios guardados', 'success');
+      if (publish && onSaveSuccess) onSaveSuccess();
+    } catch (e: any) {
+      console.error('Error al guardar:', e);
+      console.error('Datos que causaron el error:', JSON.stringify(data));
+      // Mostrar detalles específicos del error de validación si existen
+      if (e.response?.data?.details) {
+        console.error('Detalles de validación:', e.response.data.details);
+      }
+      showToast(e?.response?.data?.error || e.message || 'Error al guardar', 'error');
+    }
+  };
+
+  const handlePublish = async () => {
+    const isValid = await methods.trigger();
+    if (!isValid) {
+      showToast('Por favor, revisa los campos con errores.', 'error');
+      return;
+    }
+    setIsPublishing(true);
+    await handleSave(methods.getValues(), true);
+    setIsPublishing(false);
+  };
+
+  // Autosave logic
+  const watchedValues = useWatch({ control: methods.control });
+  useEffect(() => {
+    const { isDirty, isValid } = methods.formState;
+    if (isDirty && isValid && !isUpdating) {
+      const timer = setTimeout(() => {
+        handleSave(watchedValues);
+      }, 3000); // 3-second debounce
+      return () => clearTimeout(timer);
+    }
+  }, [watchedValues, methods.formState.isDirty, methods.formState.isValid, isUpdating]);
+
+  // Stepper state con persistencia mejorada
   const [step, setStep] = useState("datosPersonales");
   const stepOrder = [
     "datosPersonales",
@@ -228,6 +370,42 @@ export default function IntakeWizardEditor({ patientId, onSaveSuccess }: IntakeW
     "planTerapeutico",
   ];
   const currentStepIndex = stepOrder.indexOf(step);
+
+  // Mapeo de campos por pestaña para validación
+  const fieldsByStep: Record<string, Array<keyof IntakeFormValues>> = {
+    datosPersonales: ['nombrePaciente', 'edad', 'sexo', 'estadoCivil', 'ocupacion', 'grupoFamiliar', 'conviveCon'],
+    motivoDiagnostico: ['motivoConsulta', 'derivante', 'presentacion', 'diagnosticoTexto', 'diagnosticoCodigo', 'nivelPersonalidad', 'etiologia'],
+    evaluacionActual: ['malestarPaciente', 'gravedadTerapeuta', 'gaf', 'apoyoSocial', 'atribucionPaciente'],
+    antecedentes: ['medicacionPrev', 'antecedentesSM', 'biologicos'],
+    planTerapeutico: ['tipoAyuda', 'frecuenciaSesiones', 'modalidadTerapia', 'posicionTerap', 'estrategia', 'observaciones'],
+  };
+
+  // Gestor de cambio de paso con persistencia
+  const handleStepChange = async (newStep: string) => {
+    if (newStep === step) return; // No hacer nada si es la misma pestaña
+    
+    // Obtener y guardar los datos actuales antes de cambiar de pestaña
+    const currentData = methods.getValues();
+    
+    // Validar solo los campos de la pestaña actual para permitir navegación
+    // incluso si hay errores en otras pestañas
+    const fieldsToValidate = fieldsByStep[step] || [];
+    
+    const isStepValid = await methods.trigger(fieldsToValidate as any);
+    
+    if (!isStepValid) {
+      showToast('Por favor, corrija los errores en esta pestaña antes de continuar', 'error');
+      return;
+    }
+
+    // Guardar progreso actual al cambiar de pestaña
+    if (methods.formState.isDirty) {
+      await handleSave(currentData);
+    }
+    
+    // Cambiar de pestaña
+    setStep(newStep);
+  };
 
   const wizardSteps: Step[] = [
     { id: "datosPersonales", label: "Datos Personales", content: null }, 
@@ -240,7 +418,7 @@ export default function IntakeWizardEditor({ patientId, onSaveSuccess }: IntakeW
   // Check if this is an empty/new intake - only show empty state if no data from server
   // An intake is considered empty ONLY if the fetch returned null (404).
   // If an object is returned, even if it's just a skeleton, it's not empty for the editor's purpose.
-  const isEmpty = !fetched;
+  const isEmpty = !intakeData;
   
   if (isLoading) {
     return (
@@ -265,55 +443,19 @@ export default function IntakeWizardEditor({ patientId, onSaveSuccess }: IntakeW
           <p className="text-gray-600 dark:text-gray-400 mb-6">
             Para comenzar el seguimiento clínico, es necesario registrar la primera entrevista inicial del paciente.
           </p>
-          <Button 
+          <Button
             onClick={async () => {
-              console.log('🆕 Registrar primera entrevista clicked');
-              setIsCreatingInterview(true);
               try {
-                // Initialize with current date and minimal required data
-                const today = new Date().toISOString().split('T')[0];
-                const initialData = {
-                  fechaEntrevista: today,
-                  nombrePaciente: '',
-                  edad: 25,
-                  sexo: 'Masculino' as const,
-                  estadoCivil: 'Soltero/a',
-                  ocupacion: 'Estudiante',
-                  malestarPaciente: 1,
-                  gravedadTerapeuta: 'Ausencia' as const,
-                  gaf: 1,
-                  apoyoSocial: 1,
-                  posicionTerap: 1,
-                };
-                
-                // Save the initial data to server
-                console.log('📡 Saving initial data to server...');
-                const res = await fetch(`/api/patients/${patientId}/evolutions/intake`, {
-                  method: 'PATCH',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ data: initialData, publish: false }),
-                });
-                
-                if (res.ok) {
-                  console.log('✅ Initial data saved successfully');
-                  // Invalidate and refetch the query
-                  queryClient.invalidateQueries({ queryKey: ['intake', patientId] });
-                  // Reset form with the new data
-                  methods.reset(initialData);
-                  setStep("datosPersonales");
-                } else {
-                  console.error('❌ Failed to save initial data:', await res.text());
-                }
-              } catch (error) {
-                console.error('❌ Error creating interview:', error);
-              } finally {
-                setIsCreatingInterview(false);
+                await createIntake();
+                showToast("Entrevista creada. Ya puede cargar los datos.", "success");
+              } catch (e: any) {
+                showToast(e.message || "Error al crear la entrevista", "error");
               }
             }}
             className="bg-primary hover:bg-primary/90"
-            disabled={isCreatingInterview}
+            disabled={isUpdating}
           >
-            {isCreatingInterview ? <Loader2 className="animate-spin mr-2" /> : null}
+            {isUpdating ? <Loader2 className="animate-spin mr-2" /> : null}
             Registrar primera entrevista
           </Button>
         </div>
@@ -325,15 +467,49 @@ export default function IntakeWizardEditor({ patientId, onSaveSuccess }: IntakeW
     <FormProvider {...methods}>
       <form onSubmit={(e) => e.preventDefault()}>
         <fieldset disabled={published} className="space-y-4">
-        {/* Stepper indicator */}
-        <WizardLayout steps={wizardSteps} value={step} onValueChange={setStep} showList={true} />
+        {/* Stepper indicator con manejo de cambio mejorado para persistencia */}
+        <WizardLayout steps={wizardSteps} value={step} onValueChange={handleStepChange} showList={true} />
         {/* Step content */}
         {/* Urgencia banner */}
         <UrgenciaBanner />
 
         {step === "datosPersonales" && (
           <section className="grid sm:grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8 py-2">
-            <FormField name="fechaEntrevista" label="Fecha de la entrevista" type="date" readOnly />
+            <div className="flex flex-col">
+              <label className="text-sm font-medium mb-1" htmlFor="fechaEntrevista">Fecha de la entrevista</label>
+              {/* Campo de fecha con Controller para manejo adecuado */}
+              {/* Campo de fecha con Controller para mantener correctamente el valor como Date */}
+              <Controller
+                name="fechaEntrevista"
+                control={methods.control}
+                render={({ field }) => {
+                  // Asegurar que field.value sea una fecha válida
+                  let currentDate: Date;
+                  
+                  if (field.value instanceof Date && !isNaN(field.value.getTime())) {
+                    currentDate = field.value;
+                  } else {
+                    currentDate = new Date();
+                    // Actualizar el valor en el formulario
+                    field.onChange(currentDate);
+                  }
+                  
+                  // Formatear para mostrar en UI
+                  const formattedDate = currentDate.toISOString().split('T')[0];
+                  
+                  return (
+                    <Input
+                      id="fechaEntrevista"
+                      type="text"
+                      value={formattedDate}
+                      onChange={() => {}} // No permitir cambios directos
+                      readOnly
+                      className="w-full border-2 border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-gray-50 dark:bg-gray-700"
+                    />
+                  );
+                }}
+              />
+            </div>
             <FormField name="nombrePaciente" label="Nombre y apellido del paciente" />
             <FormField name="edad" label="Edad" asSelect required valueAsNumber={true} options={Array.from({ length: 121 }, (_, i) => ({ value: i, label: i.toString() }))} />
             <FormField name="sexo" label="Sexo" asSelect required options={['Masculino', 'Femenino', 'Otro']} />
@@ -439,7 +615,7 @@ export default function IntakeWizardEditor({ patientId, onSaveSuccess }: IntakeW
                 )}
               />
             </div>
-            {(ayudaEsperadaWatch ?? []).includes("Otras") && (
+            {(methods.watch('ayudaEsperada') ?? []).includes("Otras") && (
               <div className="md:col-span-2">
                 <FormField name="ayudaOtros" label="Otros (especificar)" asTextArea />
               </div>
@@ -501,12 +677,12 @@ export default function IntakeWizardEditor({ patientId, onSaveSuccess }: IntakeW
             </Button>
           )}
           {!published && currentStepIndex === stepOrder.length - 1 && (
-            <Button onClick={handlePublish} disabled={publishMutation.isPending} type="button">
-              {publishMutation.isPending ? <Loader2 className="animate-spin mr-2" /> : null}
+            <Button onClick={handlePublish} disabled={isPublishing} type="button">
+              {isPublishing ? <Loader2 className="animate-spin mr-2" /> : null}
               PUBLICAR
             </Button>
           )}
-          {saveMutation.isPending && <span className="text-sm text-muted-foreground">Guardando…</span>}
+          {isUpdating && !isPublishing && <span className="text-sm text-muted-foreground">Guardando…</span>}
         </div>
       </fieldset>
       </form>
@@ -515,24 +691,20 @@ export default function IntakeWizardEditor({ patientId, onSaveSuccess }: IntakeW
 }
 
 interface FormFieldProps {
-  name: keyof IntakeData;
+  name: keyof IntakeFormValues;
   label: string;
   type?: string;
   asTextArea?: boolean;
   asSelect?: boolean;
   required?: boolean;
   readOnly?: boolean;
-  /**
-   * Options for select fields. Can be provided as:
-   *  - array of primitives (string | number) → value & label derived automatically
-   *  - array of objects  { value, label }
-   */
   options?: Array<string | number | { value: string | number; label: string }>;
+  value?: string | number;
   valueAsNumber?: boolean;
 }
 
-function FormField({ name, label, type = "text", asTextArea, asSelect, required, readOnly, options, valueAsNumber }: FormFieldProps) {
-  const { register, formState, control } = useFormContext<IntakeData>();
+function FormField({ name, label, type = "text", asTextArea, asSelect, required, readOnly, options, value, valueAsNumber }: FormFieldProps) {
+  const { register, formState, control } = useFormContext<IntakeFormValues>();
   const error = formState.errors?.[name]?.message as string | undefined;
   const errorId = error ? `${String(name)}-error` : undefined;
 
@@ -610,7 +782,7 @@ function FormField({ name, label, type = "text", asTextArea, asSelect, required,
 }
 
 function UrgenciaBanner() {
-  const values = useWatch<IntakeData>();
+  const values = useWatch<IntakeFormValues>();
   const urgente = computeUrgente(values ?? {});
   if (!urgente) return null;
   return (
@@ -622,7 +794,7 @@ function UrgenciaBanner() {
 }
 
 function UrgenciaBadge() {
-  const values = useWatch<IntakeData>();
+  const values = useWatch<IntakeFormValues>();
   if (!values) return null;
   const urgente = computeUrgente(values);
   if (!urgente) return null; // Solo mostrar si es urgente

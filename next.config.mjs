@@ -12,20 +12,11 @@
 const nextConfig = {
   reactStrictMode: true,
   eslint: {
-    /**
-     * Allow production builds to complete even with ESLint errors.
-     * Local `npm run lint` will still surface problems for developers
-     * so issues can be fixed incrementally.
-     */
     ignoreDuringBuilds: true,
   },
   typescript: {
-    /**
-     * Skip type-checking errors during production builds.
-     * Remove once type errors across the repo are fixed.
-     */
     ignoreBuildErrors: true,
-  },
+  }
 };
 
 export default nextConfig;

@@ -1,13 +1,20 @@
 'use client';
 
-import { Fragment } from 'react';
+import { Fragment, useEffect } from 'react';
 import { Menu, Transition } from '@headlessui/react';
 import { UserCircleIcon } from '@heroicons/react/24/outline';
 import { useSession, signOut } from 'next-auth/react';
 import { usePathname } from 'next/navigation';
 
 export default function Header() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+
+  useEffect(() => {
+    console.log('[Header] Session status:', status);
+    if (status === 'authenticated') {
+      console.log('[Header] Session data:', JSON.stringify(session, null, 2));
+    }
+  }, [session, status]);
 
 
   const pathname = usePathname() || '';

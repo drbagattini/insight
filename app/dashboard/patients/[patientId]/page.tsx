@@ -2,12 +2,12 @@
 
 import { useParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Line } from 'react-chartjs-2';
-import { PatientResponsesSection } from '@/components/patients/PatientResponsesSection';
-import IntakeWizardSkeleton from '@/components/intake/IntakeWizardSkeleton';
-import IntakeWizardEditor from '@/components/intake/IntakeWizardEditor';
+import { PatientResponsesSection } from '@/components/patient/PatientResponsesSection';
+import { PatientIntakeTab } from '@/components/patient/PatientIntakeTab';
+
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -38,138 +38,8 @@ export default function PatientEvolutionPage() {
   const [error, setError] = useState<string | null>(null);
   const [patientName, setPatientName] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'evolution' | 'intake'>('intake');
-  
-  // Separate state variables for better control
-  const [intakeRowExists, setIntakeRowExists] = useState<boolean | null>(null);
-  const [intakeHasContent, setIntakeHasContent] = useState<boolean>(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [creating, setCreating] = useState(false);
 
-  const checkIntakeExists = useCallback(async () => {
-    if (!patientId) return;
-    console.log('Checking for intake interview...');
-    try {
-      const response = await fetch(`/api/patients/${patientId}/evolutions/intake`);
-      if (response.ok) {
-        try {
-          const intakeData = await response.json();
-          const actualData = intakeData.data || intakeData;
-          
-          // Row exists if we got a successful response
-          setIntakeRowExists(true);
-          
-          if (!actualData || Object.keys(actualData).length === 0) {
-            setIntakeHasContent(false);
-            return;
-          }
-          
-          // Check if the interview has meaningful content beyond defaults
-          const isDefaultInterview = actualData && 
-            (!actualData.motivoConsulta || actualData.motivoConsulta.trim() === '') &&
-            (!actualData.presentacion || actualData.presentacion.trim() === '') &&
-            (!actualData.diagnosticoTexto || actualData.diagnosticoTexto.trim() === '') &&
-            (!actualData.diagnosticoCodigo || actualData.diagnosticoCodigo.trim() === '') &&
-            (!actualData.estrategia || actualData.estrategia.trim() === '') &&
-            (!actualData.antecedentesSM || actualData.antecedentesSM.trim() === '') &&
-            (!actualData.biologicos || actualData.biologicos.trim() === '') &&
-            (!actualData.medicacionPrev || actualData.medicacionPrev.trim() === '') &&
-            (!actualData.grupoFamiliar || actualData.grupoFamiliar.trim() === '') &&
-            (!actualData.conviveCon || actualData.conviveCon.trim() === '') &&
-            (!actualData.ocupacion || actualData.ocupacion === 'Estudiante' || actualData.ocupacion.trim() === '') &&
-            (actualData.malestarPaciente === 1 || actualData.malestarPaciente === undefined) &&
-            (actualData.gaf === 1 || actualData.gaf === undefined) &&
-            (actualData.apoyoSocial === 1 || actualData.apoyoSocial === undefined);
-          
-          setIntakeHasContent(!isDefaultInterview);
-          
-        } catch (jsonErr) {
-          console.warn('Non-JSON response when checking intake.');
-          setIntakeRowExists(true); // Response was OK, so row exists
-          setIntakeHasContent(false);
-        }
-      } else {
-        if (response.status === 404) {
-          console.log('No intake interview found (404).');
-        } else {
-          const errorText = await response.text().catch(() => 'Could not read error response body');
-          console.error(`API error checking intake: ${response.status}`, errorText.substring(0, 200));
-        }
-        setIntakeRowExists(false);
-        setIntakeHasContent(false);
-      }
-    } catch (error) {
-      console.error('Error checking intake exists:', error);
-      setIntakeRowExists(false);
-      setIntakeHasContent(false);
-    }
-  }, [patientId]);
 
-  const handleCreateInterview = useCallback(async () => {
-    if (!patientId || creating) return;
-    
-    setCreating(true);
-    setError(null);
-    
-    try {
-      const defaultData = {
-        fechaEntrevista: new Date().toISOString().split('T')[0],
-        sexo: 'Femenino',
-        edad: 25,
-        estadoCivil: 'Soltero/a',
-        ocupacion: 'Estudiante',
-        motivoConsulta: '',
-        presentacion: '',
-        diagnosticoTexto: '',
-        diagnosticoCodigo: '',
-        estrategia: '',
-        antecedentesSM: '',
-        biologicos: '',
-        medicacionPrev: '',
-        grupoFamiliar: '',
-        conviveCon: '',
-        malestarPaciente: 1,
-        gaf: 1,
-        apoyoSocial: 1,
-        posicionTerap: 'Predominantemente interpretativa'
-      };
-
-      const response = await fetch(`/api/patients/${patientId}/evolutions/intake`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(defaultData)
-      });
-
-      if (response.ok) {
-        // Optimistic update: we know the row exists now, but content is minimal
-        setIntakeRowExists(true);
-        setIntakeHasContent(false);
-        setIsEditing(true);
-        
-        // Refresh the data to get the latest state
-        await checkIntakeExists();
-      } else {
-        const errorText = await response.text();
-        setError(`Error creating interview: ${errorText}`);
-        console.error('Error creating interview:', errorText);
-      }
-    } catch (error) {
-      console.error('Error creating interview:', error);
-      setError('Error creating interview. Please try again.');
-    } finally {
-      setCreating(false);
-    }
-  }, [patientId, creating, checkIntakeExists]);
-
-  const handleSaveSuccess = useCallback(() => {
-    setIsEditing(false);
-    checkIntakeExists();
-  }, [checkIntakeExists]);
-
-  useEffect(() => {
-    if (activeTab === 'intake' && patientId) {
-      checkIntakeExists();
-    }
-  }, [patientId, activeTab, checkIntakeExists]);
 
   // Tipado y estados para envíos programados
   interface ScheduledSend {
@@ -716,64 +586,8 @@ export default function PatientEvolutionPage() {
           </div>
         )}
         {activeTab === 'intake' && (
-          <div className="w-full">
-            {/* Header with buttons */}
-            <div className="flex justify-between items-center mb-4">
-              {intakeRowExists === null ? (
-                <Button size="sm" variant="outline" disabled>
-                  Cargando...
-                </Button>
-              ) : intakeRowExists && intakeHasContent ? (
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => setIsEditing(!isEditing)} data-testid="edit-interview-btn">
-                    {isEditing ? 'Cancelar y Ver' : 'Editar Entrevista'}
-                  </Button>
-                  {/* Optional: Allow creating a new interview even when one exists */}
-                  {!isEditing && (
-                    <Button size="sm" variant="secondary" onClick={handleCreateInterview} disabled={creating} data-testid="register-new-interview-btn">
-                      {creating ? 'Creando...' : 'Registrar Nueva Entrevista'}
-                    </Button>
-                  )}
-                </div>
-              ) : intakeRowExists && !intakeHasContent ? (
-                <Button size="sm" variant="default" onClick={() => setIsEditing(true)} data-testid="complete-interview-btn">
-                  Completar Entrevista
-                </Button>
-              ) : (
-                <div></div> // Empty div to maintain layout when no row exists
-              )}
-            </div>
-
-            {/* Main content: Editor, Skeleton, or Empty State */}
-            {isEditing ? (
-              <IntakeWizardEditor
-                patientId={patientId}
-                onSaveSuccess={handleSaveSuccess}
-                data-testid="intake-wizard-editor"
-              />
-            ) : intakeRowExists && intakeHasContent ? (
-              <IntakeWizardSkeleton patientId={patientId} data-testid="intake-wizard-skeleton" />
-            ) : intakeRowExists && !intakeHasContent ? (
-              <div className="text-center py-10 border-2 border-dashed border-gray-300 rounded-lg" data-testid="incomplete-interview-state">
-                <p className="text-gray-500">Entrevista creada pero incompleta</p>
-                <p className="text-sm text-gray-400 mt-2">Haz clic en "Completar Entrevista" para continuar</p>
-                {error && <p className="text-red-500 mt-2">{error}</p>}
-              </div>
-            ) : (
-              <div className="text-center py-10 border-2 border-dashed border-gray-300 rounded-lg" data-testid="empty-interview-state">
-                <p className="text-gray-500">No hay entrevista inicial registrada</p>
-                {error && <p className="text-red-500 mt-2">{error}</p>}
-                <Button
-                  className="mt-6"
-                  variant="default"
-                  onClick={handleCreateInterview}
-                  disabled={creating}
-                  data-testid="register-first-interview-btn"
-                >
-                  {creating ? 'Creando primera entrevista...' : 'Registrar primera entrevista'}
-                </Button>
-              </div>
-            )}
+          <div className="mt-6">
+            <PatientIntakeTab />
           </div>
         )}
       </div>

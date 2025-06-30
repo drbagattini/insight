@@ -8,14 +8,52 @@
 // https://on.cypress.io/custom-commands
 // ***********************************************
 
-// Custom command for login
-Cypress.Commands.add('login', (email = 'test@example.com', password = 'password123') => {
-  cy.visit('/auth/login')
-  cy.get('input[name="email"]').type(email)
-  cy.get('input[name="password"]').type(password)
-  cy.get('button[type="submit"]').click()
-  cy.url().should('include', '/dashboard')
-})
+// Custom command for login using cy.session for efficiency and robustness
+Cypress.Commands.add('login', (
+  email = Cypress.env('TEST_EMAIL'),
+  password = Cypress.env('TEST_PASSWORD')
+) => {
+  cy.session([email, password], () => {
+    cy.visit('/auth/login');
+
+    // Programmatic login is faster and more reliable than UI interaction.
+    // We get the CSRF token from the hidden input field NextAuth provides.
+    cy.get('input[name="csrfToken"]').invoke('val').then((csrfToken) => {
+      // Now we can make a direct API call to log in.
+      cy.request({
+        method: 'POST',
+        url: '/api/auth/callback/credentials',
+        failOnStatusCode: false, // We want to handle the 401 response manually
+        form: true, // mimics a form submission
+        body: {
+          email,
+          password,
+          csrfToken,
+          redirect: false, // We'll handle navigation ourselves
+        },
+      }).then((resp) => {
+        // If login fails, we'll get a 401. This assertion will fail the test
+        // and show a clear error message.
+        expect(resp.status, 'authentication failed').to.eq(200);
+        // A successful response body contains the URL to redirect to.
+        expect(resp.body.url).to.include('/resumen-asistencial');
+      });
+    });
+    
+    // After the request, we should have the session cookies set.
+    // Visit the dashboard to confirm we are logged in.
+    cy.visit('/resumen-asistencial');
+    cy.url().should('include', '/resumen-asistencial');
+
+  }, {
+    cacheAcrossSpecs: true,
+  });
+
+  // This part runs on every `cy.login()` call, after the session is 
+  // either created or restored from cache.
+  cy.visit('/resumen-asistencial');
+  cy.url().should('include', '/resumen-asistencial');
+});
 
 // Custom command to create a test patient
 Cypress.Commands.add('createTestPatient', (patientData = {}) => {

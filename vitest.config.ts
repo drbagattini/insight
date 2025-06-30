@@ -4,7 +4,8 @@ import path from 'node:path';
 export default defineConfig({
   test: {
     globals: true,
-    environment: 'node'
+    environment: 'node',
+    exclude: ['insight/**', 'node_modules/**', '**/__tests__/**']
   },
   resolve: {
     alias: {

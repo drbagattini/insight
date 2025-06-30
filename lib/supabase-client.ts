@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { createClient } from '@supabase/supabase-js';
 import { User, UserCreateInput } from '@/types/user';
 

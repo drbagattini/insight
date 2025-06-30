@@ -21,7 +21,7 @@ const navigation = [
 ];
 
 export default function Sidebar() {
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
 
   return (
     <div className="flex flex-col w-64 bg-white border-r">
@@ -30,7 +30,7 @@ export default function Sidebar() {
       </div>
       <nav className="flex-1 p-4 space-y-2">
         {navigation.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = pathname.startsWith(item.href);
           return (
             <Link
               key={item.name}

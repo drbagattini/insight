@@ -6,8 +6,8 @@ import { supabaseAdmin } from '@/app/lib/supabaseAdmin';
  * GET /api/questionnaires/[codigo]
  * Returns DB questionnaire row merged with static meta-data (if any).
  */
-export async function GET(request: NextRequest) {
-  const codigo = request.nextUrl.pathname.split('/').pop();
+export async function GET(request: NextRequest, { params }: { params: { codigo: string } }) {
+  const { codigo } = params;
 
   // Fetch questionnaire by codigo
   const { data, error, count } = await supabaseAdmin
