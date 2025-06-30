@@ -103,13 +103,11 @@ const IntakeForm: React.FC<IntakeFormProps> = ({ intakeData, onSaveSuccess, onCa
 
   // Auto-completar fecha de entrevista si no existe y sincronizar nombre del paciente
   const defaultValues: IntakeFormValues = useMemo(() => {
-    console.log('🔄 Computing defaultValues. Source intakeData.data:', intakeData.data);
     const merged = {
       ...completeDefaultValues,
       ...intakeData.data,
     } as IntakeFormValues;
-    console.log('✅ Merged defaultValues:', merged);
-    
+
     // If an interview date exists and is valid, convert it to a Date object. Otherwise, use the current date.
     const fechaEntrevista = intakeData.data?.fechaEntrevista;
     if (fechaEntrevista && dayjs(fechaEntrevista).isValid()) {
@@ -180,7 +178,7 @@ const IntakeForm: React.FC<IntakeFormProps> = ({ intakeData, onSaveSuccess, onCa
     if (!isFormReady) return; // Don't attach the watcher until the form is initialized
 
     const subscription = watch((watchedData) => {
-      console.log('🕵️‍♂️ Autosave triggered with data:', watchedData);
+  
       debouncedHandleSubmit();
     });
     return () => {
@@ -288,15 +286,9 @@ const IntakeForm: React.FC<IntakeFormProps> = ({ intakeData, onSaveSuccess, onCa
                 const selectOptions = Array.isArray(options) ? options : [];
                 const isObjectOptions = selectOptions.length > 0 && typeof selectOptions[0] === 'object' && selectOptions[0] !== null;
 
-                console.log(`🎨 Rendering Select for [${key}]:`, {
-                  value: field.value,
-                  defaultValue: field.value ? field.value.toString() : '',
-                  key: Array.isArray(field.value) ? field.value.join(',') : field.value
-                });
-
                 return (
                   <Select
-                    key={field.value}
+                    key={field.value instanceof Date ? field.value.toISOString() : (Array.isArray(field.value) ? field.value.join(',') : field.value)}
                     onValueChange={field.onChange}
                     defaultValue={field.value ? field.value.toString() : ''}
                   >
