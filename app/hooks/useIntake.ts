@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { z } from 'zod';
+import dayjs from 'dayjs';
 import { intakeDataSchema } from '@/lib/validation/intakeDataSchema';
 
 // --- CANONICAL DATA TYPES ---
@@ -54,11 +55,12 @@ const createIntake = async (patientId: string): Promise<IntakeRecord> => {
 };
 
 const updateIntake = async ({ patientId, updateData, publish = false }: { patientId: string; updateData: Partial<IntakeData>; publish?: boolean }) => {
-  // Safeguard: Ensure fechaEntrevista is not an invalid date before sending.
-  // The Zod schema on the frontend should catch this, but this is a final defense.
-  if (updateData.fechaEntrevista && !(new Date(updateData.fechaEntrevista).getTime())) {
-    console.warn('🛡️ [useIntake Safeguard] Se detectó una fecha de entrevista inválida. No se enviará para proteger los datos existentes.');
-    delete updateData.fechaEntrevista;
+  // Safeguard: Ensure fechaEntrevista is a valid Date object before sending.
+  if (updateData.fechaEntrevista) {
+    if (!dayjs(updateData.fechaEntrevista).isValid()) {
+      console.warn('🛡️ [useIntake Safeguard] Invalid interview date detected. It will not be sent to protect existing data.', updateData.fechaEntrevista);
+      delete updateData.fechaEntrevista;
+    }
   }
 
   const payload = { data: updateData, publish };

@@ -19,7 +19,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 // Scale labels for numeric fields
 const SCALE_LABELS = {
   malestar: { 1: "Muy bajo", 2: "Bajo", 3: "Medio", 4: "Alto", 5: "Muy alto" },
-  gaf: { 
+  funcionamientoGlobal: { 
     1: "Extremadamente deteriorado (1)",
     2: "Muy deteriorado (2)", 
     3: "Deteriorado severo (3)",
@@ -78,7 +78,7 @@ export default function IntakeWizardEditor({ patientId, onSaveSuccess }: IntakeW
     historiaFamiliar: '',
     malestarPaciente: 1,
     gravedadTerapeuta: 'Ausencia',
-    gaf: 1,
+    funcionamientoGlobal: 1,
     apoyoSocial: 1,
     diagnosticoPresuntivo: '',
     conceptualizacionCaso: '',
@@ -98,8 +98,8 @@ export default function IntakeWizardEditor({ patientId, onSaveSuccess }: IntakeW
     nivelPersonalidad: '',
     etiologia: '',
     atribucionPaciente: '',
-    ayudaEsperada: [],
-    ayudaOtros: '',
+    ayudaBuscada: [],
+    ayudaBuscadaOtro: '',
     duracionTratPrevio: '',
     medicacionPrev: '',
     antecedentesSM: '',
@@ -184,8 +184,8 @@ export default function IntakeWizardEditor({ patientId, onSaveSuccess }: IntakeW
       normalized.malestarPaciente = parseInt(normalized.malestarPaciente, 10) || defaultIntakeValues.malestarPaciente;
     }
 
-    if (typeof normalized.gaf === 'string') {
-      normalized.gaf = parseInt(normalized.gaf, 10) || defaultIntakeValues.gaf;
+    if (typeof normalized.funcionamientoGlobal === 'string') {
+      normalized.funcionamientoGlobal = parseInt(normalized.funcionamientoGlobal, 10) || defaultIntakeValues.funcionamientoGlobal;
     }
 
     if (typeof normalized.apoyoSocial === 'string') {
@@ -204,8 +204,8 @@ export default function IntakeWizardEditor({ patientId, onSaveSuccess }: IntakeW
       normalized.tipoAyuda = normalized.tipoAyuda ? [String(normalized.tipoAyuda)] : [];
     }
 
-    if (!Array.isArray(normalized.ayudaEsperada)) {
-      normalized.ayudaEsperada = normalized.ayudaEsperada ? [String(normalized.ayudaEsperada)] : [];
+    if (!Array.isArray(normalized.ayudaBuscada)) {
+      normalized.ayudaBuscada = normalized.ayudaBuscada ? [String(normalized.ayudaBuscada)] : [];
     }
 
     return normalized as IntakeFormValues;
@@ -243,7 +243,7 @@ export default function IntakeWizardEditor({ patientId, onSaveSuccess }: IntakeW
   }, [intakeData, methods]);
 
   // Preparar los datos antes de enviarlos a la API - versión minimalista
-  const prepareDataForApi = (data: Partial<IntakeFormValues>): Partial<IntakeFormValues> => {
+  const prepareDataForApi = (data: Record<string, any>): Partial<IntakeFormValues> => {
     // Crear un objeto nuevo completamente limpio
     const apiData: Partial<IntakeFormValues> = {};
     
@@ -268,7 +268,7 @@ export default function IntakeWizardEditor({ patientId, onSaveSuccess }: IntakeW
     // Evaluación
     apiData.malestarPaciente = data.malestarPaciente || 1;
     apiData.gravedadTerapeuta = data.gravedadTerapeuta || 'Ausencia';
-    apiData.gaf = data.gaf || 1;
+    apiData.funcionamientoGlobal = data.funcionamientoGlobal || 1;
     apiData.apoyoSocial = data.apoyoSocial || 1;
     apiData.diagnosticoPresuntivo = data.diagnosticoPresuntivo || '';
     apiData.conceptualizacionCaso = data.conceptualizacionCaso || '';
@@ -293,8 +293,8 @@ export default function IntakeWizardEditor({ patientId, onSaveSuccess }: IntakeW
     apiData.nivelPersonalidad = data.nivelPersonalidad || '';
     apiData.etiologia = data.etiologia || '';
     apiData.atribucionPaciente = data.atribucionPaciente || '';
-    apiData.ayudaEsperada = data.ayudaEsperada || [];
-    apiData.ayudaOtros = data.ayudaOtros || '';
+    apiData.ayudaBuscada = data.ayudaBuscada || [];
+    apiData.ayudaBuscadaOtro = data.ayudaBuscadaOtro || '';
     apiData.duracionTratPrevio = data.duracionTratPrevio || '';
     apiData.medicacionPrev = data.medicacionPrev || '';
     apiData.antecedentesSM = data.antecedentesSM || '';
@@ -375,7 +375,7 @@ export default function IntakeWizardEditor({ patientId, onSaveSuccess }: IntakeW
   const fieldsByStep: Record<string, Array<keyof IntakeFormValues>> = {
     datosPersonales: ['nombrePaciente', 'edad', 'sexo', 'estadoCivil', 'ocupacion', 'grupoFamiliar', 'conviveCon'],
     motivoDiagnostico: ['motivoConsulta', 'derivante', 'presentacion', 'diagnosticoTexto', 'diagnosticoCodigo', 'nivelPersonalidad', 'etiologia'],
-    evaluacionActual: ['malestarPaciente', 'gravedadTerapeuta', 'gaf', 'apoyoSocial', 'atribucionPaciente'],
+    evaluacionActual: ['malestarPaciente', 'gravedadTerapeuta', 'funcionamientoGlobal', 'apoyoSocial', 'atribucionPaciente'],
     antecedentes: ['medicacionPrev', 'antecedentesSM', 'biologicos'],
     planTerapeutico: ['tipoAyuda', 'frecuenciaSesiones', 'modalidadTerapia', 'posicionTerap', 'estrategia', 'observaciones'],
   };
@@ -575,11 +575,11 @@ export default function IntakeWizardEditor({ patientId, onSaveSuccess }: IntakeW
             />
             <FormField name="gravedadTerapeuta" label="Gravedad percibida por el terapeuta" asSelect options={["Ausencia", "Leve", "Moderada", "Grave", "Extrema"]} />
             <FormField 
-              name="gaf" 
+              name="funcionamientoGlobal" 
               label="Funcionamiento global del paciente" 
               asSelect 
               valueAsNumber={true} 
-              options={Object.entries(SCALE_LABELS.gaf).map(([value, label]) => ({
+              options={Object.entries(SCALE_LABELS.funcionamientoGlobal).map(([value, label]) => ({
                 value: parseInt(value), 
                 label: `${value} - ${label}`
               }))} 
@@ -598,7 +598,7 @@ export default function IntakeWizardEditor({ patientId, onSaveSuccess }: IntakeW
             <div className="md:col-span-2">
               <label className="text-sm font-medium mb-1">Tipo de Ayuda Esperada</label>
               <Controller
-                name="ayudaEsperada"
+                name="ayudaBuscada"
                 control={methods.control}
                 render={({ field }) => (
                   <ChipsMultiSelect
@@ -606,18 +606,18 @@ export default function IntakeWizardEditor({ patientId, onSaveSuccess }: IntakeW
                     value={field.value ?? []}
                     onChange={(selectedOptions) => {
                       field.onChange(selectedOptions);
-                      // Ensure 'ayudaOtros' is cleared if 'Otras' is not selected
+                      // Ensure 'ayudaBuscadaOtro' is cleared if 'Otras' is not selected
                       if (!selectedOptions.includes('Otras')) {
-                        methods.setValue('ayudaOtros', '', { shouldDirty: true });
+                        methods.setValue('ayudaBuscadaOtro', '', { shouldDirty: true });
                       }
                     }}
                   />
                 )}
               />
             </div>
-            {(methods.watch('ayudaEsperada') ?? []).includes("Otras") && (
+            {(methods.watch('ayudaBuscada') ?? []).includes("Otras") && (
               <div className="md:col-span-2">
-                <FormField name="ayudaOtros" label="Otros (especificar)" asTextArea />
+                <FormField name="ayudaBuscadaOtro" label="Otros (especificar)" asTextArea />
               </div>
             )}
           </section>

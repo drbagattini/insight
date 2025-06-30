@@ -4,6 +4,7 @@ import "./globals.css";
 import ReactQueryProvider from "./providers/ReactQueryProvider";
 import AuthProvider from '@/components/providers/AuthProvider';
 import ToastProvider from '@/components/providers/ToastProvider';
+import ClientLogBridge from '@/components/ClientLogBridge';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,6 +34,7 @@ export default function RootLayout({
         <ReactQueryProvider>
           <AuthProvider>
             <ToastProvider>
+              <ClientLogBridge />
               {children}
             </ToastProvider>
           </AuthProvider>

@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 import debounce from 'lodash.debounce';
+import dayjs from 'dayjs';
 
 const formatDateForInput = (date: Date | string | undefined): string => {
   if (!date) return '';
@@ -102,39 +103,26 @@ const IntakeForm: React.FC<IntakeFormProps> = ({ intakeData, onSaveSuccess, onCa
 
   // Auto-completar fecha de entrevista si no existe y sincronizar nombre del paciente
   const defaultValues: IntakeFormValues = useMemo(() => {
+    console.log('🔄 Computing defaultValues. Source intakeData.data:', intakeData.data);
     const merged = {
       ...completeDefaultValues,
       ...intakeData.data,
     } as IntakeFormValues;
+    console.log('✅ Merged defaultValues:', merged);
     
-    // Si no hay fecha en los datos, usar la fecha actual
-    if (!intakeData.data?.fechaEntrevista) {
-      merged.fechaEntrevista = new Date();
+    // If an interview date exists and is valid, convert it to a Date object. Otherwise, use the current date.
+    const fechaEntrevista = intakeData.data?.fechaEntrevista;
+    if (fechaEntrevista && dayjs(fechaEntrevista).isValid()) {
+      merged.fechaEntrevista = dayjs(fechaEntrevista).toDate();
     } else {
-      // Si hay fecha, asegurarse de que sea un objeto Date
-      try {
-        const fechaValue = intakeData.data.fechaEntrevista;
-        if (fechaValue instanceof Date) {
-          merged.fechaEntrevista = fechaValue;
-        } else {
-          merged.fechaEntrevista = new Date(String(fechaValue));
-          
-          // Si la conversión falla, usar la fecha actual
-          if (isNaN(merged.fechaEntrevista.getTime())) {
-            merged.fechaEntrevista = new Date();
-          }
-        }
-      } catch (e) {
-        console.error('Error al parsear fecha:', e);
-        merged.fechaEntrevista = new Date();
-      }
+      merged.fechaEntrevista = new Date();
     }
     
     // Siempre sincronizar el nombre del paciente con el valor más actualizado disponible
     // Prioridad: intakeData (si existe) -> patientName (del API) -> valor vacío
     merged.nombrePaciente = intakeData.data?.nombrePaciente || patientName || '';
 
-    console.log('🔵 [IntakeForm useMemo] defaultValues inicializados:', JSON.stringify(merged, null, 2));
+
 
     return merged;
   }, [intakeData.data, patientName]);
@@ -149,25 +137,14 @@ const IntakeForm: React.FC<IntakeFormProps> = ({ intakeData, onSaveSuccess, onCa
     },
   });
 
-  // Reset form when default values change (e.g., patient name loads)
   useEffect(() => {
-    if (intakeData) {
-      const formData = intakeData.data || {};
-      const initialValues = {
-        ...defaultValues,
-        ...formData,
-        fechaEntrevista: formatDateForInput(formData.fechaEntrevista),
-        nombrePaciente: patientName || formData.nombrePaciente,
-      };
-      reset(initialValues as unknown as IntakeFormValues);
-    } else {
-      reset({
-        ...defaultValues,
-        nombrePaciente: patientName,
-        fechaEntrevista: formatDateForInput(new Date()),
-      } as unknown as IntakeFormValues);
-    }
-  }, [intakeData, patientName, reset]);
+    // Reset the form whenever the calculated defaultValues change.
+    // This is crucial for populating the form with data loaded asynchronously,
+    // like the patient's name or existing intake data.
+    reset(defaultValues);
+    // Mark the form as ready to enable autosave.
+    setIsFormReady(true);
+  }, [defaultValues, reset]);
 
   const onValid = (data: IntakeFormValues) => {
     console.log('✅ [onValid] Datos validados por el formulario, procediendo a guardar:', JSON.stringify(data, null, 2));
@@ -202,7 +179,8 @@ const IntakeForm: React.FC<IntakeFormProps> = ({ intakeData, onSaveSuccess, onCa
   useEffect(() => {
     if (!isFormReady) return; // Don't attach the watcher until the form is initialized
 
-    const subscription = watch((value) => {
+    const subscription = watch((watchedData) => {
+      console.log('🕵️‍♂️ Autosave triggered with data:', watchedData);
       debouncedHandleSubmit();
     });
     return () => {
@@ -213,6 +191,7 @@ const IntakeForm: React.FC<IntakeFormProps> = ({ intakeData, onSaveSuccess, onCa
 
   // Finalize now sends data in the modern format with `publish: true`
   const onFinalize = async (formData: IntakeFormValues) => {
+    console.log('📝 [IntakeForm] onFinalize: Datos del formulario antes de enviar:', JSON.stringify(formData, null, 2));
     try {
       await updateIntake({ 
         updateData: formData, 
@@ -306,21 +285,20 @@ const IntakeForm: React.FC<IntakeFormProps> = ({ intakeData, onSaveSuccess, onCa
                   />
                 );
               case 'select':
-                let selectOptions: Array<any> = [];
-                
-                if (fieldKey === 'edad') {
-                  selectOptions = Array.from({ length: 91 }, (_, i) => i);
-                } else if (Array.isArray(options)) {
-                  selectOptions = options;
-                }
-                
-                const isObjectOptions = selectOptions.length > 0 && 
-                  typeof selectOptions[0] === 'object' && selectOptions[0] !== null;
-                
+                const selectOptions = Array.isArray(options) ? options : [];
+                const isObjectOptions = selectOptions.length > 0 && typeof selectOptions[0] === 'object' && selectOptions[0] !== null;
+
+                console.log(`🎨 Rendering Select for [${key}]:`, {
+                  value: field.value,
+                  defaultValue: field.value ? field.value.toString() : '',
+                  key: Array.isArray(field.value) ? field.value.join(',') : field.value
+                });
+
                 return (
-                  <Select 
-                    onValueChange={field.onChange} 
-                    value={field.value ? field.value.toString() : ''}
+                  <Select
+                    key={field.value}
+                    onValueChange={field.onChange}
+                    defaultValue={field.value ? field.value.toString() : ''}
                   >
                     <SelectTrigger><SelectValue placeholder={`Seleccione ${label.toLowerCase()}`} /></SelectTrigger>
                     <SelectContent className="z-[9999]">
@@ -361,7 +339,7 @@ const IntakeForm: React.FC<IntakeFormProps> = ({ intakeData, onSaveSuccess, onCa
                   </div>
                 );
               default:
-                return <Input {...field} value={field.value || ''} type="text" />;
+                return <Input {...field} value={String(field.value || '')} type="text" />;
             }
           }}
         />

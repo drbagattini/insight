@@ -7,7 +7,7 @@ export const intakeDataSchema = z.object({
   fechaEntrevista: z.coerce.date().optional(),
   nombrePaciente: z.string().optional(),
   edad: z.preprocess(preprocessOptionalField, z.coerce.number().min(0).max(90).optional()),
-  sexo: z.preprocess(preprocessOptionalField, z.enum(['Masculino', 'Femenino']).optional()),
+  sexo: z.preprocess(preprocessOptionalField, z.enum(['Masculino', 'Femenino', 'Otro']).optional()),
   estadoCivil: z.preprocess(preprocessOptionalField, z.enum(['Soltero/a', 'Casado/a', 'Concubinato estable']).optional()),
   ocupacion: z.preprocess(preprocessOptionalField, z.enum(['Estudiante', 'Trabajo dependiente', 'Trabajo independiente', 'Desempleado', 'Otra']).optional()),
   grupoFamiliar: z.string().optional(),
@@ -15,6 +15,7 @@ export const intakeDataSchema = z.object({
   derivante: z.preprocess(preprocessOptionalField, z.enum(['Psiquiatra', 'Pediatra', 'Familia', 'Asistente social', 'Consulta espontánea']).optional()),
   presentacion: z.string().optional(),
   diagnosticoTexto: z.string().optional(),
+  diagnosticoCodigo: z.string().optional(),
   nivelPersonalidad: z.preprocess(preprocessOptionalField, z.enum(['Saludable', 'Neurótico', 'Borderline', 'Psicótico']).optional()),
   etiologia: z.string().optional(),
   malestarPaciente: z.preprocess(preprocessOptionalField, z.coerce.number().optional()),
@@ -30,6 +31,22 @@ export const intakeDataSchema = z.object({
   estrategia: z.string().optional(),
   posicionTerap: z.preprocess(preprocessOptionalField, z.coerce.number().optional().nullable()),
   derivacion: z.preprocess(preprocessOptionalField, z.enum(['Sin derivaciones', 'Psiquiatra', 'Asistente social', 'Psicopedagogo', 'Pediatra', 'Neuropediatra']).optional()),
+
+  // Added missing fields
+  frecuenciaSesiones: z.string().optional(),
+  modalidadTerapia: z.string().optional(),
+  descripcionProblematica: z.string().optional(),
+  objetivosTerapia: z.string().optional(),
+  historiaClinica: z.string().optional(),
+  tratamientosPrevios: z.string().optional(),
+  historiaFamiliar: z.string().optional(),
+  diagnosticoPresuntivo: z.string().optional(),
+  conceptualizacionCaso: z.string().optional(),
+  tipoAyuda: z.string().optional(),
+  observaciones: z.string().optional(),
+  conviveCon: z.string().optional(),
+  duracionTratPrevio: z.string().optional(),
+  urgente: z.boolean().optional(),
 }).superRefine((data, ctx) => {
   if (data.ayudaBuscada?.includes('7') && (!data.ayudaBuscadaOtro || data.ayudaBuscadaOtro.trim() === '')) {
     ctx.addIssue({
