@@ -213,15 +213,7 @@ const IntakeForm: React.FC<IntakeFormProps> = ({ intakeData, onSaveSuccess, onCa
                 <h3 className="text-lg font-semibold mb-4">{step.name}</h3>
                 {intakeFieldsDefinition
                   .filter(field => field.step === step.id)
-                  .map(field => {
-                    if (field.key === 'ayudaBuscadaOtro') {
-                      const ayudaBuscada = watch('ayudaBuscada');
-                      if (!ayudaBuscada || !Array.isArray(ayudaBuscada) || !ayudaBuscada.includes('7')) {
-                        return null;
-                      }
-                    }
-                    return renderField(field);
-                  })}
+                  .map(field => renderField(field))}
               </Tab.Panel>
             ))}
           </Tab.Panels>

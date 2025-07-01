@@ -22,7 +22,7 @@ export const intakeFieldsDefinition = [
   // Step 3: Estado Actual
   { step: 3, key: 'malestarPaciente', label: 'Nivel de malestar percibido por el paciente', control: 'select', options: [{ value: '1', label: '1 - Sin malestar' }, { value: '2', label: '2 - Leve' }, { value: '3', label: '3 - Moderado' }, { value: '4', label: '4 - Severo' }, { value: '5', label: '5 - Extremo' }] },
   { step: 3, key: 'atribucionPaciente', label: '¿Cuáles son las causas de su malestar, según el paciente?', control: 'select', options: ['Psicológicas', 'Sociales', 'Familia', 'Trabajo', 'Biológicas', 'Otros'] },
-  { step: 3, key: 'ayudaEsperada', label: 'Tipo de ayuda buscada por el paciente', control: 'multiselect', options: [{ value: '1', label: 'Orientación y resolución práctica' }, { value: '2', label: 'Alivio sintomático' }, { value: '3', label: 'Apoyo emocional y contención' }, { value: '4', label: 'Entenderse a sí mismo' }, { value: '5', label: 'Cambio profundo en su personalidad' }, { value: '6', label: 'No sabe qué esperar' }, { value: '7', label: 'Otro (especificar)' }] },
+  { step: 3, key: 'ayudaBuscada', label: 'Tipo de ayuda buscada por el paciente', control: 'multiselect', options: [{ value: '1', label: 'Orientación y resolución práctica' }, { value: '2', label: 'Alivio sintomático' }, { value: '3', label: 'Apoyo emocional y contención' }, { value: '4', label: 'Entenderse a sí mismo' }, { value: '5', label: 'Cambio profundo en su personalidad' }, { value: '6', label: 'No sabe qué esperar' }] },
   { step: 3, key: 'gravedadTerapeuta', label: 'Gravedad percibida por el terapeuta', control: 'select', options: ['Ausencia', 'Leve', 'Moderada', 'Grave', 'Extrema'] },
   { step: 3, key: 'funcionamientoGlobal', label: 'Funcionamiento global del paciente', control: 'select', options: [{ value: '1', label: '1 - Funcionamiento superior (sin síntomas)' }, { value: '2', label: '2 - Síntomas mínimos, buen funcionamiento' }, { value: '3', label: '3 - Reacciones transitorias y esperables' }, { value: '4', label: '4 - Síntomas leves o dificultades leves' }, { value: '5', label: '5 - Síntomas moderados o dificultades moderadas' }, { value: '6', label: '6 - Síntomas graves o deterioro grave' }, { value: '7', label: '7 - Deterioro de la realidad o comunicación' }, { value: '8', label: '8 - Influencia de delirios/alucinaciones o deterioro muy grave' }, { value: '9', label: '9 - Peligro de autolesión o daño a otros' }, { value: '10', label: '10 - Peligro persistente de daño severo o acto suicida' }, { value: '11', label: '11 - Información insuficiente' }] },
   { step: 3, key: 'apoyoSocial', label: 'Apoyo social externo', control: 'select', options: [{ value: '1', label: '1 - Inexistente' }, { value: '2', label: '2 - Muy bajo' }, { value: '3', label: '3 - Moderado' }, { value: '4', label: '4 - Bueno' }, { value: '5', label: '5 - Óptimo' }] },
@@ -55,7 +55,6 @@ export const intakeSchema = z.object({
   etiologia: z.string().optional(),
   malestarPaciente: z.string().optional(),
   ayudaBuscada: z.array(z.string()).optional(),
-  ayudaBuscadaOtro: z.string().optional(),
   gravedadTerapeuta: z.enum(['Ausencia', 'Leve', 'Moderada', 'Grave', 'Extrema']).optional(),
   funcionamientoGlobal: z.string().optional(),
   apoyoSocial: z.string().optional(),
@@ -65,14 +64,6 @@ export const intakeSchema = z.object({
   estrategia: z.string().optional(),
   posicionTerap: z.string().optional(),
   derivacion: z.enum(['Sin derivaciones', 'Psiquiatra', 'Asistente social', 'Psicopedagogo', 'Pediatra', 'Neuropediatra']).optional(),
-}).superRefine((data, ctx) => {
-  if (data.ayudaBuscada?.includes('7') && (!data.ayudaBuscadaOtro || data.ayudaBuscadaOtro.trim() === '')) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['ayudaBuscadaOtro'],
-      message: 'Debe especificar la otra ayuda buscada.',
-    });
-  }
 });
 
 export type IntakeFormValues = z.infer<typeof intakeSchema>;
