@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { scoreWho5 } from '@/scoring/who5';
-import { scoreAnswers } from '@/scoring';
+import { scoreWho5 } from '@/src/scoring/who5';
+import { scoreAnswers } from '@/src/scoring';
 
 // -----------------------------------------------------------------------------
 // Unit tests for questionnaire scoring helpers

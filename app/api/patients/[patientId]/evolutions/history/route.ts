@@ -8,7 +8,11 @@ import { supabaseAdmin } from '@/app/lib/supabaseAdmin';
  * Devuelve todas las versiones (draft y final) de las evoluciones de un paciente.
  * Si no se pasa `tipo`, por defecto se filtra por 'intake'.
  */
-export async function GET(request: Request, { params: { patientId } }: { params: { patientId: string } }) {
+export async function GET(
+  request: Request,
+  context: { params: Promise<{ patientId: string }> }
+) {
+  const { patientId } = await context.params;
   
   const session = await getServerSession(authOptions);
 

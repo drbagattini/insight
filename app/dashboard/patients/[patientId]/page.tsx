@@ -4,8 +4,8 @@ import { useParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from 'react';
-import QuestionnaireChart from '@/components/QuestionnaireChart';
-import questionnairesMeta from '@/data/questionnaires-meta';
+import QuestionnaireChart from '@/src/components/QuestionnaireChart';
+import questionnairesMeta from '@/src/data/questionnairesMeta';
 import { PatientResponsesSection } from '@/components/patient/PatientResponsesSection';
 import { PatientDetails } from '@/components/patient/PatientDetails';
 import { PatientIntakeTab } from '@/components/patient/PatientIntakeTab';
@@ -20,6 +20,10 @@ export default function PatientEvolutionPage() {
   const [evolution, setEvolution] = useState<{ puntuacion: number; creado_en: string }[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [patientName, setPatientName] = useState<string>('');
+  
+  // Estado para el selector de cuestionario
+  const [selectedQuestionnaire, setSelectedQuestionnaire] = useState<'WHO-5' | 'OPD-CA2-SQ'>('WHO-5');
+  const [evolutionData, setEvolutionData] = useState<any[]>([]);
 
   // Tipado y estados para envíos programados
   interface ScheduledSend {
@@ -83,10 +87,11 @@ export default function PatientEvolutionPage() {
   useEffect(() => {
     async function loadEvolution() {
       try {
-        const res = await fetch(`/api/cuestionarios/resultados/paciente/${patientId}`);
+        const res = await fetch(`/api/cuestionarios/resultados/paciente/${patientId}?codigo=${selectedQuestionnaire}`);
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || 'Error al cargar evolución');
         setEvolution(json.data);
+        setEvolutionData(json.data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error desconocido');
       } finally {
@@ -94,7 +99,7 @@ export default function PatientEvolutionPage() {
       }
     }
     loadEvolution();
-  }, [patientId]);
+  }, [patientId, selectedQuestionnaire]);
 
   useEffect(() => {
     async function loadPatientName() {
@@ -343,7 +348,7 @@ export default function PatientEvolutionPage() {
 
   if (loading) return <div className="p-6">Cargando evolución...</div>;
 
-    const meta = questionnairesMeta['WHO-5'];
+    // Using WHO-5 as default questionnaire code
 
   return (
     <>
@@ -371,8 +376,35 @@ export default function PatientEvolutionPage() {
             <div className="mt-8">
               <PatientIntakeTab />
             </div>
-        <div className="bg-white p-6 rounded-lg shadow h-96">
-          <QuestionnaireChart data={evolution} meta={meta} />
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Evolución de Cuestionarios</h2>
+            <div className="flex items-center gap-2">
+              <label htmlFor="questionnaire-selector" className="text-sm font-medium text-gray-700">
+                Cuestionario:
+              </label>
+              <select
+                id="questionnaire-selector"
+                value={selectedQuestionnaire}
+                onChange={(e) => setSelectedQuestionnaire(e.target.value as 'WHO-5' | 'OPD-CA2-SQ')}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="WHO-5">{questionnairesMeta['WHO-5'].title}</option>
+                <option value="OPD-CA2-SQ">{questionnairesMeta['OPD-CA2-SQ'].title}</option>
+              </select>
+            </div>
+          </div>
+          {loading ? (
+            <p>Cargando evolución...</p>
+          ) : error ? (
+            <p className="text-red-500">Error: {error}</p>
+          ) : evolutionData.length === 0 ? (
+            <p>No hay datos de evolución disponibles para {questionnairesMeta[selectedQuestionnaire]?.title || selectedQuestionnaire}.</p>
+          ) : (
+            <div className="h-64">
+              <QuestionnaireChart data={evolutionData} codigo={selectedQuestionnaire} />
+            </div>
+          )}
         </div>
         {/* Patient Responses Section */}
         <div className="mb-8">

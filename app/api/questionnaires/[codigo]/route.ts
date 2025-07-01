@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import questionnairesMeta from '@/data/questionnaires-meta';
+import questionnairesMeta from '@/src/data/questionnairesMeta';
 import { supabaseAdmin } from '@/app/lib/supabaseAdmin';
 
 /**
@@ -8,9 +8,9 @@ import { supabaseAdmin } from '@/app/lib/supabaseAdmin';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { codigo: string } }
+  context: { params: Promise<{ codigo: string }> }
 ) {
-  const codigo = params.codigo ?? request.nextUrl.pathname.split('/').pop();
+  const { codigo } = await context.params;
 
   // Fetch questionnaire by codigo
   const { data, error, count } = await supabaseAdmin

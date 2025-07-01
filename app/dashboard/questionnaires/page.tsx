@@ -6,7 +6,7 @@ import Link from "next/link";
 import { FiSearch } from "react-icons/fi";
 import { FiFileText } from "react-icons/fi";
 import { QUERY_KEYS } from "@/lib/constants";
-import questionnairesMeta from "@/data/questionnaires-meta";
+import questionnairesMeta from "@/src/data/questionnairesMeta";
 
 interface QuestionnaireListItem {
   codigo: string;
@@ -150,10 +150,10 @@ export default function QuestionnairesPage() {
                 if (!meta) return null;
                 return (
                   <>
-                    {meta.items && (
+                    {'items' in meta && meta.items && (
                       <span>{meta.items.length} ítems</span>
                     )}
-                    {meta.tiempoMin && (
+                    {'tiempoMin' in meta && meta.tiempoMin && (
                       <span>{meta.tiempoMin} min</span>
                     )}
                   </>

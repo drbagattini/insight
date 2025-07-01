@@ -10,7 +10,11 @@ import { Loader2 } from 'lucide-react';
 
 export const PatientIntakeTab = () => {
   const params = useParams();
-  const patientId = params.patientId as string;
+  const patientId = params?.patientId as string;
+
+  if (!patientId) {
+    return <div>Error: Patient ID not found</div>;
+  }
 
   const { 
     intakeData,

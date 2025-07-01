@@ -6,9 +6,11 @@
 
 import { ScoreFn } from "@/types/questionnaire";
 import { scoreWho5 } from "./who5";
+import { scoreOpdCa2 } from "./opdCa2";
 
 export const scores: Record<string, ScoreFn> = {
   "WHO-5": scoreWho5,
+  "OPD-CA2-SQ": scoreOpdCa2,
 };
 
 /**

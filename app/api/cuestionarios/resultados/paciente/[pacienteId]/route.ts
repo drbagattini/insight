@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabaseAdmin';
+import { scoreAnswers } from '@/src/scoring';
 
 export async function GET(
   request: Request,
@@ -28,7 +29,7 @@ export async function GET(
   // 2) Obtener todas las respuestas del paciente
   const { data: respuestasData, error: respuestasError } = await supabaseAdmin
     .from('respuestas')
-    .select('puntuacion, creado_en')
+    .select('respuestas, puntuacion, creado_en')
     .eq('paciente_id', pacienteId)
     .eq('cuestionario_id', cuestionarioId)
     .order('creado_en', { ascending: true });
@@ -37,5 +38,26 @@ export async function GET(
     return NextResponse.json({ error: 'Error al obtener respuestas' }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true, data: respuestasData });
+  // 3) Procesar respuestas con scoring genérico
+  const processedData = respuestasData.map(respuesta => {
+    const baseData = {
+      puntuacion: respuesta.puntuacion,
+      creado_en: respuesta.creado_en
+    };
+
+    // Si tenemos respuestas individuales, calcular scores detallados
+    if (respuesta.respuestas && Array.isArray(respuesta.respuestas)) {
+      const scoreResult = scoreAnswers(codigoParam, respuesta.respuestas);
+      if (scoreResult) {
+        return {
+          ...baseData,
+          score_detallado: scoreResult
+        };
+      }
+    }
+
+    return baseData;
+  });
+
+  return NextResponse.json({ success: true, data: processedData });
 }

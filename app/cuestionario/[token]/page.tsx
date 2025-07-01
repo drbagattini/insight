@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { scores } from "@/scoring";
+import { Pagination } from '@/app/components/ui/pagination';
+import { scores } from "@/src/scoring";
 import { useRouter, useParams } from "next/navigation";
 
 type Pregunta = {
   id: number;
   texto: string;
+  orden?: number; // Para OPD-CA2-SQ que usa orden en lugar de id
+  opciones_respuesta?: any[]; // Para las opciones de respuesta
 };
 
 type Cuestionario = {
@@ -23,6 +26,19 @@ type LinkInfo = {
   cuestionario: Cuestionario;
   expirado: boolean;
 };
+
+const getColorForValue = (value: number) => {
+  const colors = [
+    '#ef4444', // 0 - red-500
+    '#f97316', // 1 - orange-500
+    '#eab308', // 2 - yellow-500
+    '#84cc16', // 3 - lime-500
+    '#22c55e', // 4 - green-500
+  ];
+  return colors[value];
+};
+
+
 
 export default function CuestionarioPage() {
   const router = useRouter();
@@ -63,23 +79,66 @@ export default function CuestionarioPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [linkInfo, setLinkInfo] = useState<LinkInfo | null>(null);
-  const [respuestas, setRespuestas] = useState<Record<number, number>>({});
+  const [respuestas, setRespuestas] = useState<{ [key: string | number]: number }>({});
+  
+  // Estado para paginación
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 10;
+
+  const handleRespuesta = (preguntaId: string, valor: number) => {
+    setRespuestas(prev => ({
+      ...prev,
+      [preguntaId]: valor
+    }));
+  }; // 8 preguntas por página para tener aproximadamente 10 páginas
   const [enviando, setEnviando] = useState(false);
   const [completado, setCompletado] = useState(false);
 
-  // Labels para el slider de respuestas (0-5)
-  const scaleLabels = [
-    "En ningún momento",
-    "Menos de la mitad del tiempo",
-    "Más de la mitad del tiempo",
-    "La mayor parte del tiempo",
-    "Casi todo el tiempo",
-    "Todo el tiempo",
-  ];
+  // Labels dinámicos basados en el tipo de cuestionario
+  const getScaleLabels = (codigo: string) => {
+    if (codigo === 'WHO-5') {
+      return [
+        "En ningún momento",
+        "Menos de la mitad del tiempo",
+        "Más de la mitad del tiempo",
+        "La mayor parte del tiempo",
+        "Casi todo el tiempo",
+        "Todo el tiempo",
+      ];
+    } else if (codigo === 'OPD-CA2-SQ') {
+      return [
+        "No se aplica",
+        "Raramente cierto",
+        "A veces cierto",
+        "A menudo cierto",
+        "Exactamente cierto"
+      ];
+    }
+    return [];
+  };
+  
+  const getMaxScale = (codigo: string) => {
+    return codigo === 'WHO-5' ? 5 : 4;
+  };
+  
+  const getScaleEndLabels = (codigo: string) => {
+    if (codigo === 'WHO-5') {
+      return { min: 'Nunca', max: 'Siempre' };
+    } else if (codigo === 'OPD-CA2-SQ') {
+      return { min: 'No se aplica', max: 'Exactamente cierto' };
+    }
+    return { min: '', max: '' };
+  };
+  
+  const scaleLabels = linkInfo ? getScaleLabels(linkInfo.cuestionario.id) : [];
+  const maxScale = linkInfo ? getMaxScale(linkInfo.cuestionario.id) : 5;
+  const scaleEndLabels = linkInfo ? getScaleEndLabels(linkInfo.cuestionario.id) : { min: '', max: '' };
 
   // Estado para feedback visual
   // Verifica si todas las preguntas fueron respondidas (no null ni undefined)
-  const allAnswered = linkInfo && Object.values(respuestas).every((v) => v !== undefined && v !== null);
+  const allAnswered = linkInfo && linkInfo.cuestionario.items.every(item => 
+    respuestas[item.id] !== undefined && respuestas[item.id] !== null
+  );
 
   // Cargar información del cuestionario
   useEffect(() => {
@@ -87,7 +146,7 @@ export default function CuestionarioPage() {
 
     async function cargarCuestionario() {
       try {
-        const res = await fetch(`/api/cuestionarios/verificar/${token}`);
+        const res = await fetch(`/api/cuestionarios/verificar/${token}`, { cache: 'no-store' });
         const data = await res.json();
 
         if (!res.ok) {
@@ -95,17 +154,62 @@ export default function CuestionarioPage() {
           return;
         }
 
-        setLinkInfo(data);
-        
         // Debug: verificar qué datos llegaron
         console.log('Datos del cuestionario recibidos:', data);
         console.log('Items del cuestionario:', data.cuestionario.items);
-        console.log('Cantidad de items:', data.cuestionario.items?.length);
+        console.log('Tipo de items:', typeof data.cuestionario.items);
         
-        // Inicializar respuestas
+        // Parsear items si vienen como string JSON
+        let items = data.cuestionario.items;
+        if (typeof items === 'string') {
+          try {
+            items = JSON.parse(items);
+          } catch (parseError) {
+            console.error('Error al parsear items:', parseError);
+            setError('Error al cargar las preguntas del cuestionario');
+            return;
+          }
+        }
+        
+        // Manejar diferentes estructuras de items
+        if (items && typeof items === 'object' && !Array.isArray(items)) {
+          // Si items es un objeto con propiedad 'items' (como OPD-CA2-SQ)
+          if (items.items && Array.isArray(items.items)) {
+            items = items.items;
+          } else {
+            console.error('Items no es un array ni tiene propiedad items:', items);
+            setError('Formato de cuestionario inválido');
+            return;
+          }
+        }
+        
+        // Verificar que items sea un array
+        if (!Array.isArray(items)) {
+          console.error('Items no es un array:', items);
+          setError('Formato de cuestionario inválido');
+          return;
+        }
+        
+        console.log('Items parseados:', items);
+        console.log('Cantidad de items:', items.length);
+        console.log('Primeros 5 items:', items.slice(0, 5));
+        console.log('Últimos 5 items:', items.slice(-5));
+        
+        // Actualizar el objeto data con items parseados
+        const updatedData = {
+          ...data,
+          cuestionario: {
+            ...data.cuestionario,
+            items: items
+          }
+        };
+        
+        setLinkInfo(updatedData);
+        
+        // Inicializar respuestas con valores undefined para forzar selección
         const respuestasIniciales: Record<number, number> = {};
-        data.cuestionario.items.forEach((item: Pregunta) => {
-          respuestasIniciales[item.id] = 0; // Valor por defecto
+        items.forEach((item: Pregunta) => {
+          // No inicializar con valor por defecto para forzar que el usuario seleccione
         });
         setRespuestas(respuestasIniciales);
       } catch (err) {
@@ -120,7 +224,7 @@ export default function CuestionarioPage() {
   }, [token]);
 
   // Manejar cambio en respuestas
-  const handleRespuestaChange = (preguntaId: number, valor: number) => {
+  const handleRespuestaChange = (preguntaId: string | number, valor: number) => {
     setRespuestas((prev) => ({
       ...prev,
       [preguntaId]: valor,
@@ -131,31 +235,35 @@ export default function CuestionarioPage() {
   const handleSubmit = async () => {
     if (!linkInfo) return;
 
+    // Permitimos respuestas parciales o con valor cero
+    // La antigua validación bloqueaba el envío si no se contestaban todas las preguntas
+    // Ahora convertimos directamente las respuestas disponibles para enviar
+
     setEnviando(true);
     try {
       // Convertir respuestas a formato esperado
-      const respuestasArray = Object.entries(respuestas).map(([id, valor]) => ({
-        pregunta_id: parseInt(id),
-        valor,
-      }));
+      const respuestasArray = Object.entries(respuestas).map(([id, valor]) => {
+        // Para OPD-CA2-SQ, el id puede ser el orden (número)
+        // Para WHO-5, el id es el id de la pregunta
+        const preguntaId = isNaN(Number(id)) ? id : parseInt(id);
+        return {
+          pregunta_id: preguntaId,
+          valor,
+        };
+      });
 
-      // Calcular puntuación utilizando el mapa de scoring genérico
-      const codigo = (linkInfo.cuestionario as any)?.codigo || "WHO-5";
-      const answersNumeric = Object.values(respuestas).map(Number);
-      const puntuacionTotal = scores[codigo]
-        ? scores[codigo](answersNumeric)
-        : null;
+      console.log('Enviando respuestas:', respuestasArray);
 
       const res = await fetch(`/api/cuestionarios/responder/${token}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           respuestas: respuestasArray,
-          // Ya no enviamos la puntuación; esta se calculará también en el backend.
         }),
       });
 
       const data = await res.json();
+      console.log('Respuesta del servidor:', data);
 
       if (!res.ok) {
         throw new Error(data.error || "Error al enviar respuestas");
@@ -237,111 +345,88 @@ export default function CuestionarioPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-2xl mx-auto px-4 py-8">
+      <div className="max-w-3xl mx-auto px-4 py-8">
         <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-          <h1 className="text-3xl font-bold mb-4 tracking-wide uppercase">CUESTIONARIO DE BIENESTAR</h1>
-          <p className="font-bold text-lg mb-6">{linkInfo.pacienteNombre}</p>
-          <p className="mb-6 text-gray-700 text-lg">
-            El cuestionario de bienestar de la OMS (WHO-5), es un instrumento de autoinforme que mide el bienestar mental. 
-            Por favor, indique para estas cinco afirmaciones cuál define mejor cómo se ha sentido usted durante las últimas dos semanas. 
-            Observe que cifras mayores significan mayor bienestar.
+          <h1 className="text-3xl font-bold text-gray-800">{linkInfo.cuestionario.titulo}</h1>
+          <p className="font-bold text-lg mt-4">{linkInfo.pacienteNombre}</p>
+          <p className="mt-2 mb-6 text-gray-700 text-lg">
+            {linkInfo.cuestionario.descripcion || 'Cuestionario de 81 ítems que evalúa cuatro dimensiones de capacidades psicodinámicas según el modelo OPD.'}
           </p>
+
         </div>
 
+        <div className="mb-6 flex justify-center">
+          <Pagination
+            currentPage={currentPage}
+            totalItems={linkInfo.cuestionario.items.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+          />
+        </div>
 
         <div className="space-y-6">
-          {linkInfo.cuestionario.items.map((pregunta, index) => {
-            const valor = respuestas[pregunta.id];
-            const thumbWidth = 24; // Reducido para mejor apariencia
-            const max = 5;
-            const fillWidth = valor === 0
-              ? '0px'
-              : `calc((${valor}/${max}) * 100%)`;
-            const sliderColor = [
-              '#EF4444', // 0 - rojo
-              '#F97316', // 1 - naranja
-              '#F59E0B', // 2 - ámbar
-              '#FACC15', // 3 - amarillo
-              '#10B981', // 4 - esmeralda
-              '#059669', // 5 - verde
-            ][valor];
+          {linkInfo.cuestionario.items
+            .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+            .map((pregunta, index) => {
+              const globalIndex = (currentPage - 1) * itemsPerPage + index;
+              const uniqueKey = String(pregunta.orden || pregunta.id || `item-${globalIndex}`);
+              const valor = respuestas[uniqueKey];
+              const opciones = pregunta.opciones_respuesta || [];
+              const max = opciones.length > 0 ? opciones.length - 1 : maxScale;
+              const fillPercentage = valor !== undefined ? (valor / max) * 100 : 0;
+              const trackColor = valor !== undefined ? getColorForValue(valor) : '#e5e7eb';
 
-            return (
-              <div key={pregunta.id} className="pregunta-card">
-                <p className="text-lg font-semibold text-gray-800">
-                  {index + 1}. {pregunta.texto}
-                </p>
-                
-                <div className="slider-container">
-                  <div className="flex justify-between mb-1">
-                    <span className="text-sm text-gray-600">Nunca</span>
-                    <span className="text-sm text-gray-600">Siempre</span>
-                  </div>
-                  
-                  <div className="relative w-full h-2 bg-gray-200 rounded-full">
-                    <div 
-                      className="absolute left-0 top-0 h-full rounded-full transition-all duration-300"
-                      style={{
-                        width: fillWidth,
-                        backgroundColor: sliderColor,
-                      }}
-                    />
+              return (
+                <div key={uniqueKey} className="bg-white p-6 rounded-lg shadow-sm">
+                  <p className="font-semibold text-gray-800 mb-4">{`${globalIndex + 1}. ${pregunta.texto}`}</p>
+                  <div className="relative pt-1">
                     <input
                       type="range"
-                      min={0}
-                      max={5}
-                      step={1}
-                      value={valor}
-                      onChange={(e) => handleRespuestaChange(pregunta.id, Number(e.target.value))}
-                      className="interactive-slider-input w-full h-2 appearance-none bg-transparent border-none relative z-10"
-                      aria-label={`Respuesta para: ${pregunta.texto}`}
+                      min="0"
+                      max={max}
+                      value={valor !== undefined ? valor : 0}
+                      onChange={(e) => handleRespuesta(uniqueKey, parseInt(e.target.value))}
+                      className="w-full h-2 bg-transparent rounded-lg appearance-none cursor-pointer"
+                      style={{
+                        background: `linear-gradient(to right, ${trackColor} 0%, ${trackColor} ${fillPercentage}%, #e5e7eb ${fillPercentage}%, #e5e7eb 100%)`
+                      }}
                     />
-                  </div>
-                  
-                  <div className="flex justify-between mt-1">
-                    {[0, 1, 2, 3, 4, 5].map((num) => (
-                      <span key={num} className="text-xs text-gray-500 w-6 text-center">
-                        {num}
-                      </span>
-                    ))}
+                    <div className="w-full flex justify-between text-xs text-gray-500 px-1 mt-2">
+                      {opciones.map((opt) => (
+                        <span key={opt.valor} className="font-bold">{opt.valor}</span>
+                      ))}
+                    </div>
+                    <p className="mt-4 text-center font-semibold text-lg h-8 flex items-center justify-center" style={{ color: valor !== undefined ? getColorForValue(valor) : '#6b7280' }}>
+                      {valor !== undefined
+                        ? opciones.find((o) => o.valor === valor)?.texto
+                        : <span className="text-gray-500 italic">Selecciona una opción</span>}
+                    </p>
                   </div>
                 </div>
-                
-                <p className="mt-3 text-center text-blue-600 font-medium">
-                  {scaleLabels[valor]}
-                </p>
-              </div>
-            );
-          })}
+              );
+            })}
         </div>
 
-        <div className="mt-8 bg-white p-6 rounded-lg shadow-md">
-          <div className="flex flex-col items-center">
-            <button
-              onClick={handleSubmit}
-              disabled={enviando || !allAnswered}
-              className="boton-enviar w-full max-w-xs"
-            >
-              {enviando ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></span>
-                  Enviando...
-                </span>
-              ) : (
-                "Enviar respuestas"
-              )}
-            </button>
-            
-            {!allAnswered && (
-              <p className="mt-3 text-sm text-red-500">
-                Por favor, responde todas las preguntas para continuar.
-              </p>
-            )}
-            
-            <p className="mt-4 text-sm text-gray-500 text-center">
-              Tus respuestas son confidenciales y solo serán vistas por tu profesional de salud.
-            </p>
-          </div>
+        <div className="mt-6 flex justify-center">
+          <Pagination
+            currentPage={currentPage}
+            totalItems={linkInfo.cuestionario.items.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+          />
+        </div>
+
+        <div className="mt-8">
+          <button
+            onClick={handleSubmit}
+            disabled={enviando}
+            className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
+          >
+            {enviando ? 'Enviando...' : 'Enviar respuestas'}
+          </button>
+          <p className="mt-4 text-sm text-gray-500 text-center">
+            Tus respuestas son confidenciales y solo serán vistas por tu profesional de salud.
+          </p>
         </div>
       </div>
     </div>

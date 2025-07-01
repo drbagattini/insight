@@ -6,11 +6,10 @@ import { supabaseAdmin } from "@/app/lib/supabaseAdmin";
 const respuestasSchema = z.object({
   respuestas: z.array(
     z.object({
-      pregunta_id: z.number(),
-      valor: z.number().min(0).max(5),
+      pregunta_id: z.union([z.number(), z.string()]), // Acepta number o string
+      valor: z.number().min(0).max(5), // Rango amplio para diferentes cuestionarios
     })
   ),
-
 });
 
 export async function POST(
@@ -67,7 +66,7 @@ export async function POST(
       .single();
 
     const codigo = cuestionarioRow?.codigo || "WHO-5";
-    const { scores } = await import("@/scoring");
+    const { scores } = await import("@/src/scoring");
     const puntuacion = scores[codigo] ? scores[codigo](answersNumeric) : null;
 
     // 5. Registrar las respuestas

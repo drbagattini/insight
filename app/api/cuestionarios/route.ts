@@ -18,14 +18,21 @@ export async function GET() {
 
   const { data, error } = await supabaseAdmin
     .from('cuestionarios')
-    .select('id, codigo, nombre:titulo') // Select titulo and alias as nombre to match frontend QuestionnaireType
+    .select('id, codigo, titulo') // Select titulo field directly
     .eq('activo', true)
     .order('titulo', { ascending: true });
+
+  // Transform data to match expected interface (nombre instead of titulo)
+  const transformedData = data?.map(item => ({
+    id: item.id,
+    codigo: item.codigo,
+    nombre: item.titulo // Map titulo to nombre
+  })) || [];
 
   if (error) {
     console.error('Error al listar cuestionarios:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(data);
+  return NextResponse.json(transformedData);
 }

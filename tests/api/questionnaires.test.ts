@@ -69,7 +69,7 @@ describe('Questionnaires API endpoints', () => {
     const body = await (res as Response).json();
 
     expect(body.codigo).toBe('WHO-5');
-    expect(body.meta?.nombre).toBeDefined();
-    expect(body.meta?.nombre).toBe('Índice de Bienestar WHO-5');
+    expect(body.meta?.title).toBeDefined();
+    expect(body.meta?.title).toBe('Índice de Bienestar WHO-5');
   });
 });

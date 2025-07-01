@@ -214,12 +214,13 @@ const IntakeForm: React.FC<IntakeFormProps> = ({ intakeData, onSaveSuccess, onCa
                 {intakeFieldsDefinition
                   .filter(field => field.step === step.id)
                   .map(field => {
-                    if (field.key === 'ayudaBuscadaOtro') {
-                      const ayudaBuscada = watch('ayudaBuscada');
-                      if (!ayudaBuscada || !Array.isArray(ayudaBuscada) || !ayudaBuscada.includes('7')) {
-                        return null;
-                      }
-                    }
+                    // TODO: Fix ayudaBuscadaOtro field definition
+                    // if (field.key === 'ayudaBuscadaOtro') {
+                    //   const ayudaBuscada = watch('ayudaBuscada');
+                    //   if (!ayudaBuscada || !Array.isArray(ayudaBuscada) || !ayudaBuscada.includes('7')) {
+                    //     return null;
+                    //   }
+                    // }
                     return renderField(field);
                   })}
               </Tab.Panel>

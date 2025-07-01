@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import questionnairesMeta from '@/data/questionnaires-meta';
+import questionnairesMeta from '@/src/data/questionnairesMeta';
 import { supabaseAdmin } from '@/app/lib/supabaseAdmin';
 
 /**
