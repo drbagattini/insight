@@ -5,7 +5,7 @@ export const intakeFieldsDefinition = [
   // Step 1: Datos Personales
   { step: 1, key: 'fechaEntrevista', label: 'Fecha de la entrevista', control: 'text', options: 'readonly, auto-now' },
   { step: 1, key: 'nombrePaciente', label: 'Nombre y apellido del paciente', control: 'text', options: 'readonly' },
-  { step: 1, key: 'edad', label: 'Edad', control: 'select', options: 'age-dropdown' },
+  { step: 1, key: 'edad', label: 'Edad', control: 'select', options: '0-90' },
   { step: 1, key: 'sexo', label: 'Sexo', control: 'select', options: ['Masculino', 'Femenino', 'Otro'] },
   { step: 1, key: 'estadoCivil', label: 'Estado civil', control: 'select', options: ['Soltero/a', 'Casado/a', 'Concubinato estable'] },
   { step: 1, key: 'ocupacion', label: 'Ocupación', control: 'select', options: ['Estudiante', 'Trabajo dependiente', 'Trabajo independiente', 'Desempleado', 'Otra'] },

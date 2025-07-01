@@ -68,6 +68,7 @@ const updateIntake = async ({ patientId, updateData, publish = false }: { patien
 
   try {
     const { data } = await axios.patch<IntakeRecord>(`/api/patients/${patientId}/intake`, payload, { withCredentials: true });
+    console.log('✅ [useIntake] Respuesta de la API PATCH:', data?.data);
     return data;
   } catch (error) {
     const axiosError = error as AxiosError;
@@ -75,6 +76,7 @@ const updateIntake = async ({ patientId, updateData, publish = false }: { patien
       console.log('No draft found, creating one before updating...');
       await createIntake(patientId);
       const { data } = await axios.patch<IntakeRecord>(`/api/patients/${patientId}/intake`, payload, { withCredentials: true });
+      console.log('✅ [useIntake] Respuesta de la API PATCH (draft creado):', data?.data);
       return data;
     }
     throw error;

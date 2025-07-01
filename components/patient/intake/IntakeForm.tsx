@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
+
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Tab } from '@headlessui/react';
 // Corrected imports to use the modern hook and its types
@@ -128,10 +129,13 @@ const IntakeForm: React.FC<IntakeFormProps> = ({ intakeData, onSaveSuccess, onCa
   const { control, handleSubmit, watch, reset, formState: { errors, isDirty } } = useForm<IntakeFormValues>({
     resolver: zodResolver(intakeSchema),
     defaultValues,
+    shouldUnregister: false, // Preserve values when fields unmount on tab change
     // Important: re-initialize form when `defaultValues` object instance changes
     // This ensures data loaded from server populates the form correctly.
     resetOptions: {
       keepDirtyValues: true,
+      keepValues: true,
+
     },
   });
 
@@ -152,6 +156,7 @@ const IntakeForm: React.FC<IntakeFormProps> = ({ intakeData, onSaveSuccess, onCa
   };
 
   const onInvalid = (validationErrors: any) => {
+  console.error('[onInvalid] errors', validationErrors);
     console.error('❌ [onInvalid] Errores de validación del formulario:', JSON.stringify(validationErrors, null, 2));
     const firstErrorField = Object.keys(validationErrors)[0];
     const fieldDef = intakeFieldsDefinition.find(f => f.key === firstErrorField);
@@ -168,6 +173,7 @@ const IntakeForm: React.FC<IntakeFormProps> = ({ intakeData, onSaveSuccess, onCa
   // It triggers validation and only calls onValid if the data is clean.
   const debouncedHandleSubmit = useCallback(
     debounce(() => {
+        console.log('[debouncedHandleSubmit] executing, isUpdating =', isUpdating);
       handleSubmit(onValid, onInvalid)();
     }, 1500), // 1.5 second debounce timer
     [handleSubmit, onValid, onInvalid]
@@ -178,6 +184,7 @@ const IntakeForm: React.FC<IntakeFormProps> = ({ intakeData, onSaveSuccess, onCa
     if (!isFormReady) return; // Don't attach the watcher until the form is initialized
 
     const subscription = watch((watchedData) => {
+      console.log('[watch] data', watchedData);
   
       debouncedHandleSubmit();
     });
@@ -204,7 +211,8 @@ const IntakeForm: React.FC<IntakeFormProps> = ({ intakeData, onSaveSuccess, onCa
 
   // Función para obtener el placeholder desde las opciones o generar uno por defecto
   const getPlaceholder = (fieldDef: (typeof intakeFieldsDefinition)[number]): string | undefined => {
-    const { label, options } = fieldDef;
+    const { label } = fieldDef;
+    const options = 'options' in fieldDef ? fieldDef.options : undefined;
     
     if (!options || typeof options !== 'string') return `Ingrese ${label.toLowerCase()}`;
     
@@ -218,7 +226,7 @@ const IntakeForm: React.FC<IntakeFormProps> = ({ intakeData, onSaveSuccess, onCa
   
   // Función para determinar el número de filas para un textarea
   const getRows = (fieldDef: (typeof intakeFieldsDefinition)[number]): number => {
-    const { options } = fieldDef;
+    const options = 'options' in fieldDef ? fieldDef.options : undefined;
     
     if (!options || typeof options !== 'string') return 4;
     
@@ -231,32 +239,34 @@ const IntakeForm: React.FC<IntakeFormProps> = ({ intakeData, onSaveSuccess, onCa
   };
 
   const renderField = (fieldDef: (typeof intakeFieldsDefinition)[number]) => {
-    const { key, label, control: fieldControl, options } = fieldDef;
-    // Convertir la key tipada a string para facilitar las comparaciones
+    const { key, label, control: fieldControl } = fieldDef;
+    const options = 'options' in fieldDef ? fieldDef.options : undefined;
     const fieldKey = key as string;
 
-    // Verificar si el campo debe ser de solo lectura
-    const isReadOnly = typeof options === 'string' && 
+    const isReadOnly =
+      typeof options === 'string' &&
       (options.includes('readonly') || options.includes('auto-now'));
-    
-    // Obtener placeholder y filas para textareas
+
     const placeholder = getPlaceholder(fieldDef);
     const rows = getRows(fieldDef);
 
     return (
       <div key={fieldKey} className="mb-4">
-        <label htmlFor={fieldKey} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+        <label htmlFor={fieldKey} className="block text-sm font-medium text-gray-700 mb-1">
+          {label}
+        </label>
+
         <Controller
           name={fieldKey as keyof IntakeFormValues}
           control={control}
           render={({ field }) => {
             switch (fieldControl) {
               case 'text':
-                // Si es fechaEntrevista, manejar como fecha
                 if (fieldKey === 'fechaEntrevista') {
                   return (
                     <div className="px-3 py-2 text-sm bg-gray-100 border rounded-md">
-                      {formatDateForInput(field.value as Date | string | undefined) || new Date().toLocaleDateString('es-AR')}
+                      {formatDateForInput(field.value as Date | string | undefined) ||
+                        new Date().toLocaleDateString('es-AR')}
                     </div>
                   );
                 }
@@ -266,10 +276,13 @@ const IntakeForm: React.FC<IntakeFormProps> = ({ intakeData, onSaveSuccess, onCa
                     id={fieldKey}
                     type="text"
                     readOnly={isReadOnly}
-                    className={`${errors[fieldKey as keyof typeof errors] ? 'border-red-500' : ''} ${isReadOnly ? 'bg-gray-100' : ''}`}
-                    value={String(field.value || '')}
+                    className={`${errors[fieldKey as keyof typeof errors] ? 'border-red-500' : ''} ${
+                      isReadOnly ? 'bg-gray-100' : ''
+                    }`}
+                    value={String(field.value ?? '')}
                   />
                 );
+
               case 'textarea':
                 return (
                   <Textarea
@@ -278,67 +291,113 @@ const IntakeForm: React.FC<IntakeFormProps> = ({ intakeData, onSaveSuccess, onCa
                     rows={rows}
                     readOnly={isReadOnly}
                     placeholder={placeholder}
-                    className={`${errors[fieldKey as keyof typeof errors] ? 'border-red-500' : ''} ${isReadOnly ? 'bg-gray-100' : ''}`}
-                    value={String(field.value || '')}
+                    className={`${errors[fieldKey as keyof typeof errors] ? 'border-red-500' : ''} ${
+                      isReadOnly ? 'bg-gray-100' : ''
+                    }`}
+                    value={String(field.value ?? '')}
                   />
                 );
-              case 'select':
-                const selectOptions = Array.isArray(options) ? options : [];
-                const isObjectOptions = selectOptions.length > 0 && typeof selectOptions[0] === 'object' && selectOptions[0] !== null;
+
+              case 'select': {
+                let selectOptions: (string | number | { value: string; label: string })[] = [];
+
+                if (Array.isArray(options)) {
+                  selectOptions = options;
+                } else if (typeof options === 'string' && /^\d+-\d+/.test(options)) {
+                  const [startStr, endStr] = options.split(' ')[0].split('-');
+                  const start = parseInt(startStr, 10);
+                  const end = parseInt(endStr, 10);
+                  if (!isNaN(start) && !isNaN(end)) {
+                    selectOptions = Array.from({ length: end - start + 1 }, (_, i) => start + i);
+                  }
+                }
+
+                const isObjectOptions =
+                  selectOptions.length > 0 &&
+                  typeof selectOptions[0] === 'object' &&
+                  selectOptions[0] !== null;
 
                 return (
                   <Select
-                    key={field.value instanceof Date ? field.value.toISOString() : (Array.isArray(field.value) ? field.value.join(',') : field.value)}
-                    onValueChange={field.onChange}
-                    defaultValue={field.value ? field.value.toString() : ''}
+                    key={fieldKey}
+                    defaultValue={
+                      field.value !== undefined && field.value !== null
+                        ? field.value.toString()
+                        : ''
+                    }
+                    onValueChange={(value) => {
+                      if (key === 'edad') {
+                        const numValue = parseInt(value, 10);
+                        field.onChange(isNaN(numValue) ? undefined : numValue);
+                      } else {
+                        field.onChange(value);
+                      }
+                    }}
                   >
-                    <SelectTrigger><SelectValue placeholder={`Seleccione ${label.toLowerCase()}`} /></SelectTrigger>
+                    <SelectTrigger ref={field.ref} onBlur={field.onBlur}>
+                      <SelectValue placeholder={`Seleccione ${label.toLowerCase()}`} />
+                    </SelectTrigger>
                     <SelectContent className="z-[9999]">
-                      {selectOptions.map((opt: any) => {
-                        const value = isObjectOptions ? opt.value : opt;
-                        const displayLabel = isObjectOptions ? opt.label : (key === 'edad' ? `${opt} años` : opt);
-                        return (
-                          <SelectItem key={value} value={value.toString()}>
-                            {displayLabel}
-                          </SelectItem>
-                        );
-                      })}
+                      {isObjectOptions
+                        ? (selectOptions as { value: string; label: string }[]).map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value.toString()}>
+                              {opt.label}
+                            </SelectItem>
+                          ))
+                        : (selectOptions as (string | number)[]).map((opt) => (
+                            <SelectItem key={opt.toString()} value={opt.toString()}>
+                              {key === 'edad' ? `${opt} años` : opt}
+                            </SelectItem>
+                          ))}
                     </SelectContent>
                   </Select>
                 );
-              case 'multiselect':
+              }
+
+              case 'multiselect': {
                 const multiSelectOptions = Array.isArray(options) ? options : [];
                 return (
                   <div className="space-y-2 rounded-md border p-4">
-                    {(multiSelectOptions as {value: string, label: string}[]).map(opt => (
+                    {(multiSelectOptions as { value: string; label: string }[]).map((opt) => (
                       <div key={opt.value} className="flex items-center space-x-2">
                         <Checkbox
-                          id={`${key}-${opt.value}`}
+                          id={`${fieldKey}-${opt.value}`}
                           checked={(Array.isArray(field.value) ? field.value : []).includes(opt.value)}
-                          onCheckedChange={checked => {
-                            const currentValues = (Array.isArray(field.value) ? field.value : []);
+                          onCheckedChange={(checked) => {
+                            const currentValues = Array.isArray(field.value) ? field.value : [];
                             const newValues = checked
                               ? [...currentValues, opt.value]
-                              : currentValues.filter((v: string) => v !== opt.value);
+                              : currentValues.filter((v) => v !== opt.value);
                             field.onChange(newValues);
                           }}
                         />
-                        <label htmlFor={`${key}-${opt.value}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        <label
+                          htmlFor={`${fieldKey}-${opt.value}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
                           {opt.label}
                         </label>
                       </div>
                     ))}
                   </div>
                 );
+              }
+
               default:
-                return <Input {...field} value={String(field.value || '')} type="text" />;
+                return <Input {...field} value={String(field.value ?? '')} type="text" />;
             }
           }}
         />
-        {errors[key] && <p className="text-red-500 text-xs mt-1">{errors[key]?.message}</p>}
+
+        {errors[fieldKey as keyof typeof errors] && (
+          <p className="text-red-500 text-xs mt-1">
+            {errors[fieldKey as keyof typeof errors]?.message as string}
+          </p>
+        )}
       </div>
     );
   };
+
 
   return (
     <div className="w-full mx-auto p-4 bg-white rounded-lg shadow-md mt-4">
