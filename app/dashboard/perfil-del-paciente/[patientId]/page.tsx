@@ -3,40 +3,22 @@
 import { useParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState, useEffect } from 'react';
-import { Line } from 'react-chartjs-2';
-import { Tab } from '@headlessui/react';
+import { useState, useEffect, Fragment } from 'react';
+import { Tab, Listbox, Transition } from '@headlessui/react';
+import { CheckIcon, ChevronUpDownIcon } from '@heroicons/react/20/solid';
 import { PatientResponsesSection } from '@/components/patient/PatientResponsesSection';
 import { PatientIntakeTab } from '@/components/patient/PatientIntakeTab';
 import { PatientDetails } from '@/components/patient/PatientDetails';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-} from 'chart.js';
-
-// Registrar componentes de Chart.js
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
+import QuestionnaireChart from '@/src/components/QuestionnaireChart';
+import questionnairesMeta from '@/src/data/questionnairesMeta';
 
 export default function PatientProfilePage() {
   const params = useParams() as { patientId: string };
   const patientId = params.patientId;
   const [loading, setLoading] = useState(true);
-  const [evolution, setEvolution] = useState<{ puntuacion: number; creado_en: string }[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [selectedQuestionnaire, setSelectedQuestionnaire] = useState<'WHO-5' | 'OPD-CA2-SQ'>('WHO-5');
+  const [evolutionData, setEvolutionData] = useState<any[]>([]);
   const [patientName, setPatientName] = useState<string>('');
 
   // Tipado y estados para envíos programados
@@ -101,11 +83,12 @@ export default function PatientProfilePage() {
 
   useEffect(() => {
     async function loadEvolution() {
+      setLoading(true);
       try {
-        const res = await fetch(`/api/cuestionarios/resultados/paciente/${patientId}`);
+        const res = await fetch(`/api/cuestionarios/resultados/paciente/${patientId}?codigo=${selectedQuestionnaire}`);
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || 'Error al cargar evolución');
-        setEvolution(json.data);
+        setEvolutionData(json.data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error desconocido');
       } finally {
@@ -113,7 +96,7 @@ export default function PatientProfilePage() {
       }
     }
     loadEvolution();
-  }, [patientId]);
+  }, [patientId, selectedQuestionnaire]);
 
   useEffect(() => {
     async function loadPatientName() {
@@ -371,44 +354,7 @@ export default function PatientProfilePage() {
     return date.toISOString();
   }
 
-  if (loading) return <div className="p-6">Cargando evolución...</div>;
 
-  const labels = evolution.map(e => new Date(e.creado_en).toLocaleDateString());
-  const chartData = {
-    labels,
-    datasets: [
-      {
-        label: 'Puntuación WHO-5',
-        data: evolution.map(e => e.puntuacion),
-        borderColor: 'rgb(59, 130, 246)',
-        backgroundColor: 'rgba(59, 130, 246, 0.5)',
-      },
-      {
-        label: '', // Oculta leyenda
-        data: labels.map(() => 13),
-        borderColor: 'red',
-        borderWidth: 1,
-        borderDash: [5,5],
-        pointRadius: 0,
-        fill: false,
-        borderCapStyle: 'butt' as 'butt',
-        borderJoinStyle: 'miter' as 'miter',
-        order: 0,
-      },
-    ],
-  };
-
-  const options = {
-    maintainAspectRatio: false,
-    scales: { y: { beginAtZero: true, max: 100 } },
-    plugins: {
-      legend: {
-        labels: {
-          filter: (item: any) => item.text !== '', // Oculta leyenda vacía
-        },
-      },
-    },
-  };
 
   return (
     <>
@@ -455,11 +401,68 @@ export default function PatientProfilePage() {
               </div>
             </Tab.Panel>
             <Tab.Panel className="rounded-xl bg-white p-3 min-h-[600px] overflow-y-auto ring-white ring-opacity-60 ring-offset-2 ring-offset-blue-400 focus:outline-none focus:ring-2">
-              {/* Cuestionarios Psicométricos Content */}
-              <div className="bg-white p-6 rounded-lg shadow h-96 mb-6">
-                <Line data={chartData} options={options} />
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Evolución Psicométrica</h3>
+                <div className="mb-4 w-fit">
+                  <Listbox value={selectedQuestionnaire} onChange={setSelectedQuestionnaire}>
+                    <div className="relative">
+                      <Listbox.Button className="relative w-full cursor-default rounded-lg bg-white py-2 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-blue-300 sm:text-sm">
+                        <span className="block truncate">{questionnairesMeta[selectedQuestionnaire].title}</span>
+                        <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                          <ChevronUpDownIcon
+                            className="h-5 w-5 text-gray-400"
+                            aria-hidden="true"
+                          />
+                        </span>
+                      </Listbox.Button>
+                      <Transition
+                        as={Fragment}
+                        leave="transition ease-in duration-100"
+                        leaveFrom="opacity-100"
+                        leaveTo="opacity-0"
+                      >
+                        <Listbox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm">
+                          {(Object.keys(questionnairesMeta) as Array<'WHO-5' | 'OPD-CA2-SQ'>).map((key) => (
+                            <Listbox.Option
+                              key={key}
+                              className={({ active }) =>
+                                `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-blue-100 text-blue-900' : 'text-gray-900'}`
+                              }
+                              value={key}
+                            >
+                              {({ selected }) => (
+                                <>
+                                  <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                                    {questionnairesMeta[key].title}
+                                  </span>
+                                  {selected ? (
+                                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-blue-600">
+                                      <CheckIcon className="h-5 w-5" aria-hidden="true" />
+                                    </span>
+                                  ) : null}
+                                </>)}
+                            </Listbox.Option>
+                          ))}
+                        </Listbox.Options>
+                      </Transition>
+                    </div>
+                  </Listbox>
+                </div>
               </div>
-              <div className="mb-8">
+
+              {loading ? (
+                <p>Cargando evolución...</p>
+              ) : error ? (
+                <p className="text-red-500">{error}</p>
+              ) : evolutionData.length > 0 ? (
+                <div className="bg-white p-4 rounded-lg shadow">
+                  <QuestionnaireChart data={evolutionData} codigo={selectedQuestionnaire} />
+                </div>
+              ) : (
+                <p>No hay datos de evolución para mostrar para el cuestionario seleccionado.</p>
+              )}
+              
+              <div className="mt-8 mb-8">
                 <PatientResponsesSection patientId={patientId} />
               </div>
 
