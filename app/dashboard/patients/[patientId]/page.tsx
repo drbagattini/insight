@@ -369,7 +369,7 @@ export default function PatientEvolutionPage() {
           </div>
         </div>
       )}
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 lg:p-8">
         <h1 className="text-2xl font-semibold">Evolución de {patientName || 'Paciente'}</h1>
 
             {/* Entrevista Inicial */}
@@ -377,34 +377,45 @@ export default function PatientEvolutionPage() {
               <PatientIntakeTab />
             </div>
         <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Evolución de Cuestionarios</h2>
-            <div className="flex items-center gap-2">
-              <label htmlFor="questionnaire-selector" className="text-sm font-medium text-gray-700">
-                Cuestionario:
-              </label>
-              <select
-                id="questionnaire-selector"
-                value={selectedQuestionnaire}
-                onChange={(e) => setSelectedQuestionnaire(e.target.value as 'WHO-5' | 'OPD-CA2-SQ')}
-                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          <h2 className="text-xl font-semibold mb-4 text-center">Evolución de Cuestionarios</h2>
+          
+          {/* Selector de Pestañas */}
+          <div className="mb-4 flex justify-center">
+            <div className="inline-flex rounded-md shadow-sm" role="group">
+              <button
+                type="button"
+                onClick={() => setSelectedQuestionnaire('WHO-5')}
+                className={`px-4 py-2 text-sm font-medium ${selectedQuestionnaire === 'WHO-5' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700'} border border-gray-200 rounded-l-lg hover:bg-gray-100 focus:z-10 focus:ring-2 focus:ring-blue-500`}
               >
-                <option value="WHO-5">{questionnairesMeta['WHO-5'].title}</option>
-                <option value="OPD-CA2-SQ">{questionnairesMeta['OPD-CA2-SQ'].title}</option>
-              </select>
+                {questionnairesMeta['WHO-5'].title}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedQuestionnaire('OPD-CA2-SQ')}
+                className={`px-4 py-2 text-sm font-medium ${selectedQuestionnaire === 'OPD-CA2-SQ' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700'} border-t border-b border-r border-gray-200 rounded-r-lg hover:bg-gray-100 focus:z-10 focus:ring-2 focus:ring-blue-500`}
+              >
+                {questionnairesMeta['OPD-CA2-SQ'].title}
+              </button>
             </div>
           </div>
-          {loading ? (
-            <p>Cargando evolución...</p>
-          ) : error ? (
-            <p className="text-red-500">Error: {error}</p>
-          ) : evolutionData.length === 0 ? (
-            <p>No hay datos de evolución disponibles para {questionnairesMeta[selectedQuestionnaire]?.title || selectedQuestionnaire}.</p>
-          ) : (
-            <div className="h-64">
-              <QuestionnaireChart data={evolutionData} codigo={selectedQuestionnaire} />
-            </div>
-          )}
+
+          {/* Contenedor del Gráfico */}
+          <div className="h-96">
+            {loading ? (
+              <p className="text-center pt-4">Cargando evolución...</p>
+            ) : error ? (
+              <p className="text-red-500 text-center pt-4">Error: {error}</p>
+            ) : evolutionData.length === 0 ? (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-gray-500">No hay datos de evolución disponibles para {questionnairesMeta[selectedQuestionnaire]?.title || selectedQuestionnaire}.</p>
+              </div>
+            ) : (
+              <QuestionnaireChart 
+                data={evolutionData} 
+                codigo={selectedQuestionnaire} 
+              />
+            )}
+          </div>
         </div>
         {/* Patient Responses Section */}
         <div className="mb-8">

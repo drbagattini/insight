@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { ResponseDetail, ResponseItemDetail } from '@/types/patient-responses';
 
 interface ResponseDetailViewProps {
@@ -40,6 +40,31 @@ const ResponseDetailView: React.FC<ResponseDetailViewProps> = ({
 
   const { questionnaire_name, date, score, items } = selectedResponseFullDetail;
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+
+  // Reset to page 1 whenever the response data changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedResponseFullDetail]);
+
+  const totalPages = items ? Math.ceil(items.length / ITEMS_PER_PAGE) : 0;
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const currentItems = items ? items.slice(startIndex, endIndex) : [];
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
   return (
     <div className="bg-white shadow-md rounded-lg overflow-hidden">
       <div className="p-6 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
@@ -76,10 +101,10 @@ const ResponseDetailView: React.FC<ResponseDetailViewProps> = ({
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {items.map((item: ResponseItemDetail, index: number) => (
+                  {currentItems.map((item: ResponseItemDetail, index: number) => (
                     <tr key={item.questionId || index} className="hover:bg-gray-50">
                       <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-500">
-                        {index + 1}
+                        {startIndex + index + 1}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-800">
                         {item.questionText}
@@ -95,6 +120,27 @@ const ResponseDetailView: React.FC<ResponseDetailViewProps> = ({
                 </tbody>
               </table>
             </div>
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between p-4 bg-gray-50 border-t border-gray-200">
+                <button
+                  onClick={handlePrevPage}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Anterior
+                </button>
+                <span className="text-sm text-gray-600">
+                  Página <span className="font-semibold">{currentPage}</span> de <span className="font-semibold">{totalPages}</span>
+                </span>
+                <button
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Siguiente
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="text-center py-8 bg-gray-50 rounded-lg">

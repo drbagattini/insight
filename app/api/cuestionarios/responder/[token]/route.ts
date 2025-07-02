@@ -67,18 +67,39 @@ export async function POST(
 
     const codigo = cuestionarioRow?.codigo || "WHO-5";
     const { scores } = await import("@/src/scoring");
-    const puntuacion = scores[codigo] ? scores[codigo](answersNumeric) : null;
+    const scoreResult = scores[codigo] ? scores[codigo](answersNumeric) : null;
+
+    // 4.1. Preparar los datos para la inserción, manejando puntuaciones simples y detalladas
+    const dataToInsert: {
+      paciente_id: string;
+      cuestionario_id: string;
+      enviado_desde: string;
+      respuestas: any;
+      puntuacion?: number | null;
+      score_detallado?: any;
+    } = {
+      paciente_id: linkData.paciente_id,
+      cuestionario_id: linkData.cuestionario_id,
+      enviado_desde: "email",
+      respuestas: respuestas,
+    };
+
+    if (typeof scoreResult === 'number') {
+      // Para cuestionarios con una sola puntuación (ej. WHO-5)
+      dataToInsert.puntuacion = scoreResult;
+    } else if (typeof scoreResult === 'object' && scoreResult !== null) {
+      // Para cuestionarios con puntuaciones detalladas (ej. OPD-CA2-SQ)
+      dataToInsert.score_detallado = scoreResult;
+      dataToInsert.puntuacion = (scoreResult as any).total || null; // Guardamos el total o null
+    } else {
+      // Si no hay puntuación calculable
+      dataToInsert.puntuacion = null;
+    }
 
     // 5. Registrar las respuestas
     const { data: respuestaData, error: respuestaError } = await supabaseAdmin
       .from("respuestas")
-      .insert({
-        paciente_id: linkData.paciente_id,
-        cuestionario_id: linkData.cuestionario_id,
-        enviado_desde: "email", // Por defecto, se podru00eda determinar mejor
-        respuestas: respuestas,
-        puntuacion: puntuacion
-      })
+      .insert(dataToInsert)
       .select("id")
       .single();
 

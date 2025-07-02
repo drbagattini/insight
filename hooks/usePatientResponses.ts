@@ -140,7 +140,8 @@ export const usePatientResponses = ({ patientId }: UsePatientResponsesProps) => 
   // Effect to automatically set selectedResponseId when the specific response instance is fetched
   useEffect(() => {
     if (specificResponseInstanceData?.data && specificResponseInstanceData.data.length > 0) {
-      setSelectedResponseId(specificResponseInstanceData.data[0].id);
+      const responseId = specificResponseInstanceData.data[0].id;
+      setSelectedResponseId(responseId);
     } else if (!selectedQCode || !selectedResponseDate) {
       // Clear ID if filters are cleared
       setSelectedResponseId(null);
