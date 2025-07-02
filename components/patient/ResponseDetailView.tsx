@@ -41,17 +41,32 @@ const ResponseDetailView: React.FC<ResponseDetailViewProps> = ({
   const { questionnaire_name, date, score, items } = selectedResponseFullDetail;
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [filterValue, setFilterValue] = useState<string>('');
   const ITEMS_PER_PAGE = 10;
 
-  // Reset to page 1 whenever the response data changes
+  const likertOptions = [
+    { value: 0, text: 'No' },
+    { value: 1, text: 'Más bien no' },
+    { value: 2, text: 'Más o menos' },
+    { value: 3, text: 'Más bien sí' },
+    { value: 4, text: 'Sí' },
+  ];
+
+  const filteredItems = React.useMemo(() => {
+    if (!items) return [];
+    if (filterValue === '') return items;
+    return items.filter(item => String(item.answerValue) === filterValue);
+  }, [items, filterValue]);
+
+  // Reset to page 1 whenever the response data or filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedResponseFullDetail]);
+  }, [selectedResponseFullDetail, filterValue]);
 
-  const totalPages = items ? Math.ceil(items.length / ITEMS_PER_PAGE) : 0;
+  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
-  const currentItems = items ? items.slice(startIndex, endIndex) : [];
+  const currentItems = filteredItems.slice(startIndex, endIndex);
 
   const handleNextPage = () => {
     if (currentPage < totalPages) {
@@ -86,7 +101,23 @@ const ResponseDetailView: React.FC<ResponseDetailViewProps> = ({
       </div>
 
       <div className="p-4">
-        <h3 className="text-lg font-semibold text-gray-700 mb-3">Respuestas Detalladas:</h3>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-gray-700">Respuestas Detalladas:</h3>
+          <div className="flex items-center gap-2">
+            <label htmlFor="filter-value" className="text-sm font-medium text-gray-600">Filtrar por valor:</label>
+            <select
+              id="filter-value"
+              value={filterValue}
+              onChange={(e) => setFilterValue(e.target.value)}
+              className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="">Todos</option>
+              {likertOptions.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.value} - {opt.text}</option>
+              ))}
+            </select>
+          </div>
+        </div>
         
         {items && items.length > 0 ? (
           <div className="border border-gray-200 rounded-lg overflow-hidden shadow-sm w-full">
