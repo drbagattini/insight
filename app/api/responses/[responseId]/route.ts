@@ -190,34 +190,50 @@ export async function GET(
     }
     
     interface RawAnswerItem {
-      pregunta_id: number; 
-      valor: number;       
+      pregunta_id: number | string; // Allow string IDs
+      valor: number;
     }
 
     interface AnswerOption {
-      valor: number | string; // Allow string values if some questionnaires use them
+      valor: number | string;
       texto: string;
     }
 
     interface QuestionDefinitionDB {
-      id: number; 
-      texto: string; 
-      opciones_respuesta?: AnswerOption[]; // Make optional as not all questions might have predefined options
-    }
+      id: number | string; // Allow string IDs
+      texto: string;
+      opciones_respuesta?: AnswerOption[];
+    } // Make optional as not all questions might have predefined options
 
     // Acceder al cuestionario (como primer elemento del array o directamente)
     const cuestionario = Array.isArray(responseData.cuestionarios) 
       ? responseData.cuestionarios[0] as unknown as Cuestionario 
       : responseData.cuestionarios as unknown as Cuestionario;
     
-    const questionDefinitions = cuestionario?.items as QuestionDefinitionDB[] | undefined;
-    const rawAnswers = responseData.respuestas as RawAnswerItem[] | undefined;
+    // Handle potential nested 'items' structure for some questionnaires like OPD-CA2-SQ
+    let actualQuestionDefinitions = cuestionario?.items;
+    if (cuestionario?.items && !Array.isArray(cuestionario.items) && (cuestionario.items as any).items && Array.isArray((cuestionario.items as any).items)) {
+      console.log(`[API /responses/${responseId}] Found nested items structure, using the inner array.`);
+      actualQuestionDefinitions = (cuestionario.items as any).items;
+    }
+
+    const questionDefinitions = actualQuestionDefinitions as QuestionDefinitionDB[] | undefined;
+    
+    // Defensively get the raw answers array, as it might be nested
+    let rawAnswers: RawAnswerItem[] | undefined;
+    if (Array.isArray(responseData.respuestas)) {
+      rawAnswers = responseData.respuestas as RawAnswerItem[];
+    } else if (responseData.respuestas && typeof responseData.respuestas === 'object' && Array.isArray((responseData.respuestas as any).respuestas)) {
+      console.warn(`[API /responses/${responseId}] 'respuestas' column contained a nested object. Using the inner array.`);
+      rawAnswers = (responseData.respuestas as any).respuestas as RawAnswerItem[];
+    }
     let enrichedItems: ResponseItemDetail[] = [];
 
     if (questionDefinitions && Array.isArray(questionDefinitions) && rawAnswers && Array.isArray(rawAnswers)) {
       console.log(`[API /responses/${responseId}] Processing ${questionDefinitions.length} question definitions and ${rawAnswers.length} answers`);
       
-      const questionsMap = new Map<number, QuestionDefinitionDB>(); 
+      // Use a map that can handle both string and number IDs
+      const questionsMap = new Map<string | number, QuestionDefinitionDB>(); 
       questionDefinitions.forEach(qDef => {
         if (qDef.id !== undefined && qDef.id !== null) { 
           questionsMap.set(qDef.id, qDef);
@@ -229,6 +245,7 @@ export async function GET(
           console.warn(`[API /responses/${responseId}] Raw answer item missing or invalid pregunta_id:`, rawAnswer);
           return null; 
         }
+        // The key in the map will match the type of pregunta_id (string or number)
         const qDef = questionsMap.get(rawAnswer.pregunta_id);
         
         if (!qDef) {
