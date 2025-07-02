@@ -119,14 +119,20 @@ export const usePatientResponses = ({ patientId }: UsePatientResponsesProps) => 
     error: errorSpecificResponseInstance, // Error state for getting the ID
   } = useQuery<{ data: ResponseRow[]; totalCount: number }, Error>({
     queryKey: ['specificResponseInstance', patientId, selectedQCode, selectedResponseDate],
-    queryFn: () => fetchPatientResponsesAPI({
-      patientId,
-      qcode: selectedQCode,
-      fromDate: selectedResponseDate,
-      toDate: selectedResponseDate,
-      page: 1, // We only need the first (and should be only) result
-      limit: 1,  // to get its ID.
-    }),
+    queryFn: () => {
+      // Ensure the date range covers the entire selected day to catch all responses.
+      const from = selectedResponseDate ? `${selectedResponseDate}T00:00:00.000Z` : null;
+      const to = selectedResponseDate ? `${selectedResponseDate}T23:59:59.999Z` : null;
+
+      return fetchPatientResponsesAPI({
+        patientId,
+        qcode: selectedQCode,
+        fromDate: from,
+        toDate: to,
+        page: 1,
+        limit: 1,
+      });
+    },
     enabled: !!patientId && !!selectedQCode && !!selectedResponseDate,
     placeholderData: keepPreviousData, // Useful to avoid UI flicker
   });
