@@ -26,25 +26,47 @@ export async function GET(
   }
   const cuestionarioId = cuestionario.id;
 
-  // 2) Obtener todas las respuestas del paciente para el cuestionario solicitado
+  // 2) Obtener todas las respuestas del paciente
   const { data: respuestasData, error: respuestasError } = await supabaseAdmin
     .from('respuestas')
-    .select('puntuacion, creado_en, score_detallado') // Pedimos el score detallado
+    .select('respuestas, puntuacion, creado_en')
     .eq('paciente_id', pacienteId)
     .eq('cuestionario_id', cuestionarioId)
     .order('creado_en', { ascending: true });
-
   if (respuestasError) {
     console.error('Error al obtener respuestas por paciente:', respuestasError);
     return NextResponse.json({ error: 'Error al obtener respuestas' }, { status: 500 });
   }
 
-  // 3) Simplemente pasamos los datos. El frontend (QuestionnaireChart) ya sabe cómo manejar el score_detallado.
-  const processedData = respuestasData.map(respuesta => ({
-    puntuacion: respuesta.puntuacion,
-    creado_en: respuesta.creado_en,
-    score_detallado: respuesta.score_detallado,
-  }));
+  // 3) Procesar respuestas con scoring genérico
+  const processedData = respuestasData.map(respuesta => {
+    const baseData = {
+      puntuacion: respuesta.puntuacion,
+      creado_en: respuesta.creado_en
+    };
+
+    // Si tenemos un objeto de respuestas, convertirlo en un array y calcular scores detallados
+    if (respuesta.respuestas && typeof respuesta.respuestas === 'object' && !Array.isArray(respuesta.respuestas)) {
+      // Convertir el objeto de respuestas a un array denso de 81 elementos
+      const answersArray = Array(81).fill(null);
+      for (const [key, value] of Object.entries(respuesta.respuestas)) {
+        const index = parseInt(key, 10) - 1; // Los items están 1-based
+        if (index >= 0 && index < 81) {
+          answersArray[index] = value;
+        }
+      }
+
+      const scoreResult = scoreAnswers(codigoParam, answersArray);
+      if (scoreResult) {
+        return {
+          ...baseData,
+          score_detallado: scoreResult
+        };
+      }
+    }
+
+    return baseData;
+  });
 
   return NextResponse.json({ success: true, data: processedData });
 }

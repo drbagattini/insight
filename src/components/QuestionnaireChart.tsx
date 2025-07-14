@@ -4,7 +4,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 import { Line, Bar } from "react-chartjs-2";
 import React from "react";
 import questionnairesMeta, { QuestionnaireCode } from "@/src/data/questionnairesMeta";
-import { LABELS } from "@/src/scoring/opdCa2";
+
 
 // Register the pieces we may need. Doing this once here avoids duplicate registration warnings.
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend);
@@ -29,6 +29,34 @@ export interface QuestionnaireChartProps {
  * Generic chart component that renders questionnaire evolution based on questionnairesMeta[codigo].chartType.
  * Currently supports "line" (default), "bar", and "bar-multidim" (for multi-dimensional questionnaires like OPD-CA2-SQ).
  */
+const LABELS = {
+  total: 'Puntuación Total',
+  control: 'Control y Regulación',
+  identity: 'Identidad',
+  interpersonality: 'Interpersonalidad',
+  attachment: 'Apego',
+  ctr_self_perception: 'Percepción de sí mismo',
+  ctr_object_perception: 'Percepción de objeto',
+  ctr_self_regulation: 'Autorregulación',
+  ctr_regulation_of_relationship: 'Regulación de la relación',
+  id_self_reflection: 'Autorreflexión',
+  id_affect_differentiation: 'Diferenciación de afectos',
+  id_identity: 'Identidad',
+  id_body_self: 'Cuerpo y autoimagen',
+  int_empathy: 'Empatía',
+  int_communication: 'Comunicación',
+  int_affect_experience: 'Experiencia afectiva',
+  int_object_experience: 'Experiencia de objeto',
+  att_internalization: 'Internalización',
+  att_separation_ability: 'Capacidad de separación',
+  att_variable_attachment_patterns: 'Patrones de apego variables',
+  // Subdimensiones adicionales que podrían faltar pero se incluyen por completitud
+  ctr_impulse_control: 'Control de impulsos',
+  id_affect_tolerance: 'Tolerancia a los afectos',
+  int_relationship_building: 'Construcción de relaciones',
+  att_secure_base: 'Base segura',
+} as const;
+
 const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, codigo, className }) => {
 
   const midBandPlugin = {
@@ -128,7 +156,8 @@ const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, codigo, c
   if (type === "bar-multidim" && data.length > 0) {
     // Get latest data point (we only show current profile, not evolution for multi-dimensional)
     const latestData = data[data.length - 1];
-    
+    console.log('QuestionnaireChart latestData:', latestData); // LOG DE DEPURACIÓN
+
     // Sanity check for detailed scores
     if (!latestData.score_detallado?.subDimensions) {
       return <div className="text-center text-red-500 py-8">Datos detallados no disponibles para {meta.title}.</div>;
@@ -199,23 +228,23 @@ const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, codigo, c
     
     // Crear arrays de subdimensiones agrupados por categoría
     const controlEntries = Object.entries(subDimensions)
-      .filter(([k]) => k.startsWith('ctr_'))
-      .map(([k, v]) => ({ key: k, ...v }))
+      .filter(([key]) => key.startsWith('ctr_'))
+      .map(([key, tScore]) => ({ key, tScore: tScore as number }))
       .sort((a, b) => (keyOrder[a.key as keyof typeof keyOrder] ?? 999) - (keyOrder[b.key as keyof typeof keyOrder] ?? 999));
       
     const identityEntries = Object.entries(subDimensions)
-      .filter(([k]) => k.startsWith('id_'))
-      .map(([k, v]) => ({ key: k, ...v }))
+      .filter(([key]) => key.startsWith('id_'))
+      .map(([key, tScore]) => ({ key, tScore: tScore as number }))
       .sort((a, b) => (keyOrder[a.key as keyof typeof keyOrder] ?? 999) - (keyOrder[b.key as keyof typeof keyOrder] ?? 999));
       
     const interpersonalityEntries = Object.entries(subDimensions)
-      .filter(([k]) => k.startsWith('int_'))
-      .map(([k, v]) => ({ key: k, ...v }))
+      .filter(([key]) => key.startsWith('int_'))
+      .map(([key, tScore]) => ({ key, tScore: tScore as number }))
       .sort((a, b) => (keyOrder[a.key as keyof typeof keyOrder] ?? 999) - (keyOrder[b.key as keyof typeof keyOrder] ?? 999));
       
     const attachmentEntries = Object.entries(subDimensions)
-      .filter(([k]) => k.startsWith('att_'))
-      .map(([k, v]) => ({ key: k, ...v }))
+      .filter(([key]) => key.startsWith('att_'))
+      .map(([key, tScore]) => ({ key, tScore: tScore as number }))
       .sort((a, b) => (keyOrder[a.key as keyof typeof keyOrder] ?? 999) - (keyOrder[b.key as keyof typeof keyOrder] ?? 999));
 
     // Crear una estructura con claves ordenadas intercalando dimensión total seguido por subdimensiones

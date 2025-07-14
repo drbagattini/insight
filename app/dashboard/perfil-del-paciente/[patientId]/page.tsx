@@ -87,6 +87,7 @@ export default function PatientProfilePage() {
       try {
         const res = await fetch(`/api/cuestionarios/resultados/paciente/${patientId}?codigo=${selectedQuestionnaire}`);
         const json = await res.json();
+        console.log('Datos de evolución recibidos de la API:', json.data); // LOG DE DEPURACIÓN
         if (!res.ok) throw new Error(json.error || 'Error al cargar evolución');
         setEvolutionData(json.data);
       } catch (err) {

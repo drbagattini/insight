@@ -86,7 +86,8 @@ export function scoreOpdCa2(answers: number[]): {
   total: number | null;
   dimensionLabels: string[];
 } {
-  if (!answers || answers.length !== 81) {
+  if (!answers) {
+    // Si no hay array de respuestas, no se puede puntuar.
     return {
       control: null,
       identity: null,
