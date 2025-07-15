@@ -234,7 +234,7 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
               font: (ctx: any) => {
                 const label = ctx.tick?.label as string;
                 return {
-                  size: 17, // aumentado a 17 según feedback
+                  size: 18, // aumentado a 18 según feedback
                   weight: boldLabelSet.has(label) ? 'bold' as const : 'normal' as const,
                 };
               },
@@ -410,7 +410,7 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
             autoSkip: false,
             maxRotation: 45,
             minRotation: 30,
-            font: { size: 17, weight: 'bold' as const },
+            font: { size: 18, weight: 'bold' as const },
             color: '#374151',
           },
           grid: { display: false },
