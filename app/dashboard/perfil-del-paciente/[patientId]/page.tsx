@@ -3,7 +3,7 @@
 import { useParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState, useEffect, Fragment } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react';
 import { Tab, Listbox, Transition } from '@headlessui/react';
 import { CheckIcon, ChevronUpDownIcon } from '@heroicons/react/20/solid';
 import { PatientResponsesSection } from '@/components/patient/PatientResponsesSection';
@@ -20,6 +20,34 @@ export default function PatientProfilePage() {
   const [selectedQuestionnaire, setSelectedQuestionnaire] = useState<'WHO-5' | 'OPD-CA2-SQ'>('WHO-5');
   const [evolutionData, setEvolutionData] = useState<any[]>([]);
   const [patientName, setPatientName] = useState<string>('');
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  const availableDates = useMemo(() => {
+    return [...new Set(evolutionData.map((item: any) => (item.fecha ?? item.creado_en).split('T')[0]))]
+      .sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+  }, [evolutionData]);
+
+  // Seleccionar fecha por defecto o limpiar según cuestionario
+  useEffect(() => {
+    if (selectedQuestionnaire === 'WHO-5') {
+      setSelectedDate(null);
+    } else if (selectedQuestionnaire === 'OPD-CA2-SQ' && availableDates.length > 0) {
+      // última fecha por defecto
+      setSelectedDate(availableDates[availableDates.length - 1]);
+    }
+  }, [selectedQuestionnaire, availableDates]);
+
+  const filteredEvolutionData = useMemo(() => {
+    if (!selectedDate) return evolutionData;
+    return evolutionData.filter((item: any) => (item.fecha ?? item.creado_en).split("T")[0] === selectedDate);
+  }, [evolutionData, selectedDate]);
+
+  const chartTitle = useMemo(() => {
+    if (selectedQuestionnaire === 'OPD-CA2-SQ') {
+      return 'Perfil Estructural del Adolescente';
+    }
+    return questionnairesMeta[selectedQuestionnaire].title;
+  }, [selectedQuestionnaire]);
 
   // Tipado y estados para envíos programados
   interface ScheduledSend {
@@ -473,13 +501,27 @@ export default function PatientProfilePage() {
                 </div>
               </div>
 
+              {/* Filtro de fecha (solo OPD-CA2-SQ) */}
+              {selectedQuestionnaire === 'OPD-CA2-SQ' && (
+              <div className="flex flex-col sm:flex-row gap-4 mt-4 justify-end">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Fecha</label>
+                  <select className="w-full px-2 py-1 border rounded" value={selectedDate ?? (availableDates[availableDates.length-1] ?? '')} onChange={e => setSelectedDate(e.target.value)}> 
+                    {availableDates.map(d => (
+                      <option key={d} value={d}>{new Date(d).toLocaleDateString()}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              )}
+
               {loading ? (
                 <p>Cargando evolución...</p>
               ) : error ? (
                 <p className="text-red-500">{error}</p>
-              ) : evolutionData.length > 0 ? (
+              ) : filteredEvolutionData.length > 0 ? (
                 <div className="bg-white p-4 rounded-lg shadow">
-                  <QuestionnaireChart data={evolutionData} codigo={selectedQuestionnaire} />
+                  <QuestionnaireChart data={filteredEvolutionData} codigo={selectedQuestionnaire} titleOverride={chartTitle} />
                 </div>
               ) : (
                 <p>No hay datos de evolución para mostrar para el cuestionario seleccionado.</p>
