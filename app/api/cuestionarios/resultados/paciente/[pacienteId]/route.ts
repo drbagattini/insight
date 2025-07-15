@@ -37,7 +37,7 @@ export async function GET(
   // 2) Obtener todas las respuestas del paciente
   const { data: respuestasData, error: respuestasError } = await supabaseAdmin
     .from('respuestas')
-    .select('respuestas, puntuacion, creado_en')
+    .select('respuestas, puntuacion, creado_en, score_detallado')
     .eq('paciente_id', pacienteId)
     .eq('cuestionario_id', cuestionarioId)
     .order('creado_en', { ascending: true });
@@ -51,18 +51,30 @@ export async function GET(
     let score_detallado: ScoreDetalladoOpdCa2 | {} = {};
 
     if (codigo === 'OPD-CA2-SQ') {
-      const answersArray = Array(81).fill(null);
-      if (respuesta.respuestas && typeof respuesta.respuestas === 'object' && !Array.isArray(respuesta.respuestas)) {
-        for (const [key, value] of Object.entries(respuesta.respuestas)) {
-          const index = parseInt(key, 10) - 1;
-          if (index >= 0 && index < 81) {
-            answersArray[index] = value;
+      // 1) Si ya existe un score_detallado persistido, úsalo directamente
+      if (respuesta.score_detallado && typeof respuesta.score_detallado === 'object') {
+        score_detallado = respuesta.score_detallado as ScoreDetalladoOpdCa2;
+      } else {
+        // 2) De lo contrario, intenta reconstruirlo a partir de las respuestas
+        const answersArray = Array(81).fill(null);
+        if (respuesta.respuestas && typeof respuesta.respuestas === 'object') {
+          if (Array.isArray(respuesta.respuestas)) {
+            // Caso: respuestas guardadas como array indexado 0-80
+            respuesta.respuestas.forEach((val: any, idx: number) => {
+              if (idx < 81) answersArray[idx] = typeof val === 'object' && 'valor' in val ? (val as any).valor : val;
+            });
+          } else {
+            // Caso: objeto con claves numéricas o UUIDs
+            for (const [key, value] of Object.entries(respuesta.respuestas)) {
+              const idx = parseInt(key, 10);
+              if (!isNaN(idx) && idx >= 1 && idx <= 81) {
+                answersArray[idx - 1] = typeof value === 'object' && 'valor' in value ? (value as any).valor : value as any;
+              }
+            }
           }
         }
+        score_detallado = scoreOpdCa2(answersArray);
       }
-      // La función scoreOpdCa2 se encarga de devolver la estructura completa,
-      // incluso si no hay respuestas.
-      score_detallado = scoreOpdCa2(answersArray);
     } else {
       // Lógica para otros cuestionarios podría ir aquí
     }
