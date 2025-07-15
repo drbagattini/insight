@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabaseAdmin';
-import { scoreAnswers } from '@/src/scoring';
+import { scoreOpdCa2 } from '@/src/scoring/opdCa2';
+import { ResultadoCuestionario, ScoreDetalladoOpdCa2 } from '@/src/types/cuestionarios';
 
 export async function GET(
   request: Request,
@@ -13,16 +14,23 @@ export async function GET(
 
   // Obtener el código a consultar (query param)
   const url = new URL(request.url);
-  const codigoParam = url.searchParams.get('codigo') || 'WHO-5';
+  const codigo = url.searchParams.get('codigo');
+
+  // Si no se especifica un código de cuestionario, devolver un error
+  if (!codigo) {
+    return NextResponse.json({ success: false, message: 'Código de cuestionario no especificado' }, { status: 400 });
+  }
+
+
 
   // 1) Obtener ID de cuestionario solicitado
   const { data: cuestionario, error: cuestionarioError } = await supabaseAdmin
     .from('cuestionarios')
     .select('id')
-    .eq('codigo', codigoParam)
+    .eq('codigo', codigo)
     .single();
   if (cuestionarioError || !cuestionario) {
-    return NextResponse.json({ error: `Cuestionario ${codigoParam} no encontrado` }, { status: 404 });
+    return NextResponse.json({ error: `Cuestionario ${codigo} no encontrado` }, { status: 404 });
   }
   const cuestionarioId = cuestionario.id;
 
@@ -38,34 +46,35 @@ export async function GET(
     return NextResponse.json({ error: 'Error al obtener respuestas' }, { status: 500 });
   }
 
-  // 3) Procesar respuestas con scoring genérico
-  const processedData = respuestasData.map(respuesta => {
-    const baseData = {
-      puntuacion: respuesta.puntuacion,
-      creado_en: respuesta.creado_en
-    };
+  // 3) Procesar respuestas y calcular scores
+  const processedData: ResultadoCuestionario[] = respuestasData.map(respuesta => {
+    let score_detallado: ScoreDetalladoOpdCa2 | {} = {};
 
-    // Si tenemos un objeto de respuestas, convertirlo en un array y calcular scores detallados
-    if (respuesta.respuestas && typeof respuesta.respuestas === 'object' && !Array.isArray(respuesta.respuestas)) {
-      // Convertir el objeto de respuestas a un array denso de 81 elementos
+    if (codigo === 'OPD-CA2-SQ') {
       const answersArray = Array(81).fill(null);
-      for (const [key, value] of Object.entries(respuesta.respuestas)) {
-        const index = parseInt(key, 10) - 1; // Los items están 1-based
-        if (index >= 0 && index < 81) {
-          answersArray[index] = value;
+      if (respuesta.respuestas && typeof respuesta.respuestas === 'object' && !Array.isArray(respuesta.respuestas)) {
+        for (const [key, value] of Object.entries(respuesta.respuestas)) {
+          const index = parseInt(key, 10) - 1;
+          if (index >= 0 && index < 81) {
+            answersArray[index] = value;
+          }
         }
       }
-
-      const scoreResult = scoreAnswers(codigoParam, answersArray);
-      if (scoreResult) {
-        return {
-          ...baseData,
-          score_detallado: scoreResult
-        };
-      }
+      // La función scoreOpdCa2 se encarga de devolver la estructura completa,
+      // incluso si no hay respuestas.
+      score_detallado = scoreOpdCa2(answersArray);
+    } else {
+      // Lógica para otros cuestionarios podría ir aquí
     }
 
-    return baseData;
+    return {
+      id: `${pacienteId}-${cuestionarioId}-${respuesta.creado_en}`,
+      fecha: respuesta.creado_en,
+      codigo_cuestionario: codigo,
+      score_total: respuesta.puntuacion,
+      score_detallado: score_detallado,
+      respuestas: respuesta.respuestas
+    };
   });
 
   return NextResponse.json({ success: true, data: processedData });

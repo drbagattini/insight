@@ -85,12 +85,34 @@ export default function PatientProfilePage() {
     async function loadEvolution() {
       setLoading(true);
       try {
+        console.log(`Cargando datos para cuestionario: ${selectedQuestionnaire}`);
         const res = await fetch(`/api/cuestionarios/resultados/paciente/${patientId}?codigo=${selectedQuestionnaire}`);
         const json = await res.json();
-        console.log('Datos de evolución recibidos de la API:', json.data); // LOG DE DEPURACIÓN
         if (!res.ok) throw new Error(json.error || 'Error al cargar evolución');
+        
+        if (selectedQuestionnaire === 'OPD-CA2-SQ') {
+          console.log('API OPD-CA2-SQ - Respuesta completa:', json);
+          console.log('API OPD-CA2-SQ - Datos procesados:', JSON.stringify(json.data, null, 2));
+          
+          // Verificar estructura de datos
+          if (json.data && json.data.length > 0) {
+            const lastItem = json.data[json.data.length - 1];
+            console.log('API OPD-CA2-SQ - Último ítem:', JSON.stringify(lastItem, null, 2));
+            console.log('API OPD-CA2-SQ - ¿Tiene score_detallado?', !!lastItem.score_detallado);
+            if (lastItem.score_detallado) {
+              console.log('API OPD-CA2-SQ - Estructura de score_detallado:', Object.keys(lastItem.score_detallado));
+              console.log('API OPD-CA2-SQ - ¿Tiene subDimensions?', !!lastItem.score_detallado.subDimensions);
+            }
+          } else {
+            console.log('API OPD-CA2-SQ - No hay datos o array vacío');
+          }
+        } else {
+          console.log(`DATOS API ${selectedQuestionnaire}:`, JSON.stringify(json.data, null, 2));
+        }
+        
         setEvolutionData(json.data);
       } catch (err) {
+        console.error(`Error cargando ${selectedQuestionnaire}:`, err);
         setError(err instanceof Error ? err.message : 'Error desconocido');
       } finally {
         setLoading(false);
