@@ -234,7 +234,7 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
               font: (ctx: any) => {
                 const label = ctx.tick?.label as string;
                 return {
-                  size: 11, // 2 puntos más grande que antes
+                  size: 13, // aumentado a 13 según feedback
                   weight: boldLabelSet.has(label) ? 'bold' as const : 'normal' as const,
                 };
               },
@@ -266,7 +266,7 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
       } as const;
 
       return (
-        <div className={`relative w-full ${className ?? 'h-[720px]'}`}>
+        <div className={`relative w-[80%] mx-auto ${className ?? 'h-[720px]'}`}>
           <Bar data={barData} options={barOptions as any} plugins={[midBandPlugin]} />
         </div>
       );
@@ -346,7 +346,7 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
         } as const;
 
         return (
-          <div className={`relative w-full ${className ?? 'h-[620px]'}`}>
+          <div className={`relative w-[80%] mx-auto ${className ?? 'h-[620px]'}`}>
             <Bar data={subData} options={subOptions as any} plugins={[midBandPlugin]} />
           </div>
         );
@@ -410,7 +410,7 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
             autoSkip: false,
             maxRotation: 45,
             minRotation: 30,
-            font: { size: 11, weight: '500' },
+            font: { size: 13, weight: 'bold' as const },
             color: '#374151',
           },
           grid: { display: false },
@@ -434,7 +434,7 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
     };
 
     return (
-      <div className={`relative w-full ${className ?? "h-[600px]"}`}>
+      <div className={`relative w-[80%] mx-auto ${className ?? "h-[600px]"}`}>
         <Bar data={multidimData} options={multidimOptions as any} plugins={[midBandPlugin]} />
       </div>
     );
