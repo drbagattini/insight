@@ -98,6 +98,159 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
 
     const { score_detallado } = latestData;
 
+    // --- Custom rendering for OPD-CA2-SQ full profile (total + dimensiones + subdimensiones) ---
+    if (codigo === 'OPD-CA2-SQ') {
+      // Orden clínico exacto
+      const orderedKeys = [
+        'total',
+        // Control
+        'control','ctr_impulse','ctr_affect','ctr_consc','ctr_selfworth',
+        // Identidad
+        'identity','id_coherence','id_selfexp','id_sodiff','id_objectexp','id_belong',
+        // Interpersonalidad
+        'interpersonality','int_fantasies','int_emotcontact','int_reciprocity','int_affectexp','int_empathy','int_ability_detach',
+        // Apego
+        'attachment','att_representation','att_internalbasis','att_capacity_alone','att_use_relations',
+      ];
+
+      // Etiquetas clínicas oficiales (número + nombre)
+      const LABEL_MAP: Record<string,string> = {
+        total: 'Estructura (total)',
+        control: '1. Control (total)',
+        ctr_impulse: '1.1 Control de impulsos',
+        ctr_affect: '1.2 Tolerancia afectiva',
+        ctr_consc: '1.3 Formación de conciencia',
+        ctr_selfworth: '1.4 Autovaloración',
+        identity: '2. Identidad (total)',
+        id_coherence: '2.1 Coherencia',
+        id_selfexp: '2.2 Percepción del self',
+        id_sodiff: '2.3 Diferenciación self-objeto',
+        id_objectexp: '2.4 Percepción del objeto',
+        id_belong: '2.5 Sentido de pertenencia',
+        interpersonality: '3. Interpersonalidad (total)',
+        int_fantasies: '3.1 Fantasías',
+        int_emotcontact: '3.2 Contacto emocional',
+        int_reciprocity: '3.3 Reciprocidad',
+        int_affectexp: '3.4 Expresión afectiva',
+        int_empathy: '3.5 Empatía',
+        int_ability_detach: '3.6 Capacidad de distanciarse',
+        attachment: '4. Apego (total)',
+        att_representation: '4.1 Representación de figuras de apego',
+        att_internalbasis: '4.2 Base interna de apego',
+        att_capacity_alone: '4.3 Capacidad de estar a solas',
+        att_use_relations: '4.4 Uso de relaciones de apego',
+      };
+
+      // Paleta base por dimensión
+      const BASE_COLORS: Record<string,string> = {
+        total: 'rgba(0,0,0,1)',
+        control: 'rgba(37, 99, 235, 1)',            // blue-600
+        identity: 'rgba(22, 101, 52, 1)',           // green-700
+        interpersonality: 'rgba(154, 52, 18, 1)',   // orange-700
+        attachment: 'rgba(161, 98, 7, 1)',          // yellow-700
+      };
+
+      // Helper para asignar colores de dimensión base
+      const getBaseKey = (k: string): string => {
+        if (k === 'total') return 'total';
+        if (k.startsWith('ctr_') || k === 'control') return 'control';
+        if (k.startsWith('id_') || k === 'identity') return 'identity';
+        if (k.startsWith('int_') || k === 'interpersonality') return 'interpersonality';
+        if (k.startsWith('att_') || k === 'attachment') return 'attachment';
+        return 'total';
+      };
+
+      const labels: string[] = [];
+      const values: number[] = [];
+      const bgColors: string[] = [];
+      const borderColors: string[] = [];
+
+      orderedKeys.forEach((key) => {
+        // Buscar valor en score_detallado o en subDimensions
+        let val: number | null | undefined = (score_detallado as any)[key];
+        if (val === undefined && score_detallado.subDimensions) {
+          val = score_detallado.subDimensions[key];
+        }
+        if (val === null || val === undefined) return; // Skip no data
+
+        labels.push(LABEL_MAP[key] ?? key);
+        values.push(val);
+
+        const baseKey = getBaseKey(key);
+        const base = BASE_COLORS[baseKey];
+
+        // Opacidad: total 0.85, dimensiones 0.85, subdimensiones 0.35
+        let bg = base;
+        if (key === 'total') {
+          bg = 'rgba(0,0,0,0.85)';
+        } else if (['control','identity','interpersonality','attachment'].includes(key)) {
+          bg = base.replace(', 1)', ', 0.85)');
+        } else {
+          bg = base.replace(', 1)', ', 0.35)');
+        }
+        bgColors.push(bg);
+        borderColors.push(base);
+      });
+
+      const barData = {
+        labels,
+        datasets: [{
+          label: 'T-Score',
+          data: values,
+          backgroundColor: bgColors,
+          borderColor: borderColors,
+          borderWidth: 1,
+        }],
+      } as const;
+
+      const barOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: false,
+            min: 20,
+            max: 80,
+            title: { display: true, text: 'T-Score', font: { size: 14, weight: 'bold' } },
+            grid: {
+              color: (ctx: any) => (ctx.tick.value === 40 || ctx.tick.value === 60) ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.1)',
+            },
+          },
+          x: {
+            ticks: { autoSkip: false, maxRotation: 65, minRotation: 40, font: { size: 9 } },
+            grid: { display: false },
+          },
+        },
+        plugins: {
+          legend: { display: false },
+          title: {
+            display: true,
+            text: `Perfil Estructural Adolescente – ${new Date(latestData.creado_en).toLocaleDateString()}`,
+            font: { size: 16, weight: 'bold' },
+            padding: { top: 10, bottom: 20 },
+          },
+          tooltip: {
+            callbacks: {
+              title: (ctx: any) => ctx[0].label,
+              label: (ctx: any) => `T-Score: ${ctx.parsed.y}`,
+              afterLabel: (ctx: any) => {
+                const score = ctx.parsed.y;
+                if (score >= 60) return 'Nivel clínico';
+                if (score <= 40) return 'Nivel vulnerable';
+                return 'Rango saludable';
+              },
+            },
+          },
+        },
+      } as const;
+
+      return (
+        <div className={`relative w-full ${className ?? 'h-[720px]'}`}>
+          <Bar data={barData} options={barOptions as any} plugins={[midBandPlugin]} />
+        </div>
+      );
+    }
+
     const dimensionKeys = ['control', 'identity', 'interpersonality', 'attachment'];
 
     // Si existen subdimensiones válidas, las usamos para el gráfico
