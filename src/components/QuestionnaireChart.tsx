@@ -75,7 +75,7 @@ const midBandPlugin = {
     const bandStartPixel = valueScale.getPixelForValue(60);
     const bandEndPixel = valueScale.getPixelForValue(40);
 
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.08)'; // A light grey band
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.04)'; // Lighter grey band (less intrusive)
 
     if (isHorizontal) {
       // For horizontal bar chart, the band is a vertical rectangle.
@@ -242,7 +242,7 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
     };
 
     return (
-      <div className={`relative w-full ${className ?? "h-[700px]"}`}>
+      <div className={`relative w-full ${className ?? "h-[28rem]"}`}>
         <Bar data={multidimData} options={multidimOptions as any} plugins={[midBandPlugin]} />
       </div>
     );

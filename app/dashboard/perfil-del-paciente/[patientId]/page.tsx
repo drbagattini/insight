@@ -501,18 +501,28 @@ export default function PatientProfilePage() {
                 </div>
               </div>
 
-              {/* Filtro de fecha (solo OPD-CA2-SQ) */}
-              {selectedQuestionnaire === 'OPD-CA2-SQ' && (
-              <div className="flex flex-col sm:flex-row gap-4 mt-4 justify-end">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Fecha</label>
-                  <select className="w-full px-2 py-1 border rounded" value={selectedDate ?? (availableDates[availableDates.length-1] ?? '')} onChange={e => setSelectedDate(e.target.value)}> 
-                    {availableDates.map(d => (
-                      <option key={d} value={d}>{new Date(d).toLocaleDateString()}</option>
-                    ))}
-                  </select>
+                            {/* Filtro de fecha (solo OPD-CA2-SQ) */}
+              {selectedQuestionnaire === 'OPD-CA2-SQ' && availableDates.length > 0 && (
+                <div className="flex flex-col sm:flex-row gap-4 mt-4 justify-end">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Fecha de la toma</label>
+                    <select 
+                      className="w-full px-2 py-1 border rounded"
+                      value={selectedDate ?? ''}
+                      onChange={e => setSelectedDate(e.target.value)}
+                    > 
+                      {availableDates.map(d => {
+                        // Parse date as local to prevent timezone shifts in display
+                        const localDate = new Date(d + 'T00:00:00');
+                        return (
+                          <option key={d} value={d}>
+                            {localDate.toLocaleDateString()}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
                 </div>
-              </div>
               )}
 
               {loading ? (
@@ -520,11 +530,11 @@ export default function PatientProfilePage() {
               ) : error ? (
                 <p className="text-red-500">{error}</p>
               ) : filteredEvolutionData.length > 0 ? (
-                <div className="bg-white p-4 rounded-lg shadow">
+                <div className="bg-white p-4 rounded-lg shadow mt-4">
                   <QuestionnaireChart data={filteredEvolutionData} codigo={selectedQuestionnaire} titleOverride={chartTitle} />
                 </div>
               ) : (
-                <p>No hay datos de evolución para mostrar para el cuestionario seleccionado.</p>
+                <p className="mt-4">No hay datos de evolución para mostrar para el cuestionario seleccionado.</p>
               )}
               
               <div className="mt-8 mb-8">
