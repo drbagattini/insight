@@ -165,6 +165,15 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
       const bgColors: string[] = [];
       const borderColors: string[] = [];
 
+      // Conjunto para identificar etiquetas que deben ir en negrita (dimensiones generales + total)
+      const boldLabelSet = new Set<string>([
+        LABEL_MAP['total'],
+        LABEL_MAP['control'],
+        LABEL_MAP['identity'],
+        LABEL_MAP['interpersonality'],
+        LABEL_MAP['attachment'],
+      ]);
+
       orderedKeys.forEach((key) => {
         // Buscar valor en score_detallado o en subDimensions
         let val: number | null | undefined = (score_detallado as any)[key];
@@ -217,7 +226,19 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
             },
           },
           x: {
-            ticks: { autoSkip: false, maxRotation: 65, minRotation: 40, font: { size: 9 } },
+            ticks: {
+              autoSkip: false,
+              maxRotation: 65,
+              minRotation: 40,
+              // Scriptable font to bold main dimensions & total
+              font: (ctx: any) => {
+                const label = ctx.tick?.label as string;
+                return {
+                  size: 11, // 2 puntos más grande que antes
+                  weight: boldLabelSet.has(label) ? 'bold' as const : 'normal' as const,
+                };
+              },
+            },
             grid: { display: false },
           },
         },
