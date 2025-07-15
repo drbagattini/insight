@@ -37,25 +37,56 @@ const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, meta, cla
     return <div className="text-center text-gray-500 py-8">Sin datos suficientes para mostrar el gráfico.</div>;
   }
 
-  // --- Manejo de cuestionarios multidimensionales (p.ej. OPD-CA2-SQ) ---
-  const latest = data[data.length - 1] as any;
-  if (latest?.score_detallado?.subDimensions) {
-    const { score_detallado } = latest;
-    const sub = score_detallado.subDimensions || {};
+    // --- Manejo de cuestionarios multidimensionales (p.ej. OPD-CA2-SQ) ---
+    const latest = data[data.length - 1] as any;
+    console.log('DATA RECIBIDA:', data);
+    console.log('LATEST ITEM:', latest);
+    
+    if (latest?.score_detallado) { 
+      const { score_detallado } = latest;
+      console.log('SCORE DETALLADO:', score_detallado);
+      const sub = score_detallado.subDimensions || {};
+      console.log('SUBDIMENSIONS:', sub);
 
-    // Orden clínico de visualización (total → dimensiones → subdimensiones)
+    // Orden clínico de visualización exacto para OPD-CA2-SQ
+    // 1. Estructura total
+    // 2-5. Las 4 dimensiones principales
+    // 6-24. Las 19 subdimensiones en orden clínico
     const orderedKeys = [
-      // Total
-      'OPD_total_t',
-      // Control
-      'OPD_control_t', 'OPD_CTR_Impulse_t', 'OPD_CTR_Affect_t', 'OPD_CTR_Consc_t', 'OPD_CTR_Selfworth_t',
-      // Identidad
-      'OPD_Identity_t', 'OPD_Id_Coherence_t', 'OPD_Id_Selfexp_t', 'OPD_Id_SODiff_t', 'OPD_Id_Objectexp_t', 'OPD_Id_Belong_t',
-      // Interpersonalidad
-      'OPD_Interpersonality_t', 'OPD_Int_Fantasies_t', 'OPD_Int_emotContact_t', 'OPD_Int_Reciprocity_t', 'OPD_Int_Affectexp_t', 'OPD_Int_Empathy_t', 'OPD_Int_Ability_detach_t',
-      // Apego
-      'OPD_Attachment_t', 'OPD_Att_Representation_t', 'OPD_Att_internalBasis_t', 'OPD_Att_Capacity_Alone_t', 'OPD_Att_Use_relations_t',
-    ] as const;
+      // Total - debe ir primero
+      'total', 
+
+      // 1. Control (total) y sus subdimensiones
+      'control',
+      'ctr_impulse', 
+      'ctr_affect', 
+      'ctr_consc', 
+      'ctr_selfworth',
+
+      // 2. Identidad (total) y sus subdimensiones
+      'identity',
+      'id_coherence', 
+      'id_selfexp', 
+      'id_sodiff', 
+      'id_objectexp', 
+      'id_belong',
+
+      // 3. Interpersonalidad (total) y sus subdimensiones
+      'interpersonality',
+      'int_fantasies', 
+      'int_emotcontact', 
+      'int_reciprocity', 
+      'int_affectexp', 
+      'int_empathy', 
+      'int_ability_detach',
+
+      // 4. Apego (total) y sus subdimensiones
+      'attachment',
+      'att_representation', 
+      'att_internalbasis', 
+      'att_capacity_alone', 
+      'att_use_relations',
+    ];
 
     // Etiquetas clínicas oficiales
     const LABELS: Record<string, string> = {
@@ -118,76 +149,135 @@ const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, meta, cla
       att_use_relations: '4.4 Uso de relaciones de apego',
     };
 
-    // Mapeo de claves técnicas a las claves simples usadas en versiones previas
+    // Mapa bidireccional para buscar claves en ambas direcciones
     const altKeyMap: Record<string, string> = {
-      OPD_total_t: 'total',
-
-      OPD_control_t: 'control',
-      OPD_CTR_Impulse_t: 'ctr_impulse',
-      OPD_CTR_Affect_t: 'ctr_affect',
-      OPD_CTR_Consc_t: 'ctr_consc',
-      OPD_CTR_Selfworth_t: 'ctr_selfworth',
-
-      OPD_Identity_t: 'identity',
-      OPD_Id_Coherence_t: 'id_coherence',
-      OPD_Id_Selfexp_t: 'id_selfexp',
-      OPD_Id_SODiff_t: 'id_sodiff',
-      OPD_Id_Objectexp_t: 'id_objectexp',
-      OPD_Id_Belong_t: 'id_belong',
-
-      OPD_Interpersonality_t: 'interpersonality',
-      OPD_Int_Fantasies_t: 'int_fantasies',
-      OPD_Int_emotContact_t: 'int_emotcontact',
-      OPD_Int_Reciprocity_t: 'int_reciprocity',
-      OPD_Int_Affectexp_t: 'int_affectexp',
-      OPD_Int_Empathy_t: 'int_empathy',
-      OPD_Int_Ability_detach_t: 'int_ability_detach',
-
-      OPD_Attachment_t: 'attachment',
-      OPD_Att_Representation_t: 'att_representation',
-      OPD_Att_internalBasis_t: 'att_internalbasis',
-      OPD_Att_Capacity_Alone_t: 'att_capacity_alone',
-      OPD_Att_Use_relations_t: 'att_use_relations',
+      // OPD -> original
+      'OPD_total_t': 'total',
+      'OPD_control_t': 'control',
+      'OPD_Identity_t': 'identity',
+      'OPD_Interpersonality_t': 'interpersonality',
+      'OPD_Attachment_t': 'attachment',
+      'OPD_CTR_Impulse_t': 'ctr_impulse',
+      'OPD_CTR_Affect_t': 'ctr_affect',
+      'OPD_CTR_Consc_t': 'ctr_consc',
+      'OPD_CTR_Selfworth_t': 'ctr_selfworth',
+      'OPD_Id_Coherence_t': 'id_coherence',
+      'OPD_Id_Selfexp_t': 'id_selfexp',
+      'OPD_Id_SODiff_t': 'id_sodiff',
+      'OPD_Id_Objectexp_t': 'id_objectexp',
+      'OPD_Id_Belong_t': 'id_belong',
+      'OPD_Int_Fantasies_t': 'int_fantasies',
+      'OPD_Int_emotContact_t': 'int_emotcontact',
+      'OPD_Int_Reciprocity_t': 'int_reciprocity',
+      'OPD_Int_Affectexp_t': 'int_affectexp',
+      'OPD_Int_Empathy_t': 'int_empathy',
+      'OPD_Int_Ability_detach_t': 'int_ability_detach',
+      'OPD_Att_Representation_t': 'att_representation',
+      'OPD_Att_internalBasis_t': 'att_internalbasis',
+      'OPD_Att_Capacity_Alone_t': 'att_capacity_alone',
+      'OPD_Att_Use_relations_t': 'att_use_relations',
+      // original -> OPD
+      'total': 'OPD_total_t',
+      'control': 'OPD_control_t',
+      'identity': 'OPD_Identity_t',
+      'interpersonality': 'OPD_Interpersonality_t',
+      'attachment': 'OPD_Attachment_t',
+      'ctr_impulse': 'OPD_CTR_Impulse_t',
+      'ctr_affect': 'OPD_CTR_Affect_t',
+      'ctr_consc': 'OPD_CTR_Consc_t',
+      'ctr_selfworth': 'OPD_CTR_Selfworth_t',
+      'id_coherence': 'OPD_Id_Coherence_t',
+      'id_selfexp': 'OPD_Id_Selfexp_t',
+      'id_sodiff': 'OPD_Id_SODiff_t',
+      'id_objectexp': 'OPD_Id_Objectexp_t',
+      'id_belong': 'OPD_Id_Belong_t',
+      'int_fantasies': 'OPD_Int_Fantasies_t',
+      'int_emotcontact': 'OPD_Int_emotContact_t',
+      'int_reciprocity': 'OPD_Int_Reciprocity_t',
+      'int_affectexp': 'OPD_Int_Affectexp_t',
+      'int_empathy': 'OPD_Int_Empathy_t',
+      'int_ability_detach': 'OPD_Int_Ability_detach_t',
+      'att_representation': 'OPD_Att_Representation_t',
+      'att_internalbasis': 'OPD_Att_internalBasis_t',
+      'att_capacity_alone': 'OPD_Att_Capacity_Alone_t',
+      'att_use_relations': 'OPD_Att_Use_relations_t',
     };
 
-    // Colores base por dimensión
+    // Paleta de colores clínicos oficiales exacta
     const baseColors: Record<string, string> = {
-      control: 'rgb(37, 99, 235)',
-      identity: 'rgb(22, 101, 52)',
-      interpersonality: 'rgb(154, 52, 18)',
-      attachment: 'rgb(161, 98, 7)',
-      total: 'rgb(55, 65, 81)',
+      total: 'rgb(0, 0, 0)',       // Negro para estructura total
+      control: 'rgb(0, 75, 150)',  // Azul para dimensión Control
+      identity: 'rgb(0, 150, 75)', // Verde para dimensión Identidad
+      interpersonality: 'rgb(180, 75, 0)',  // Naranja-marrón para Interpersonalidad
+      attachment: 'rgb(180, 120, 0)',       // Dorado para dimensión Apego
     };
 
     const bgColors: string[] = [];
     const values: number[] = [];
     const displayLabels: string[] = [];
 
+    // Recorremos las claves en el orden clínico
     orderedKeys.forEach((k) => {
-      const simpleKey = altKeyMap[k];
-      const val = score_detallado[k] ?? sub[k] ?? (simpleKey ? (score_detallado[simpleKey] ?? sub[simpleKey]) : undefined);
+      let val;
+      
+      // La estrategia de búsqueda depende de si es dimensión principal o subdimensión
+      const isMainDimension = ['total', 'control', 'identity', 'interpersonality', 'attachment'].includes(k);
+      
+      // Buscar el valor en la ubicación correcta
+      if (isMainDimension) {
+        // Para dimensiones principales y total, buscamos directamente en score_detallado
+        val = score_detallado[k];
+        } else {
+        // Para subdimensiones, buscamos en subDimensions
+        val = sub[k];
+      }
+      
+      console.log(`Key: ${k}, Value: ${val}, Label: ${LABELS[k]}`);
+
 
       if (val !== null && val !== undefined) {
         values.push(val as number);
-        displayLabels.push(LABELS[k] ?? k);
+        // Siempre usar la etiqueta clínica del mapeo LABELS
+        displayLabels.push(LABELS[k] || k);
 
+        // Determina a qué dimensión pertenece para aplicar color
         const dim = (() => {
-          if (['OPD_total_t', 'total'].includes(k)) return 'total';
-          if (k.startsWith('OPD_CTR_') || k.startsWith('ctr_') || ['OPD_control_t', 'control'].includes(k)) return 'control';
-          if (k.startsWith('OPD_Id_') || k.startsWith('id_') || ['OPD_Identity_t', 'identity'].includes(k)) return 'identity';
-          if (k.startsWith('OPD_Int_') || k.startsWith('int_') || ['OPD_Interpersonality_t', 'interpersonality'].includes(k)) return 'interpersonality';
-          if (k.startsWith('OPD_Att_') || k.startsWith('att_') || ['OPD_Attachment_t', 'attachment'].includes(k)) return 'attachment';
-          return 'total';
+          if (k === 'total') return 'total';
+          if (k === 'control' || k.startsWith('ctr_')) return 'control';
+          if (k === 'identity' || k.startsWith('id_')) return 'identity';
+          if (k === 'interpersonality' || k.startsWith('int_')) return 'interpersonality';
+          if (k === 'attachment' || k.startsWith('att_')) return 'attachment';
+          return 'total'; // fallback
         })();
 
-        const isMain = ['OPD_total_t','total','OPD_control_t','control','OPD_Identity_t','identity','OPD_Interpersonality_t','interpersonality','OPD_Attachment_t','attachment'].includes(k);
-        const alpha = isMain ? 0.85 : 0.45;
+        // Determina si es dimensión principal para ajustar la opacidad
+        const isMain = ['total', 'control', 'identity', 'interpersonality', 'attachment'].includes(k);
+        
+        // Usa diferentes niveles de opacidad para distinguir claramente los niveles:
+        // - Total: opacidad máxima
+        // - Dimensiones principales: opacidad alta
+        // - Subdimensiones: opacidad media
+        let alpha = 0.45; // subdimensiones
+        if (k === 'total') {
+          alpha = 1.0; // total con opacidad completa
+        } else if (isMain) {
+          alpha = 0.85; // dimensiones principales
+        }
         const rgb = baseColors[dim];
         bgColors.push(rgb.replace('rgb', 'rgba').replace(')', `, ${alpha})`));
       }
     });
 
-    const barData = {
+    const barData: {
+      labels: string[];
+      datasets: Array<{
+        label: string;
+        data: number[];
+        backgroundColor: string[];
+        borderColor: string[];
+        borderWidth: number;
+      }>;
+    } = {
       labels: displayLabels,
       datasets: [
         {
@@ -198,12 +288,12 @@ const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, meta, cla
           borderWidth: 1,
         },
       ],
-    } as const;
+    };
 
     // Plugin para banda saludable 40-60
     const midBandPlugin = {
       id: 'midBand',
-      beforeDatasetsDraw(chart: any) {
+      beforeDatasetsDraw(chart: ChartJS<'bar'>) {
         const { ctx, chartArea: { top, bottom, left, right }, scales: { y } } = chart;
         ctx.save();
         const yStart = y.getPixelForValue(60);
@@ -218,23 +308,55 @@ const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, meta, cla
       responsive: true,
       maintainAspectRatio: false,
       scales: {
-        y: { beginAtZero: false, min: 20, max: 80, title: { display: true, text: 'T-Score' } },
-        x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 30, font: { size: 10 } }, grid: { display: false } },
+        y: { 
+          beginAtZero: false, 
+          min: 20, 
+          max: 80, 
+          title: { display: true, text: 'T-Score' },
+          grid: {
+            color: (ctx: any) => {
+              // Resaltar la línea del valor 40 y 60 (banda saludable)
+              if (ctx.tick.value === 40 || ctx.tick.value === 60) {
+                return 'rgba(0,0,0,0.2)';
+              }
+              return 'rgba(0,0,0,0.1)';
+            }
+          }
+        },
+        x: { 
+          ticks: { 
+            autoSkip: false, 
+            maxRotation: 65, 
+            minRotation: 40, 
+            font: { size: 9 } 
+          }, 
+          grid: { display: false } 
+        },
       },
       plugins: {
         legend: { display: false },
-        title: { display: true, text: `Perfil Estructura Psíquica – ${new Date(latest.creado_en).toLocaleDateString()}` },
+        title: { 
+          display: true, 
+          font: { size: 14, weight: 'bold' },
+          text: `Perfil Estructural Adolescente – ${latest.fecha ? new Date(latest.fecha).toLocaleDateString() : 'Última evaluación'}` 
+        },
         tooltip: {
           callbacks: {
             title: (ctx: any) => ctx[0].label,
             label: (ctx: any) => `T-Score: ${ctx.parsed.y}`,
+            afterLabel: (ctx: any) => {
+              const score = ctx.parsed.y;
+              if (score >= 60) return 'Nivel clínico';
+              if (score <= 40) return 'Nivel vulnerable';
+              return 'Rango saludable';
+            }
           },
         },
       },
     } as const;
 
     return (
-      <div className={`relative w-full ${className ?? 'h-[620px]'}`}>
+      <div className={`relative w-full ${className ?? 'h-[800px]'}`}>
         <Bar data={barData} options={barOptions} plugins={[midBandPlugin]} />
       </div>
     );
