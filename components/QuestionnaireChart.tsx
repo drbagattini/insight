@@ -45,43 +45,109 @@ const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, meta, cla
 
     // Orden clínico de visualización (total → dimensiones → subdimensiones)
     const orderedKeys = [
-      'total',
-      'control', 'ctr_impulse', 'ctr_affect', 'ctr_consc', 'ctr_selfworth',
-      'identity', 'id_coherence', 'id_selfexp', 'id_sodiff', 'id_objectexp', 'id_belong',
-      'interpersonality', 'int_fantasies', 'int_emotcontact', 'int_reciprocity', 'int_affectexp', 'int_empathy', 'int_ability_detach',
-      'attachment', 'att_representation', 'att_internalbasis', 'att_capacity_alone', 'att_use_relations',
+      // Total
+      'OPD_total_t',
+      // Control
+      'OPD_control_t', 'OPD_CTR_Impulse_t', 'OPD_CTR_Affect_t', 'OPD_CTR_Consc_t', 'OPD_CTR_Selfworth_t',
+      // Identidad
+      'OPD_Identity_t', 'OPD_Id_Coherence_t', 'OPD_Id_Selfexp_t', 'OPD_Id_SODiff_t', 'OPD_Id_Objectexp_t', 'OPD_Id_Belong_t',
+      // Interpersonalidad
+      'OPD_Interpersonality_t', 'OPD_Int_Fantasies_t', 'OPD_Int_emotContact_t', 'OPD_Int_Reciprocity_t', 'OPD_Int_Affectexp_t', 'OPD_Int_Empathy_t', 'OPD_Int_Ability_detach_t',
+      // Apego
+      'OPD_Attachment_t', 'OPD_Att_Representation_t', 'OPD_Att_internalBasis_t', 'OPD_Att_Capacity_Alone_t', 'OPD_Att_Use_relations_t',
     ] as const;
 
     // Etiquetas clínicas oficiales
     const LABELS: Record<string, string> = {
+      // Total
+      OPD_total_t: 'Estructura (total)',
       total: 'Estructura (total)',
 
+      // Control
+      OPD_control_t: '1. Control (total)',
       control: '1. Control (total)',
+      OPD_CTR_Impulse_t: '1.1 Control de impulsos',
       ctr_impulse: '1.1 Control de impulsos',
+      OPD_CTR_Affect_t: '1.2 Tolerancia afectiva',
       ctr_affect: '1.2 Tolerancia afectiva',
+      OPD_CTR_Consc_t: '1.3 Formación de conciencia',
       ctr_consc: '1.3 Formación de conciencia',
+      OPD_CTR_Selfworth_t: '1.4 Autovaloración',
       ctr_selfworth: '1.4 Autovaloración',
 
+      // Identidad
+      OPD_Identity_t: '2. Identidad (total)',
       identity: '2. Identidad (total)',
+      OPD_Id_Coherence_t: '2.1 Coherencia',
       id_coherence: '2.1 Coherencia',
+      OPD_Id_Selfexp_t: '2.2 Percepción del sí mismo',
       id_selfexp: '2.2 Percepción del sí mismo',
+      OPD_Id_SODiff_t: '2.3 Diferenciación self-objeto',
       id_sodiff: '2.3 Diferenciación self-objeto',
+      OPD_Id_Objectexp_t: '2.4 Percepción del objeto',
       id_objectexp: '2.4 Percepción del objeto',
+      OPD_Id_Belong_t: '2.5 Pertenencia',
       id_belong: '2.5 Pertenencia',
 
+      // Interpersonalidad
+      OPD_Interpersonality_t: '3. Interpersonalidad (total)',
       interpersonality: '3. Interpersonalidad (total)',
+      OPD_Int_Fantasies_t: '3.1 Fantasías',
       int_fantasies: '3.1 Fantasías',
+      OPD_Int_emotContact_t: '3.2 Contacto emocional',
       int_emotcontact: '3.2 Contacto emocional',
+      OPD_Int_Reciprocity_t: '3.3 Reciprocidad',
       int_reciprocity: '3.3 Reciprocidad',
+      OPD_Int_Affectexp_t: '3.4 Percepción de afectos',
       int_affectexp: '3.4 Percepción de afectos',
+      OPD_Int_Empathy_t: '3.5 Empatía',
       int_empathy: '3.5 Empatía',
+      OPD_Int_Ability_detach_t: '3.6 Capacidad para separarse',
       int_ability_detach: '3.6 Capacidad para separarse',
 
+      // Apego
+      OPD_Attachment_t: '4. Apego (total)',
       attachment: '4. Apego (total)',
+      OPD_Att_Representation_t: '4.1 Acceso a representaciones de apego',
       att_representation: '4.1 Acceso a representaciones de apego',
+      OPD_Att_internalBasis_t: '4.2 Base segura interna',
       att_internalbasis: '4.2 Base segura interna',
+      OPD_Att_Capacity_Alone_t: '4.3 Capacidad para estar solo',
       att_capacity_alone: '4.3 Capacidad para estar solo',
+      OPD_Att_Use_relations_t: '4.4 Uso de relaciones de apego',
       att_use_relations: '4.4 Uso de relaciones de apego',
+    };
+
+    // Mapeo de claves técnicas a las claves simples usadas en versiones previas
+    const altKeyMap: Record<string, string> = {
+      OPD_total_t: 'total',
+
+      OPD_control_t: 'control',
+      OPD_CTR_Impulse_t: 'ctr_impulse',
+      OPD_CTR_Affect_t: 'ctr_affect',
+      OPD_CTR_Consc_t: 'ctr_consc',
+      OPD_CTR_Selfworth_t: 'ctr_selfworth',
+
+      OPD_Identity_t: 'identity',
+      OPD_Id_Coherence_t: 'id_coherence',
+      OPD_Id_Selfexp_t: 'id_selfexp',
+      OPD_Id_SODiff_t: 'id_sodiff',
+      OPD_Id_Objectexp_t: 'id_objectexp',
+      OPD_Id_Belong_t: 'id_belong',
+
+      OPD_Interpersonality_t: 'interpersonality',
+      OPD_Int_Fantasies_t: 'int_fantasies',
+      OPD_Int_emotContact_t: 'int_emotcontact',
+      OPD_Int_Reciprocity_t: 'int_reciprocity',
+      OPD_Int_Affectexp_t: 'int_affectexp',
+      OPD_Int_Empathy_t: 'int_empathy',
+      OPD_Int_Ability_detach_t: 'int_ability_detach',
+
+      OPD_Attachment_t: 'attachment',
+      OPD_Att_Representation_t: 'att_representation',
+      OPD_Att_internalBasis_t: 'att_internalbasis',
+      OPD_Att_Capacity_Alone_t: 'att_capacity_alone',
+      OPD_Att_Use_relations_t: 'att_use_relations',
     };
 
     // Colores base por dimensión
@@ -98,26 +164,23 @@ const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, meta, cla
     const displayLabels: string[] = [];
 
     orderedKeys.forEach((k) => {
-      const val = k === 'total'
-        ? score_detallado.total
-        : (k === 'control' || k === 'identity' || k === 'interpersonality' || k === 'attachment')
-          ? score_detallado[k]
-          : sub[k];
+      const simpleKey = altKeyMap[k];
+      const val = score_detallado[k] ?? sub[k] ?? (simpleKey ? (score_detallado[simpleKey] ?? sub[simpleKey]) : undefined);
 
       if (val !== null && val !== undefined) {
         values.push(val as number);
         displayLabels.push(LABELS[k] ?? k);
 
         const dim = (() => {
-          if (k === 'total') return 'total';
-          if (k.startsWith('ctr_') || k === 'control') return 'control';
-          if (k.startsWith('id_') || k === 'identity') return 'identity';
-          if (k.startsWith('int_') || k === 'interpersonality') return 'interpersonality';
-          if (k.startsWith('att_') || k === 'attachment') return 'attachment';
+          if (['OPD_total_t', 'total'].includes(k)) return 'total';
+          if (k.startsWith('OPD_CTR_') || k.startsWith('ctr_') || ['OPD_control_t', 'control'].includes(k)) return 'control';
+          if (k.startsWith('OPD_Id_') || k.startsWith('id_') || ['OPD_Identity_t', 'identity'].includes(k)) return 'identity';
+          if (k.startsWith('OPD_Int_') || k.startsWith('int_') || ['OPD_Interpersonality_t', 'interpersonality'].includes(k)) return 'interpersonality';
+          if (k.startsWith('OPD_Att_') || k.startsWith('att_') || ['OPD_Attachment_t', 'attachment'].includes(k)) return 'attachment';
           return 'total';
         })();
 
-        const isMain = ['total', 'control', 'identity', 'interpersonality', 'attachment'].includes(k);
+        const isMain = ['OPD_total_t','total','OPD_control_t','control','OPD_Identity_t','identity','OPD_Interpersonality_t','interpersonality','OPD_Attachment_t','attachment'].includes(k);
         const alpha = isMain ? 0.85 : 0.45;
         const rgb = baseColors[dim];
         bgColors.push(rgb.replace('rgb', 'rgba').replace(')', `, ${alpha})`));
