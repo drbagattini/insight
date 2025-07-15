@@ -256,9 +256,9 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
               label: (ctx: any) => `T-Score: ${ctx.parsed.y}`,
               afterLabel: (ctx: any) => {
                 const score = ctx.parsed.y;
-                if (score >= 60) return 'Nivel clínico';
-                if (score <= 40) return 'Nivel vulnerable';
-                return 'Rango saludable';
+                if (score > 60) return 'Nivel clínico';
+                if (score >= 40) return 'Nivel borderline';
+                return 'Nivel saludable';
               },
             },
           },
@@ -267,7 +267,10 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
 
       return (
         <div className={`relative w-full ${className ?? 'h-[720px]'}`}>
-          <Bar data={barData} options={barOptions as any} plugins={[midBandPlugin]} />
+          <Bar data={{
+            ...barData,
+            datasets: [...barData.datasets] // Ensure datasets is mutable
+          }} options={barOptions as any} plugins={[midBandPlugin]} />
         </div>
       );
     }
@@ -435,7 +438,10 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
 
     return (
       <div className={`relative w-full ${className ?? "h-[600px]"}`}>
-        <Bar data={multidimData} options={multidimOptions as any} plugins={[midBandPlugin]} />
+        <Bar data={{
+        ...multidimData,
+        datasets: [...multidimData.datasets] // Ensure datasets is mutable
+      }} options={multidimOptions as any} plugins={[midBandPlugin]} />
       </div>
     );
   }
