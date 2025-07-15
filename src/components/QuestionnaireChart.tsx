@@ -35,26 +35,29 @@ const LABELS = {
   identity: 'Identidad',
   interpersonality: 'Interpersonalidad',
   attachment: 'Apego',
-  ctr_self_perception: 'Percepción de sí mismo',
-  ctr_object_perception: 'Percepción de objeto',
-  ctr_self_regulation: 'Autorregulación',
-  ctr_regulation_of_relationship: 'Regulación de la relación',
-  id_self_reflection: 'Autorreflexión',
-  id_affect_differentiation: 'Diferenciación de afectos',
-  id_identity: 'Identidad',
-  id_body_self: 'Cuerpo y autoimagen',
+  // Subdimensiones Control
+  ctr_impulse: 'Impulsos',
+  ctr_affect: 'Afecto',
+  ctr_consc: 'Consciencia',
+  ctr_selfworth: 'Autoestima',
+  // Subdimensiones Identity
+  id_coherence: 'Coherencia',
+  id_selfexp: 'Expresión del Self',
+  id_sodiff: 'Autodiferenciación',
+  id_objectexp: 'Exp. de objeto',
+  id_belong: 'Pertenencia',
+  // Subdimensiones Interpersonality
+  int_fantasies: 'Fantasías',
+  int_emotcontact: 'Contacto Emocional',
+  int_reciprocity: 'Reciprocidad',
+  int_affectexp: 'Expresión Afectiva',
   int_empathy: 'Empatía',
-  int_communication: 'Comunicación',
-  int_affect_experience: 'Experiencia afectiva',
-  int_object_experience: 'Experiencia de objeto',
-  att_internalization: 'Internalización',
-  att_separation_ability: 'Capacidad de separación',
-  att_variable_attachment_patterns: 'Patrones de apego variables',
-  // Subdimensiones adicionales que podrían faltar pero se incluyen por completitud
-  ctr_impulse_control: 'Control de impulsos',
-  id_affect_tolerance: 'Tolerancia a los afectos',
-  int_relationship_building: 'Construcción de relaciones',
-  att_secure_base: 'Base segura',
+  int_ability_detach: 'Desapego',
+  // Subdimensiones Attachment
+  att_representation: 'Representación',
+  att_internalbasis: 'Base Interna',
+  att_capacity_alone: 'Capacidad Soledad',
+  att_use_relations: 'Uso Relacional',
 } as const;
 
 const midBandPlugin = {
@@ -96,6 +99,85 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
     const { score_detallado } = latestData;
 
     const dimensionKeys = ['control', 'identity', 'interpersonality', 'attachment'];
+
+    // Si existen subdimensiones válidas, las usamos para el gráfico
+    const subDimensions = score_detallado.subDimensions;
+    let subChartElement: React.ReactNode = null;
+    if (subDimensions) {
+      const subEntries = Object.entries(subDimensions).filter(([, val]) => val !== null && val !== undefined);
+      if (subEntries.length > 0) {
+        const subLabels = subEntries.map(([key]) => LABELS[key as keyof typeof LABELS] || key);
+        const subValues = subEntries.map(([, val]) => val as number);
+        const baseColors = {
+          control: 'rgb(37, 99, 235)',
+          identity: 'rgb(22, 101, 52)',
+          interpersonality: 'rgb(154, 52, 18)',
+          attachment: 'rgb(161, 98, 7)',
+        } as const;
+
+        // Determine color by dimension prefix
+        const bgColors = subEntries.map(([key]) => {
+          if (key.startsWith('ctr_')) return baseColors.control + '99';
+          if (key.startsWith('id_')) return baseColors.identity + '99';
+          if (key.startsWith('int_')) return baseColors.interpersonality + '99';
+          if (key.startsWith('att_')) return baseColors.attachment + '99';
+          return 'rgba(100,100,100,0.6)';
+        });
+        const borderColors = bgColors.map(c => c.replace('99', ''));
+
+        const subData = {
+          labels: subLabels,
+          datasets: [
+            {
+              label: 'T-Score por Subdimensión',
+              data: subValues,
+              backgroundColor: bgColors,
+              borderColor: borderColors,
+              borderWidth: 1,
+            },
+          ],
+        };
+
+        const subOptions = {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: false,
+              min: 20,
+              max: 80,
+              title: { display: true, text: 'T-Score', font: { size: 14, weight: 'bold' } },
+              grid: { color: 'rgba(0,0,0,0.1)' },
+            },
+            x: {
+              ticks: { autoSkip: false, maxRotation: 45, minRotation: 30, font: { size: 10 } },
+              grid: { display: false },
+            },
+          },
+          plugins: {
+            legend: { display: false },
+            title: {
+              display: true,
+              text: `Perfil Subdimensiones - ${new Date(latestData.creado_en).toLocaleDateString()}`,
+              font: { size: 16, weight: 'bold' },
+              padding: { top: 10, bottom: 20 },
+            },
+            tooltip: {
+              callbacks: {
+                title: (ctx: any) => ctx[0].label,
+                label: (ctx: any) => `T-Score: ${ctx.parsed.y}`,
+              },
+            },
+          },
+        } as const;
+
+        return (
+          <div className={`relative w-full ${className ?? 'h-[620px]'}`}>
+            <Bar data={subData} options={subOptions as any} plugins={[midBandPlugin]} />
+          </div>
+        );
+      }
+    }
     const hasValidData = dimensionKeys.some(key => score_detallado[key] !== null && score_detallado[key] !== undefined);
 
     if (!hasValidData) {
