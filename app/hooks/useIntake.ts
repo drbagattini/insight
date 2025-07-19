@@ -58,18 +58,41 @@ export interface IntakeData {
 // Helper function to determine if intake data has meaningful content
 const hasMeaningfulContent = (intakeData: IntakeData | null): boolean => {
   if (!intakeData || !intakeData.datos) {
+    console.log('[DEBUG] hasMeaningfulContent: No intakeData or datos');
     return false;
   }
+  
+  // If the interview is finalized, it should be considered as having content
+  // regardless of specific field contents
+  if (intakeData.estado === 'finalizada') {
+    console.log('[DEBUG] hasMeaningfulContent: Interview is finalized, treating as having content');
+    return true;
+  }
+  
   const { datos } = intakeData;
+  
   // Check for some key fields that indicate actual content beyond a blank slate
-  return !!(
+  const hasContent = !!(
     datos.motivoConsulta ||
     datos.presentacion ||
     datos.diagnosticoTexto ||
     datos.malestarPaciente ||
-    (datos.ayudaEsperada && datos.ayudaEsperada.length > 0) ||
+    (datos.ayudaBuscada && datos.ayudaBuscada.length > 0) ||
     datos.estrategia
   );
+  
+  console.log('[DEBUG] hasMeaningfulContent:', {
+    hasContent,
+    estado: intakeData.estado,
+    motivoConsulta: !!datos.motivoConsulta,
+    presentacion: !!datos.presentacion,
+    diagnosticoTexto: !!datos.diagnosticoTexto,
+    malestarPaciente: !!datos.malestarPaciente,
+    ayudaBuscada: datos.ayudaBuscada?.length || 0,
+    estrategia: !!datos.estrategia
+  });
+  
+  return hasContent;
 };
 
 const getIntakeByPatientId = async (patientId: string): Promise<IntakeData | null> => {
@@ -91,8 +114,19 @@ const createIntake = async (patientId: string): Promise<IntakeData> => {
 };
 
 const updateIntake = async ({ patientId, intakeId, updateData }: { patientId: string; intakeId: string; updateData: Partial<IntakeData> }) => {
-  const { data } = await axios.patch<IntakeData>(`/api/patients/${patientId}/intake`, updateData, { withCredentials: true });
-  return data;
+  console.log('updateIntake called with:', { patientId, intakeId, updateData });
+  try {
+    const response = await axios.patch<IntakeData>(`/api/patients/${patientId}/intake`, updateData, { withCredentials: true });
+    console.log('updateIntake response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('updateIntake error:', error);
+    if (axios.isAxiosError(error)) {
+      console.error('Response data:', error.response?.data);
+      console.error('Response status:', error.response?.status);
+    }
+    throw error;
+  }
 };
 
 export const useIntake = (patientId: string) => {

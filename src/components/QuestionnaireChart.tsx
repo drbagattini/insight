@@ -313,12 +313,7 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
     );
   }
 
-  // Default chart rendering for line and simple bar charts
-  // Debug: Log raw data for WHO-5
-  if (codigo === 'WHO-5') {
-    console.log('WHO-5 Raw data:', data);
-  }
-  
+  // Default chart rendering for line and simple bar charts  
   // Filter out entries with invalid dates for cleaner chart
   const validEntries = data.filter(d => {
     // Handle different data field mappings
@@ -327,15 +322,8 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
     
     const date = new Date(dateField);
     const isValid = !isNaN(date.getTime()) && scoreField != null;
-    if (codigo === 'WHO-5') {
-      console.log('Data point:', d, 'Valid:', isValid, 'Date:', date, 'Score:', scoreField, 'DateField:', dateField);
-    }
     return isValid;
   });
-  
-  if (codigo === 'WHO-5') {
-    console.log('WHO-5 Valid entries:', validEntries);
-  }
   
   const labels = validEntries.map((d) => {
     const dateField = d.creado_en || (d as any).fecha;

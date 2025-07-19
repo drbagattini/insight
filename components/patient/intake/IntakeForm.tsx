@@ -85,14 +85,16 @@ const IntakeForm: React.FC<IntakeFormProps> = ({ intakeData, onSaveSuccess, onCa
 
   const onFinalize = async (formData: IntakeFormValues) => {
     try {
+      console.log('Finalizando entrevista...', { intakeId: intakeData.id, patientId: intakeData.paciente_id });
       await updateIntake({ 
-        intakeId: intakeData.id, 
+        intakeId: intakeData.id,
         updateData: { datos: formData, estado: 'finalizada' }
       });
+      console.log('Entrevista finalizada exitosamente');
       onSaveSuccess(); // Notificar al padre que se guardó correctamente
     } catch (error) {
       console.error("Error al finalizar la entrevista:", error);
-      // Opcional: Mostrar un mensaje de error al usuario
+      alert(`Error al finalizar la entrevista: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     }
   };
 

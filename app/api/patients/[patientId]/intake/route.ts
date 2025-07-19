@@ -121,9 +121,14 @@ export async function POST(request: NextRequest, { params }: any) {
 // PATCH: Actualizar una entrevista existente (autoguardado o finalización)
 export async function PATCH(request: NextRequest, { params }: any) {
   const { patientId } = await params;
+  console.log('[DEBUG] PATCH intake - patientId:', patientId);
+  
   // Obtenemos el token JWT de NextAuth que contiene sbAccessToken
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
   const updateData = await request.json();
+  
+  console.log('[DEBUG] PATCH intake - updateData:', updateData);
+  console.log('[DEBUG] PATCH intake - token exists:', !!token);
   
   // Si no hay token, retornar 401
   if (!token) {
@@ -147,6 +152,7 @@ export async function PATCH(request: NextRequest, { params }: any) {
   try {
 
     // Buscamos la entrevista más reciente para este paciente
+    console.log('[DEBUG] PATCH intake - Searching for existing intake...');
     const { data: existingIntake, error: findError } = await supabase
         .from('primeras_entrevistas')
         .select('id')
@@ -155,15 +161,22 @@ export async function PATCH(request: NextRequest, { params }: any) {
         .limit(1)
         .single();
 
+    console.log('[DEBUG] PATCH intake - Find result:', { existingIntake, findError });
+    
     if (findError || !existingIntake) {
+        console.log('[DEBUG] PATCH intake - No intake found, returning 404');
         return NextResponse.json({ error: 'No se encontró una entrevista para actualizar.' }, { status: 404 });
     }
 
     // Si se está finalizando la entrevista, actualizamos la fecha_fin
     if (updateData.estado === 'finalizada' && !updateData.fecha_fin) {
       updateData.fecha_fin = new Date().toISOString();
+      console.log('[DEBUG] PATCH intake - Added fecha_fin:', updateData.fecha_fin);
     }
 
+    console.log('[DEBUG] PATCH intake - Updating intake with ID:', existingIntake.id);
+    console.log('[DEBUG] PATCH intake - Final updateData:', updateData);
+    
     const { data: updatedIntake, error: updateError } = await supabase
       .from('primeras_entrevistas')
       .update(updateData)
@@ -171,11 +184,14 @@ export async function PATCH(request: NextRequest, { params }: any) {
       .select()
       .single();
 
+    console.log('[DEBUG] PATCH intake - Update result:', { updatedIntake, updateError });
+    
     if (updateError) {
       console.error('Error updating intake:', updateError);
       return NextResponse.json({ error: 'Error al actualizar la entrevista: ' + updateError.message }, { status: 500 });
     }
 
+    console.log('[DEBUG] PATCH intake - Success! Returning updated intake');
     return NextResponse.json(updatedIntake);
   } catch (error) {
     console.error('An unexpected error occurred:', error);
