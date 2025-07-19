@@ -196,11 +196,10 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
           <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
             <div className="sm:col-span-6">
               <label htmlFor="cuestionario" className="block text-sm font-medium text-gray-700">
-                Cuestionario {formData.sendInitial && <span className="text-red-500">*</span>}
+                Cuestionario
               </label>
               <select
                 id="cuestionario"
-                required={!!formData.sendInitial}
                 className="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm shadow-sm"
                 value={(formData.metadata as any).cuestionario_id || ''}
                 onChange={e =>
@@ -209,7 +208,8 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
                     metadata: {
                       ...(prev.metadata as any),
                       cuestionario_id: e.target.value
-                    }
+                    },
+                    sendInitial: !!e.target.value // Auto-set based on selection
                   }))
                 }
               >
@@ -218,9 +218,14 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
                   <option key={q.id} value={q.id}>{q.nombre}</option>
                 ))}
               </select>
-              {!formData.sendInitial && (
+              {!(formData.metadata as any).cuestionario_id && (
                 <p className="mt-1 text-xs text-gray-500">
                   Puedes configurar el envío de cuestionarios más tarde desde el perfil del paciente
+                </p>
+              )}
+              {(formData.metadata as any).cuestionario_id && (
+                <p className="mt-1 text-xs text-green-600">
+                  ✅ El paciente recibirá el cuestionario inmediatamente después de guardar
                 </p>
               )}
             </div>
@@ -232,8 +237,8 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
               </label>
               <select
                 id="canal"
-                disabled={!formData.sendInitial || !(formData.metadata as any).cuestionario_id}
-                className="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm shadow-sm disabled:bg-gray-50 disabled:text-gray-500"
+                disabled={!(formData.metadata as any).cuestionario_id}
+                className="mt-1 block w-full rounded-md border-gray-300 py-1.5 pl-3 pr-8 text-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 shadow-sm disabled:bg-gray-50 disabled:text-gray-500"
                 value={(formData.metadata?.preferencias_cuestionario as any)?.canal || 'email'}
                 onChange={(e) =>
                   setFormData((prev) => ({
@@ -248,7 +253,7 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
                   }))
                 }
               >
-                <option value="email">📧 Correo electrónico</option>
+                <option value="email">📧 Email</option>
                 <option value="whatsapp">💬 WhatsApp</option>
               </select>
             </div>
@@ -260,8 +265,8 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
               </label>
               <select
                 id="frecuencia"
-                disabled={!formData.sendInitial || !(formData.metadata as any).cuestionario_id}
-                className="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm shadow-sm disabled:bg-gray-50 disabled:text-gray-500"
+                disabled={!(formData.metadata as any).cuestionario_id}
+                className="mt-1 block w-full rounded-md border-gray-300 py-1.5 pl-3 pr-8 text-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 shadow-sm disabled:bg-gray-50 disabled:text-gray-500"
                 value={(formData.metadata?.preferencias_cuestionario as any)?.frecuencia || 'mensual'}
                 onChange={(e) =>
                   setFormData((prev) => ({
@@ -282,39 +287,7 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
               </select>
             </div>
 
-            <div className="sm:col-span-6">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="relative flex items-start">
-                  <div className="flex h-5 items-center">
-                    <input
-                      id="sendInitial"
-                      name="sendInitial"
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      checked={!!formData.sendInitial} // Read from top-level
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          sendInitial: e.target.checked // Update top-level
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="ml-3 text-sm">
-                    <label htmlFor="sendInitial" className="font-medium text-blue-900 flex items-center">
-                      <FiSend className="h-4 w-4 mr-1" />
-                      Enviar cuestionario inmediatamente
-                    </label>
-                    <p className="text-blue-700 mt-1">
-                      {formData.sendInitial 
-                        ? "✅ El paciente recibirá el cuestionario inmediatamente después de guardar"
-                        : "ℹ️ Podrás programar el envío de cuestionarios más tarde desde el perfil del paciente"
-                      }
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
+
           </div>
         </div>
 
