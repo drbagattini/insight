@@ -32,36 +32,37 @@ export interface QuestionnaireChartProps {
  * Currently supports "line" (default), "bar", and "bar-multidim" (for multi-dimensional questionnaires like OPD-CA2-SQ).
  */
 const LABELS = {
-  total: 'Puntuación Total',
-  control: 'Control y Regulación',
-  identity: 'Identidad',
-  interpersonality: 'Interpersonalidad',
-  attachment: 'Apego',
+  total: 'Estructura (total)',
+  control: '1. Control (total)',
+  identity: '2. Identidad (total)',
+  interpersonality: '3. Interpersonalidad (total)',
+  attachment: '4. Apego (total)',
   // Subdimensiones Control
-  ctr_impulse: 'Impulsos',
-  ctr_affect: 'Afecto',
-  ctr_consc: 'Consciencia',
-  ctr_selfworth: 'Autoestima',
+  ctr_impulse: '1.1 Control de impulsos',
+  ctr_affect: '1.2 Tolerancia afectiva',
+  ctr_consc: '1.3 Formación de conciencia',
+  ctr_selfworth: '1.4 Autovaloración',
   // Subdimensiones Identity
-  id_coherence: 'Coherencia',
-  id_selfexp: 'Expresión del Self',
-  id_sodiff: 'Autodiferenciación',
-  id_objectexp: 'Exp. de objeto',
-  id_belong: 'Pertenencia',
+  id_coherence: '2.1 Coherencia',
+  id_selfexp: '2.2 Percepción del sí mismo',
+  id_sodiff: '2.3 Diferenciación self-objeto',
+  id_objectexp: '2.4 Percepción del objeto',
+  id_belong: '2.5 Pertenencia',
   // Subdimensiones Interpersonality
-  int_fantasies: 'Fantasías',
-  int_emotcontact: 'Contacto Emocional',
-  int_reciprocity: 'Reciprocidad',
-  int_affectexp: 'Expresión Afectiva',
-  int_empathy: 'Empatía',
-  int_ability_detach: 'Desapego',
+  int_fantasies: '3.1 Fantasías',
+  int_emotcontact: '3.2 Contacto emocional',
+  int_reciprocity: '3.3 Reciprocidad',
+  int_affectexp: '3.4 Percepción de afectos',
+  int_empathy: '3.5 Empatía',
+  int_ability_detach: '3.6 Capacidad para separarse',
   // Subdimensiones Attachment
-  att_representation: 'Representación',
-  att_internalbasis: 'Base Interna',
-  att_capacity_alone: 'Capacidad Soledad',
-  att_use_relations: 'Uso Relacional',
+  att_representation: '4.1 Acceso a representaciones de apego',
+  att_internalbasis: '4.2 Base segura interna',
+  att_capacity_alone: '4.3 Capacidad para estar solo',
+  att_use_relations: '4.4 Uso de relaciones de apego',
 } as const;
 
+// Plugin for T-score range 40-60 (only for OPD-CA2-SQ)
 const midBandPlugin = {
   id: 'midBand',
   beforeDatasetsDraw(chart: any) {
@@ -75,7 +76,7 @@ const midBandPlugin = {
     const bandStartPixel = valueScale.getPixelForValue(60);
     const bandEndPixel = valueScale.getPixelForValue(40);
 
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.04)'; // Lighter grey band (less intrusive)
+    ctx.fillStyle = 'rgba(128, 128, 128, 0.25)'; // Optimal visibility grey band for T-score 40-60 range
 
     if (isHorizontal) {
       // For horizontal bar chart, the band is a vertical rectangle.
@@ -84,6 +85,48 @@ const midBandPlugin = {
       // For vertical line/bar chart, the band is a horizontal rectangle.
       ctx.fillRect(left, bandStartPixel, right - left, bandEndPixel - bandStartPixel);
     }
+
+    ctx.restore();
+  }
+};
+
+// Plugin for WHO-5 threshold lines (13, 25, 50, 75)
+const who5ThresholdPlugin = {
+  id: 'who5Thresholds',
+  beforeDatasetsDraw(chart: any) {
+    const { ctx, chartArea: { top, bottom, left, right }, scales } = chart;
+    const yScale = scales.y;
+
+    ctx.save();
+
+    // Threshold lines: 25, 50, 75 (subtle), 13 (prominent)
+    const thresholds = [
+      { value: 75, style: 'subtle' },
+      { value: 50, style: 'subtle' },
+      { value: 25, style: 'subtle' },
+      { value: 13, style: 'prominent' } // Risk threshold
+    ];
+
+    thresholds.forEach(({ value, style }) => {
+      const y = yScale.getPixelForValue(value);
+      
+      if (style === 'prominent') {
+        // Visible line for risk threshold (13)
+        ctx.strokeStyle = 'rgba(220, 38, 38, 0.5)'; // More visible red
+        ctx.lineWidth = 1;
+        ctx.setLineDash([]);
+      } else {
+        // Visible dashed lines for other thresholds
+        ctx.strokeStyle = 'rgba(107, 114, 128, 0.4)'; // More visible gray
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 5]);
+      }
+      
+      ctx.beginPath();
+      ctx.moveTo(left, y);
+      ctx.lineTo(right, y);
+      ctx.stroke();
+    });
 
     ctx.restore();
   }
@@ -189,14 +232,24 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
         label: 'T-Score',
         data: chartValues,
         backgroundColor: bgColors,
-        barPercentage: 0.8,
-        categoryPercentage: 0.9,
+        borderColor: bgColors.map(color => color.replace('0.6)', '1)').replace('rgba', 'rgb').replace(', 1)', ')')),
+        borderWidth: 1.5,
+        barPercentage: 0.75,
+        categoryPercentage: 0.85,
       }],
     };
 
     const multidimOptions = {
       responsive: true,
       maintainAspectRatio: false,
+      layout: {
+        padding: {
+          left: 10,
+          right: 10,
+          top: 15,
+          bottom: 35
+        }
+      },
       // Vertical bar chart (categorías en eje X, valores T-score en eje Y)
       scales: {
         x: {
@@ -206,17 +259,29 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
             minRotation: 30,
             font: (ctx: any) => {
               const label = ctx.tick.label as string;
-              const isMain = ['Puntuación Total', 'Control y Regulación', 'Identidad', 'Interpersonalidad', 'Apego'].includes(label);
+              const isMain = ['Estructura (total)', '1. Control (total)', '2. Identidad (total)', '3. Interpersonalidad (total)', '4. Apego (total)'].includes(label);
               return { weight: isMain ? 'bold' : 'normal' };
             },
           },
-          grid: { display: false },
+          grid: { 
+            display: true,
+            drawOnChartArea: false,
+            drawTicks: true,
+            color: 'rgba(0,0,0,0.1)'
+          },
         },
         y: {
           beginAtZero: false,
           min: 20,
           max: 80,
-          title: { display: true, text: 'T-Score' },
+          title: { 
+            display: true, 
+            text: 'T-Score',
+            font: { size: 13, weight: 'bold' }
+          },
+          grid: {
+            color: 'rgba(0,0,0,0.1)'
+          }
         },
       },
       plugins: {
@@ -242,18 +307,45 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
     };
 
     return (
-      <div className={`relative w-full ${className ?? "h-[28rem]"}`}>
+      <div className={`relative w-full ${className ?? "h-[32rem]"} overflow-x-auto`}>
         <Bar data={multidimData} options={multidimOptions as any} plugins={[midBandPlugin]} />
       </div>
     );
   }
 
   // Default chart rendering for line and simple bar charts
-  const labels = data.map((d) => new Date(d.creado_en).toLocaleDateString());
+  // Debug: Log raw data for WHO-5
+  if (codigo === 'WHO-5') {
+    console.log('WHO-5 Raw data:', data);
+  }
+  
+  // Filter out entries with invalid dates for cleaner chart
+  const validEntries = data.filter(d => {
+    // Handle different data field mappings
+    const dateField = d.creado_en || (d as any).fecha;
+    const scoreField = d.puntuacion || (d as any).score_total;
+    
+    const date = new Date(dateField);
+    const isValid = !isNaN(date.getTime()) && scoreField != null;
+    if (codigo === 'WHO-5') {
+      console.log('Data point:', d, 'Valid:', isValid, 'Date:', date, 'Score:', scoreField, 'DateField:', dateField);
+    }
+    return isValid;
+  });
+  
+  if (codigo === 'WHO-5') {
+    console.log('WHO-5 Valid entries:', validEntries);
+  }
+  
+  const labels = validEntries.map((d) => {
+    const dateField = d.creado_en || (d as any).fecha;
+    const date = new Date(dateField);
+    return date.toLocaleDateString();
+  });
 
   const primaryDataset = {
-    label: meta.title || "Puntuación",
-    data: data.map((d) => d.puntuacion),
+    label: codigo === 'WHO-5' ? "Puntuación" : (meta.title || "Puntuación"),
+    data: validEntries.map((d) => d.puntuacion || (d as any).score_total),
     borderColor: "rgb(59, 130, 246)",
     backgroundColor: "rgba(59, 130, 246,0.5)",
     fill: false,
@@ -270,7 +362,10 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
     maintainAspectRatio: false,
     plugins: {
       legend: { position: "top" as const },
-      title: { display: true, text: titleOverride ?? meta.title ?? "Evolución" },
+      title: { 
+        display: true, 
+        text: titleOverride || (codigo === 'WHO-5' ? 'Evolución del Bienestar' : meta.title) 
+      },
     },
     scales: {
       y: {
@@ -283,7 +378,7 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
 
   return (
     <div className={`relative w-full ${className ?? "h-96"}`}>
-      <Line data={chartData} options={commonOptions} plugins={[midBandPlugin]} />
+      <Line data={chartData} options={commonOptions} plugins={codigo === 'WHO-5' ? [who5ThresholdPlugin] : [midBandPlugin]} />
     </div>
   );
 };

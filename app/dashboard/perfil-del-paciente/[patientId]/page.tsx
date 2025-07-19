@@ -453,11 +453,11 @@ export default function PatientProfilePage() {
             </Tab.Panel>
             <Tab.Panel className="rounded-xl bg-white p-3 min-h-[600px] overflow-y-auto ring-white ring-opacity-60 ring-offset-2 ring-offset-blue-400 focus:outline-none focus:ring-2">
               <div>
-                <h3 className="text-lg font-semibold mb-2">Evolución Psicométrica</h3>
-                <div className="mb-4 w-fit">
+                <h3 className="text-base font-semibold mb-2">Evolución Psicométrica</h3>
+                <div className="mb-2 w-fit">
                   <Listbox value={selectedQuestionnaire} onChange={setSelectedQuestionnaire}>
                     <div className="relative">
-                      <Listbox.Button className="relative w-full cursor-default rounded-lg bg-white py-2 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-blue-300 sm:text-sm">
+                      <Listbox.Button className="relative w-full cursor-default rounded-md bg-white py-1.5 pl-2.5 pr-8 text-left shadow-sm border border-gray-300 focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-1 focus-visible:ring-indigo-500 text-sm">
                         <span className="block truncate">{questionnairesMeta[selectedQuestionnaire].title}</span>
                         <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
                           <ChevronUpDownIcon
@@ -503,11 +503,11 @@ export default function PatientProfilePage() {
 
                             {/* Filtro de fecha (solo OPD-CA2-SQ) */}
               {selectedQuestionnaire === 'OPD-CA2-SQ' && availableDates.length > 0 && (
-                <div className="flex flex-col sm:flex-row gap-4 mt-4 justify-end">
+                <div className="flex flex-col sm:flex-row gap-4 mt-2 justify-end">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Fecha de la toma</label>
+                    <label className="block text-xs font-medium mb-1">Fecha de la toma</label>
                     <select 
-                      className="w-full px-2 py-1 border rounded"
+                      className="w-full px-2 py-1.5 border rounded-md text-sm"
                       value={selectedDate ?? ''}
                       onChange={e => setSelectedDate(e.target.value)}
                     > 
@@ -530,7 +530,7 @@ export default function PatientProfilePage() {
               ) : error ? (
                 <p className="text-red-500">{error}</p>
               ) : filteredEvolutionData.length > 0 ? (
-                <div className="bg-white p-4 rounded-lg shadow mt-4">
+                <div className="bg-white p-3 rounded-lg shadow-sm mt-2 border border-gray-100">
                   <QuestionnaireChart data={filteredEvolutionData} codigo={selectedQuestionnaire} titleOverride={chartTitle} />
                 </div>
               ) : (
