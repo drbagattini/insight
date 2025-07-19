@@ -26,7 +26,7 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
   }));
   const [error, setError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [questionarios, setQuestionarios] = useState<{ id: string; titulo: string }[]>([]);
+  const [questionarios, setQuestionarios] = useState<{ id: string; nombre: string }[]>([]);
 
   useEffect(() => {
     fetch('/api/cuestionarios')
@@ -209,7 +209,7 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
               >
                 <option value="" disabled>Selecciona un cuestionario</option>
                 {questionarios.map(q => (
-                  <option key={q.id} value={q.id}>{q.titulo}</option>
+                  <option key={q.id} value={q.id}>{q.nombre}</option>
                 ))}
               </select>
             </div>
