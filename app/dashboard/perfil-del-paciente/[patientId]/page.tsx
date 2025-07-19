@@ -429,32 +429,54 @@ export default function PatientProfilePage() {
       <div className="p-6 space-y-6">
         <h1 className="text-2xl font-semibold mb-4">Perfil del paciente</h1>
         <Tab.Group selectedIndex={selectedTabIndex} onChange={setSelectedTabIndex}>
-          <Tab.List className="flex space-x-1 rounded-xl bg-blue-900/20 p-1">
-            {['Entrevista inicial', 'Cuestionarios psicométricos'].map((category) => (
-              <Tab
-                key={category}
-                className={({ selected }) =>
-                  `w-full rounded-lg py-2.5 text-sm font-medium leading-5 text-blue-700 ` +
-                  `ring-white ring-opacity-60 ring-offset-2 ring-offset-blue-400 focus:outline-none focus:ring-2 ` +
-                  `${selected ? 'bg-white shadow' : 'text-blue-100 hover:bg-white/[0.12] hover:text-white'}`
-                }
-              >
-                {category}
-              </Tab>
-            ))}
-          </Tab.List>
-          <Tab.Panels className="mt-2">
-            <Tab.Panel className="rounded-xl bg-white p-3 min-h-[600px] overflow-y-auto ring-white ring-opacity-60 ring-offset-2 ring-offset-blue-400 focus:outline-none focus:ring-2">
-              <h2 className="text-xl font-semibold mb-3">Evolución de {patientName || 'Paciente'}</h2>
-              {/* Entrevista Inicial Content */}
-              <div className="mt-4">
-                <PatientIntakeTab /> {/* Assuming this contains Wizard and Summary */}
+          <div className="mb-8">
+            <Tab.List className="flex bg-gray-50 rounded-xl p-1.5 shadow-sm border border-gray-200">
+              {['Entrevista inicial', 'Cuestionarios psicométricos'].map((category, index) => (
+                <Tab
+                  key={category}
+                  className={({ selected }) =>
+                    `relative flex-1 px-6 py-3.5 text-sm font-semibold transition-all duration-300 focus:outline-none ` +
+                    `rounded-lg whitespace-nowrap text-center ` +
+                    `${selected 
+                      ? 'text-indigo-700 bg-white shadow-md ring-1 ring-indigo-100 transform scale-[1.02]' 
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                    }`
+                  }
+                >
+                  <span className="relative z-10 flex items-center justify-center space-x-2">
+                    <span className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                      selectedTabIndex === index 
+                        ? 'bg-indigo-500 ring-2 ring-indigo-200' 
+                        : 'bg-gray-300'
+                    }`} />
+                    <span>{category}</span>
+                  </span>
+                  
+                  {/* Gradient overlay for active tab */}
+                  {selectedTabIndex === index && (
+                    <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-indigo-50 to-blue-50 opacity-30" />
+                  )}
+                </Tab>
+              ))}
+            </Tab.List>
+          </div>
+          <Tab.Panels>
+            <Tab.Panel className="rounded-xl bg-white border border-gray-200 shadow-sm min-h-[600px] overflow-hidden focus:outline-none">
+              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 px-6 py-4 border-b border-gray-100">
+                <h2 className="text-xl font-semibold text-gray-900">Evolución de {patientName || 'Paciente'}</h2>
+                <p className="text-sm text-gray-600 mt-1">Registro completo de la entrevista inicial y seguimiento del paciente</p>
+              </div>
+              <div className="p-6 overflow-y-auto max-h-[calc(600px-80px)]">
+                <PatientIntakeTab />
               </div>
             </Tab.Panel>
-            <Tab.Panel className="rounded-xl bg-white p-3 min-h-[600px] overflow-y-auto ring-white ring-opacity-60 ring-offset-2 ring-offset-blue-400 focus:outline-none focus:ring-2">
-              <div>
-                <h3 className="text-base font-semibold mb-2">Evolución Psicométrica</h3>
-                <div className="mb-2 w-fit">
+            <Tab.Panel className="rounded-xl bg-white border border-gray-200 shadow-sm min-h-[600px] overflow-hidden focus:outline-none">
+              <div className="bg-gradient-to-r from-emerald-50 to-teal-50 px-6 py-4 border-b border-gray-100">
+                <h3 className="text-xl font-semibold text-gray-900">Evolución Psicométrica</h3>
+                <p className="text-sm text-gray-600 mt-1">Análisis y seguimiento de cuestionarios aplicados al paciente</p>
+              </div>
+              <div className="p-6">
+                <div className="mb-6 w-fit">
                   <Listbox value={selectedQuestionnaire} onChange={setSelectedQuestionnaire}>
                     <div className="relative">
                       <Listbox.Button className="relative w-full cursor-default rounded-md bg-white py-1.5 pl-2.5 pr-8 text-left shadow-sm border border-gray-300 focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-1 focus-visible:ring-indigo-500 text-sm">
@@ -499,10 +521,9 @@ export default function PatientProfilePage() {
                     </div>
                   </Listbox>
                 </div>
-              </div>
-
-                            {/* Filtro de fecha (solo OPD-CA2-SQ) */}
-              {selectedQuestionnaire === 'OPD-CA2-SQ' && availableDates.length > 0 && (
+                
+                {/* Filtro de fecha (solo OPD-CA2-SQ) */}
+                {selectedQuestionnaire === 'OPD-CA2-SQ' && availableDates.length > 0 && (
                 <div className="flex flex-col sm:flex-row gap-4 mt-2 justify-end">
                   <div>
                     <label className="block text-xs font-medium mb-1">Fecha de la toma</label>
@@ -523,9 +544,9 @@ export default function PatientProfilePage() {
                     </select>
                   </div>
                 </div>
-              )}
+                )}
 
-              {loading ? (
+                {loading ? (
                 <p>Cargando evolución...</p>
               ) : error ? (
                 <p className="text-red-500">{error}</p>
@@ -533,16 +554,16 @@ export default function PatientProfilePage() {
                 <div className="bg-white p-3 rounded-lg shadow-sm mt-2 border border-gray-100">
                   <QuestionnaireChart data={filteredEvolutionData} codigo={selectedQuestionnaire} titleOverride={chartTitle} />
                 </div>
-              ) : (
-                <p className="mt-4">No hay datos de evolución para mostrar para el cuestionario seleccionado.</p>
-              )}
-              
-              <div className="mt-8 mb-8">
-                <PatientResponsesSection patientId={patientId} />
-              </div>
+                ) : (
+                  <p className="mt-4">No hay datos de evolución para mostrar para el cuestionario seleccionado.</p>
+                )}
+                
+                <div className="mt-8 mb-8">
+                  <PatientResponsesSection patientId={patientId} />
+                </div>
 
-              {/* Programar nuevo envío - Moved into Tab.Panel */}
-              <div className="bg-white p-6 rounded-lg shadow mb-6 mt-6">
+                {/* Programar nuevo envío */}
+                <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 mb-6 mt-6">
                 <h3 className="text-lg font-semibold mb-4">Programar nuevo envío</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                   <div>
@@ -692,6 +713,7 @@ export default function PatientProfilePage() {
                 ) : (
                   <p>No hay envíos programados</p>
                 )}
+              </div>
               </div>
             </Tab.Panel>
           </Tab.Panels>
