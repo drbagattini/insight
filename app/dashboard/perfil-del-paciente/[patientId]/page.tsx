@@ -461,14 +461,8 @@ export default function PatientProfilePage() {
             </Tab.List>
           </div>
           <Tab.Panels>
-            <Tab.Panel className="rounded-xl bg-white border border-gray-200 shadow-sm min-h-[600px] overflow-hidden focus:outline-none">
-              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 px-6 py-4 border-b border-gray-100">
-                <h2 className="text-xl font-semibold text-gray-900">Evolución de {patientName || 'Paciente'}</h2>
-                <p className="text-sm text-gray-600 mt-1">Registro completo de la entrevista inicial y seguimiento del paciente</p>
-              </div>
-              <div className="p-6 overflow-y-auto max-h-[calc(600px-80px)]">
-                <PatientIntakeTab />
-              </div>
+            <Tab.Panel className="focus:outline-none">
+              <PatientIntakeTab />
             </Tab.Panel>
             <Tab.Panel className="rounded-xl bg-white border border-gray-200 shadow-sm min-h-[600px] overflow-hidden focus:outline-none">
               <div className="bg-gradient-to-r from-emerald-50 to-teal-50 px-6 py-4 border-b border-gray-100">
