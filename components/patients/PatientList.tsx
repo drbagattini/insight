@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Patient } from '@/types/patients';
 import { useQuery } from '@tanstack/react-query';
 import { QUERY_KEYS } from '@/lib/constants';
-import { FiSearch, FiUser, FiEdit2, FiTrash2, FiEye, FiMail, FiPhone, FiPlus, FiFilter } from 'react-icons/fi';
+import { FiSearch, FiUser, FiEdit2, FiTrash2, FiEye, FiMail, FiPhone, FiPlus } from 'react-icons/fi';
 
 interface PatientListProps {
   onEdit: (patient: Patient) => void;
@@ -39,7 +39,6 @@ export default function PatientList({
   hideTitle = false 
 }: PatientListProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
 
   const { 
     data: patients = [], 
@@ -86,25 +85,18 @@ export default function PatientList({
 
   return (
     <div className="space-y-6">
-      {/* Header mejorado */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Header elegante y simplificado */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         {!hideTitle && (
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Pacientes</h1>
             <p className="text-sm text-gray-600 mt-1">Gestiona la información de tus pacientes</p>
           </div>
         )}
-        <div className={`flex items-center gap-3 ${hideTitle ? 'ml-auto' : ''}`}>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            <FiFilter className="h-4 w-4 mr-2" />
-            Filtros
-          </button>
+        <div className={hideTitle ? 'ml-auto' : ''}>
           <button
             onClick={() => onEdit({} as Patient)}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            className="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 hover:shadow-md"
           >
             <FiPlus className="h-4 w-4 mr-2" />
             Agregar Paciente
@@ -112,39 +104,18 @@ export default function PatientList({
         </div>
       </div>
 
-      {/* Barra de búsqueda mejorada */}
-      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <FiSearch className="h-5 w-5 text-gray-400" />
-          </div>
-          <input
-            type="text"
-            placeholder="Buscar por nombre, email o teléfono..."
-            className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      {/* Barra de búsqueda elegante */}
+      <div className="relative max-w-md">
+        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+          <FiSearch className="h-5 w-5 text-gray-400" />
         </div>
-        
-        {/* Filtros expandibles */}
-        {showFilters && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Última actividad</label>
-                <select className="block w-full text-sm border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                  <option>Cualquier momento</option>
-                  <option>Última semana</option>
-                  <option>Último mes</option>
-                </select>
-              </div>
-              <div className="flex items-end">
-                <button className="text-sm text-blue-600 hover:text-blue-800">Limpiar filtros</button>
-              </div>
-            </div>
-          </div>
-        )}
+        <input
+          type="text"
+          placeholder="Buscar pacientes..."
+          className="block w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl shadow-sm bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-sm"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
       </div>
 
       {/* Lista moderna y eficiente */}
@@ -170,12 +141,12 @@ export default function PatientList({
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <div className="divide-y divide-gray-100">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="divide-y divide-gray-50">
             {filteredPatients.map((patient) => (
               <div
                 key={patient.id}
-                className="px-6 py-4 hover:bg-gray-50 transition-colors duration-150"
+                className="px-6 py-5 hover:bg-gray-50 transition-all duration-200"
               >
                 <div className="flex items-center justify-between">
                   {/* Información del paciente */}
