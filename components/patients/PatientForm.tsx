@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Patient, NewPatient } from '@/types/patients';
-import { FiUser, FiMail, FiPhone, FiCheck, FiAlertCircle } from 'react-icons/fi';
+import { FiUser, FiMail, FiPhone, FiCheck, FiAlertCircle, FiFileText, FiSettings, FiSend } from 'react-icons/fi';
 
 interface PatientFormProps {
   patient?: Patient;
@@ -80,7 +80,10 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
       )}
       <div className="space-y-6">
         <div>
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Información del Paciente</h3>
+          <div className="flex items-center mb-4">
+            <FiUser className="h-5 w-5 text-blue-500 mr-2" />
+            <h3 className="text-lg font-medium text-gray-900">Información del Paciente</h3>
+          </div>
           <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
             <div className="sm:col-span-6">
               <label htmlFor="name" className="block text-sm font-medium text-gray-700">
@@ -94,7 +97,7 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
                   type="text"
                   id="name"
                   required
-                  className="block w-full rounded-md border-gray-300 pl-10 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  className="block w-full rounded-md border-gray-300 pl-10 focus:border-blue-500 focus:ring-blue-500 sm:text-sm shadow-sm"
                   value={formData.name || ''}
                   onChange={(e) =>
                     setFormData((prev) => ({ ...prev, name: e.target.value }))
@@ -115,7 +118,7 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
                 <input
                   type="email"
                   id="email"
-                  className="block w-full rounded-md border-gray-300 pl-10 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  className="block w-full rounded-md border-gray-300 pl-10 focus:border-blue-500 focus:ring-blue-500 sm:text-sm shadow-sm"
                   value={formData.email || ''}
                   onChange={(e) =>
                     setFormData((prev) => ({
@@ -139,7 +142,7 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
                 <input
                   type="tel"
                   id="whatsapp"
-                  className="block w-full rounded-md border-gray-300 pl-10 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  className="block w-full rounded-md border-gray-300 pl-10 focus:border-blue-500 focus:ring-blue-500 sm:text-sm shadow-sm"
                   value={formData.whatsapp?.replace('+54', '') || ''}
                   onChange={(e) =>
                     setFormData((prev) => ({
@@ -186,16 +189,19 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
         </div>
 
         <div className="border-t border-gray-200 pt-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Preferencias de Cuestionario</h3>
+          <div className="flex items-center mb-4">
+            <FiFileText className="h-5 w-5 text-blue-500 mr-2" />
+            <h3 className="text-lg font-medium text-gray-900">Preferencias de Cuestionario</h3>
+          </div>
           <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
             <div className="sm:col-span-6">
               <label htmlFor="cuestionario" className="block text-sm font-medium text-gray-700">
-                Cuestionario <span className="text-red-500">*</span>
+                Cuestionario {formData.sendInitial && <span className="text-red-500">*</span>}
               </label>
               <select
                 id="cuestionario"
-                required
-                className="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                required={!!formData.sendInitial}
+                className="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm shadow-sm"
                 value={(formData.metadata as any).cuestionario_id || ''}
                 onChange={e =>
                   setFormData(prev => ({
@@ -207,20 +213,27 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
                   }))
                 }
               >
-                <option value="" disabled>Selecciona un cuestionario</option>
+                <option value="">No enviar cuestionario ahora</option>
                 {questionarios.map(q => (
                   <option key={q.id} value={q.id}>{q.nombre}</option>
                 ))}
               </select>
+              {!formData.sendInitial && (
+                <p className="mt-1 text-xs text-gray-500">
+                  Puedes configurar el envío de cuestionarios más tarde desde el perfil del paciente
+                </p>
+              )}
             </div>
 
             <div className="sm:col-span-3">
               <label htmlFor="canal" className="block text-sm font-medium text-gray-700">
+                <FiSend className="inline h-4 w-4 mr-1" />
                 Canal de envío
               </label>
               <select
                 id="canal"
-                className="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                disabled={!formData.sendInitial || !(formData.metadata as any).cuestionario_id}
+                className="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm shadow-sm disabled:bg-gray-50 disabled:text-gray-500"
                 value={(formData.metadata?.preferencias_cuestionario as any)?.canal || 'email'}
                 onChange={(e) =>
                   setFormData((prev) => ({
@@ -235,18 +248,20 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
                   }))
                 }
               >
-                <option value="email">Correo electrónico</option>
-                <option value="whatsapp">WhatsApp</option>
+                <option value="email">📧 Correo electrónico</option>
+                <option value="whatsapp">💬 WhatsApp</option>
               </select>
             </div>
 
             <div className="sm:col-span-3">
               <label htmlFor="frecuencia" className="block text-sm font-medium text-gray-700">
+                <FiSettings className="inline h-4 w-4 mr-1" />
                 Frecuencia
               </label>
               <select
                 id="frecuencia"
-                className="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                disabled={!formData.sendInitial || !(formData.metadata as any).cuestionario_id}
+                className="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm shadow-sm disabled:bg-gray-50 disabled:text-gray-500"
                 value={(formData.metadata?.preferencias_cuestionario as any)?.frecuencia || 'mensual'}
                 onChange={(e) =>
                   setFormData((prev) => ({
@@ -261,36 +276,42 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
                   }))
                 }
               >
-                <option value="semanal">Semanal</option>
-                <option value="mensual">Mensual</option>
-                <option value="trimestral">Trimestral</option>
+                <option value="semanal">🗓️ Semanal</option>
+                <option value="mensual">📅 Mensual</option>
+                <option value="trimestral">📆 Trimestral</option>
               </select>
             </div>
 
             <div className="sm:col-span-6">
-              <div className="relative flex items-start">
-                <div className="flex h-5 items-center">
-                  <input
-                    id="sendInitial"
-                    name="sendInitial"
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    checked={!!formData.sendInitial} // Read from top-level
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        sendInitial: e.target.checked // Update top-level
-                      }))
-                    }
-                  />
-                </div>
-                <div className="ml-3 text-sm">
-                  <label htmlFor="sendInitial" className="font-medium text-gray-700">
-                    Enviar cuestionario inmediatamente
-                  </label>
-                  <p className="text-gray-500">
-                    El paciente recibirá el cuestionario inmediatamente después de guardar
-                  </p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="relative flex items-start">
+                  <div className="flex h-5 items-center">
+                    <input
+                      id="sendInitial"
+                      name="sendInitial"
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      checked={!!formData.sendInitial} // Read from top-level
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          sendInitial: e.target.checked // Update top-level
+                        }))
+                      }
+                    />
+                  </div>
+                  <div className="ml-3 text-sm">
+                    <label htmlFor="sendInitial" className="font-medium text-blue-900 flex items-center">
+                      <FiSend className="h-4 w-4 mr-1" />
+                      Enviar cuestionario inmediatamente
+                    </label>
+                    <p className="text-blue-700 mt-1">
+                      {formData.sendInitial 
+                        ? "✅ El paciente recibirá el cuestionario inmediatamente después de guardar"
+                        : "ℹ️ Podrás programar el envío de cuestionarios más tarde desde el perfil del paciente"
+                      }
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
