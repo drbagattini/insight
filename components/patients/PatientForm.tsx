@@ -97,7 +97,7 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
                   type="text"
                   id="name"
                   required
-                  className="block w-full rounded-md border-gray-300 pl-10 py-3 focus:border-blue-500 focus:ring-blue-500 sm:text-sm shadow-sm"
+                  className="block w-full rounded-md border-gray-300 pl-10 py-2.5 focus:border-blue-500 focus:ring-blue-500 sm:text-sm shadow-sm"
                   value={formData.name || ''}
                   onChange={(e) =>
                     setFormData((prev) => ({ ...prev, name: e.target.value }))
@@ -118,7 +118,7 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
                 <input
                   type="email"
                   id="email"
-                  className="block w-full rounded-md border-gray-300 pl-10 py-3 focus:border-blue-500 focus:ring-blue-500 sm:text-sm shadow-sm"
+                  className="block w-full rounded-md border-gray-300 pl-10 py-2.5 focus:border-blue-500 focus:ring-blue-500 sm:text-sm shadow-sm"
                   value={formData.email || ''}
                   onChange={(e) =>
                     setFormData((prev) => ({
@@ -142,7 +142,7 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
                 <input
                   type="tel"
                   id="whatsapp"
-                  className="block w-full rounded-md border-gray-300 pl-10 py-3 focus:border-blue-500 focus:ring-blue-500 sm:text-sm shadow-sm"
+                  className="block w-full rounded-md border-gray-300 pl-10 py-2.5 focus:border-blue-500 focus:ring-blue-500 sm:text-sm shadow-sm"
                   value={formData.whatsapp?.replace('+54', '') || ''}
                   onChange={(e) =>
                     setFormData((prev) => ({
