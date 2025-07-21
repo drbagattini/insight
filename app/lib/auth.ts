@@ -471,6 +471,17 @@ export const authOptions: AuthOptions = {
       if (trigger === "update" && updateData) {
         console.log("[JWT Callback] Update trigger received", { updateData });
         const sourceForUpdates = updateData.user || updateData;
+        
+        // Handle Google Calendar disconnection
+        if (updateData.disconnectGoogleCalendar === true) {
+          console.log('[JWT] Disconnecting Google Calendar - clearing tokens');
+          delete token.googleCalendarAccessToken;
+          delete token.googleCalendarRefreshToken;
+          delete token.googleCalendarExpiresAt;
+          token.googleCalendarScopeGranted = false;
+          return token; // Return early to avoid other processing
+        }
+        
         if (typeof sourceForUpdates.image_url === 'string') token.image_url = sourceForUpdates.image_url;
         if (typeof sourceForUpdates.firstName === 'string') token.firstName = sourceForUpdates.firstName;
         if (typeof sourceForUpdates.lastName === 'string') token.lastName = sourceForUpdates.lastName;

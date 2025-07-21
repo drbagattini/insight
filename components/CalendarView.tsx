@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -11,6 +11,7 @@ import axios from 'axios';
 import { formatISO } from 'date-fns';
 import { AppointmentModal, ModalAppointmentData } from './appointments/AppointmentModal';
 import { useAppointmentMutations } from '@/hooks/useAppointmentMutations'; // Use new modal
+import ConnectCalendarButton from '@/app/components/auth/ConnectCalendarButton';
 
 interface AppointmentEvent {
   id: string;
@@ -58,42 +59,151 @@ export default function CalendarView() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDateInfo, setSelectedDateInfo] = useState<DateSelectArg | null>(null);
   const [selectedAppointment, setSelectedAppointment] = useState<ModalAppointmentData | null>(null);
+  const [calendarTitle, setCalendarTitle] = useState('21 – 27 jul 2025');
+  const [currentView, setCurrentView] = useState('timeGridWeek');
   const calendarRef = useRef<FullCalendar>(null);
   const queryClient = useQueryClient();
   const { updateAppointment } = useAppointmentMutations();
+  
+  // Actualizar título cuando cambie la vista o navegación
+  useEffect(() => {
+    const updateTitle = () => {
+      if (calendarRef.current) {
+        const calendarApi = calendarRef.current.getApi();
+        setCalendarTitle(calendarApi.view.title);
+        setCurrentView(calendarApi.view.type);
+      }
+    };
+    
+    // Actualizar título después de un pequeño delay para asegurar que el calendario se haya renderizado
+    const timer = setTimeout(updateTitle, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
-  // The handleSaveAppointment function is no longer directly needed here, as the new modal handles saving internally.
-  // We might bring back parts of it if CalendarView needs to react to save events, e.g., for optimistic updates not handled by React Query's default cache invalidation.
-  // For now, let's comment it out to avoid confusion.
-  /* const handleSaveAppointment = async (appointmentData: { title: string; start: string; end: string; paciente_id: string; rrule: string | null }) => {
-    try {
-      await axios.post('/api/appointments', {
-        title: appointmentData.title,
-        start_time: appointmentData.start, 
-        end_time: appointmentData.end,     
-        paciente_id: appointmentData.paciente_id,
-        rrule: appointmentData.rrule,
-      });
-      queryClient.invalidateQueries({ queryKey: ['appointments'] });
-      setIsModalOpen(false); 
-    } catch (error) {
-      console.error('Error al guardar la cita:', error);
-      alert('Hubo un error al guardar la cita. Por favor, inténtalo de nuevo.');
-    }
-  }; */
+
 
   return (
     <div className="w-full h-full flex flex-col bg-gray-50">
-      <div className="w-full h-full bg-white overflow-hidden flex flex-col">
+      {/* Header con título */}
+      <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Agenda</h1>
+            <p className="text-sm text-gray-600 mt-1">
+              Gestiona tus citas y sincroniza con Google Calendar
+            </p>
+          </div>
+        </div>
+      </div>
+      
+      <div className="flex-1 bg-white overflow-hidden flex flex-col p-4">
+        {/* Header personalizado del calendario */}
+        <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
+          {/* Controles de navegación y vista */}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center">
+              <button 
+                onClick={() => {
+                  calendarRef.current?.getApi().prev();
+                }}
+                className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+                title="Anterior"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <button 
+                onClick={() => {
+                  calendarRef.current?.getApi().next();
+                }}
+                className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+                title="Siguiente"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+            
+            <button 
+              onClick={() => {
+                calendarRef.current?.getApi().today();
+              }}
+              className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+            >
+              Hoy
+            </button>
+            
+            <div className="flex items-center ml-2">
+              <button 
+                onClick={() => {
+                  calendarRef.current?.getApi().changeView('dayGridMonth');
+                }}
+                className={`px-3 py-1.5 text-sm rounded transition-colors ${
+                  currentView === 'dayGridMonth' 
+                    ? 'bg-blue-100 text-blue-700' 
+                    : 'hover:bg-gray-100'
+                }`}
+              >
+                Mes
+              </button>
+              <button 
+                onClick={() => {
+                  calendarRef.current?.getApi().changeView('timeGridWeek');
+                }}
+                className={`px-3 py-1.5 text-sm rounded transition-colors ${
+                  currentView === 'timeGridWeek' 
+                    ? 'bg-blue-100 text-blue-700' 
+                    : 'hover:bg-gray-100'
+                }`}
+              >
+                Semana
+              </button>
+              <button 
+                onClick={() => {
+                  calendarRef.current?.getApi().changeView('timeGridDay');
+                }}
+                className={`px-3 py-1.5 text-sm rounded transition-colors ${
+                  currentView === 'timeGridDay' 
+                    ? 'bg-blue-100 text-blue-700' 
+                    : 'hover:bg-gray-100'
+                }`}
+              >
+                Día
+              </button>
+            </div>
+          </div>
+          
+          {/* Título del calendario */}
+          <div className="flex-1 text-center">
+            <h2 className="text-lg font-semibold text-gray-900" id="calendar-title">
+              {calendarTitle}
+            </h2>
+          </div>
+          
+          {/* Botón de Google Calendar */}
+          <div>
+            <ConnectCalendarButton onConnection={() => {
+              // Refrescar eventos después de conectar/desconectar
+              if (calendarRef.current) {
+                calendarRef.current.getApi().refetchEvents();
+              }
+            }} />
+          </div>
+        </div>
+        
         <FullCalendar
+        ref={calendarRef}
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
         initialView="timeGridWeek"
-        headerToolbar={{
-          left: 'prev,next today',
-          center: 'title',
-          right: 'dayGridMonth,timeGridWeek,timeGridDay',
+        headerToolbar={false}
+        datesSet={(dateInfo) => {
+          // Actualizar título cuando cambie la vista
+          setCalendarTitle(dateInfo.view.title);
+          setCurrentView(dateInfo.view.type);
         }}
-        customButtons={{}}
         dayHeaderClassNames={'bg-gray-50 text-gray-700 font-semibold py-2'}
         locale={esLocale}
         views={{
