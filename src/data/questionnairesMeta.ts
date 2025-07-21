@@ -53,39 +53,110 @@ const questionnairesMeta = {
   },
   'OPD-CA2-SQ': {
     code: 'OPD-CA2-SQ',
-    title: 'Estructura psíquica adolescente (OPD-CA2-SQ)',
+    title: 'OPD-CA2-SQ - Cuestionario de Capacidades Operacionalizadas',
     shortTitle: 'OPD-CA2-SQ',
     chartType: 'bar-multidim' as const,
     thresholds: {
-      warning: undefined, // T-scores will be used instead
+      warning: 60, // T-scores > 60 suggest possible personality disorder
       danger: undefined
     },
     // Extended metadata for UI/UX
-    dominio: 'Capacidades Psicodinámicas',
-    descripcion: 'Cuestionario de 81 ítems que evalúa cuatro dimensiones de capacidades psicodinámicas según el modelo OPD.',
-    poblacion: 'Adolescentes y adultos',
+    dominio: 'Estructura de Personalidad',
+    descripcion: 'Diagnóstico Psicodinámico Operacionalizado para niños y adolescentes. Cuestionario de autoreporte de 81 ítems que evalúa el nivel de estructura de la personalidad en cuatro dimensiones principales para la detección temprana de trastornos de personalidad en desarrollo.',
+    poblacion: 'Adolescentes de 12 a 18 años (+/- 2 años según nivel de desarrollo)',
     tiempoMin: 15,
+    autores: 'Moises Kassin & Jan Hackradt (versión española)',
+    autoresOriginales: 'Goth K & Schmeck K (versión alemana original)',
+    añoPublicacion: 2020,
     dimensiones: [
-      { nombre: 'Regulación', descripcion: 'Capacidad de regulación emocional' },
-      { nombre: 'Comunicación', descripcion: 'Capacidad de comunicación interpersonal' },
-      { nombre: 'Vinculación', descripcion: 'Capacidad de establecer vínculos' },
-      { nombre: 'Introspección', descripcion: 'Capacidad de introspección y autoconocimiento' }
+      { 
+        nombre: 'Regulación', 
+        descripcion: 'Control de impulsos, tolerancia afectiva, formación de conciencia, regulación de autoestima',
+        subdimensiones: [
+          'Regulación de impulsos',
+          'Tolerancia afectiva', 
+          'Instancias de regulación/Formación de conciencia',
+          'Regulación de autoestima'
+        ]
+      },
+      { 
+        nombre: 'Identidad', 
+        descripcion: 'Coherencia, percepción de sí mismo, diferenciación yo-objetos, percepción de objetos, pertenencia',
+        subdimensiones: [
+          'Coherencia',
+          'Percepción de sí mismo',
+          'Diferenciación Yo-objetos',
+          'Percepción de objetos',
+          'Pertenencia'
+        ]
+      },
+      { 
+        nombre: 'Interpersonalidad', 
+        descripcion: 'Fantasías, contacto emocional, reciprocidad, percepción afectiva, empatía, capacidad de separarse',
+        subdimensiones: [
+          'Fantasías',
+          'Toma de contactos emocional',
+          'Reciprocidad',
+          'Percepción de afectos',
+          'Empatía',
+          'Capacidad de separarse'
+        ]
+      },
+      { 
+        nombre: 'Apego', 
+        descripcion: 'Acceso a representaciones de apego, base segura interna, capacidad de estar solo, uso de relaciones de apego',
+        subdimensiones: [
+          'Acceso a representaciones de apego',
+          'Base segura interna',
+          'Capacidad de estar solo',
+          'Uso de relaciones de apego'
+        ]
+      }
     ],
-    respuestaTipo: 'Likert 0-4 (0=Nunca, 1=Raramente, 2=A veces, 3=A menudo, 4=Siempre)',
+    respuestaTipo: 'Likert 0-4 (0=No, 1=Más no, 2=Parte/parte, 3=Más sí, 4=Sí)',
     scoring: {
-      rango: [20, 80], // T-scores range
-      sentido: 'mayor = mejor',
-      tipo: 'T-scores por dimensión',
-      formulaFrontEnd: 'Conversión a T-scores según tablas normativas'
+      rango: [0, 4], // Raw scores per item
+      sentido: 'mayor = mayor patología',
+      tipo: 'T-scores por dimensión y puntuación total',
+      formulaFrontEnd: 'Puntuaciones brutas convertidas a T-scores según normas poblacionales',
+      puntosDeCorte: [
+        {
+          umbral: 60,
+          label: 'T-scores > 60 sugieren posible trastorno de personalidad en desarrollo o existente'
+        }
+      ],
+      interpretacion: {
+        direccion: 'Las puntuaciones altas indican mayor alteración estructural',
+        escalas: 'Cuatro escalas primarias con 4-6 subescalas cada una',
+        puntuacionTotal: 'Puntuación total de todos los ítems disponible'
+      }
     },
     validez: {
-      fiabilidad: 'Pendiente de documentar',
+      fiabilidad: 'α de Cronbach: .96 total, .85 (Regulación), .87 (Identidad), .87 (Interpersonalidad), .75 (Apego)',
+      muestra: 'N=1393 estudiantes + N=31 pacientes (México)',
+      validezClinica: 'Diferencias significativas entre estudiantes y pacientes con TP (d=1.7, p<.000)',
       estudiosClave: [
         {
-          cita: 'OPD Task Force, 2008',
-          doi: 'Pendiente'
+          cita: 'Kassin M, Hackradt J (2020). Adaptación cultural de la versión al Español del cuestionario OPD-CA2-SQ',
+          doi: 'academic-tests.com'
+        },
+        {
+          cita: 'Goth K & Schmeck K (versión alemana original). OPD-KJ2-SF',
+          doi: 'academic-tests.com'
         }
       ]
+    },
+    fundamentoTeorico: {
+      modelo: 'Diagnóstico Psicodinámico Operacionalizado (OPD-KJ-2)',
+      enfoque: 'Evaluación dimensional de la estructura psicológica',
+      objetivo: 'Detección temprana de trastornos de personalidad en desarrollo',
+      baseConceptual: 'Integra ideas de múltiples escuelas psicológicas: investigación infantil, del apego, emocional, del temperamento, psicopatología del desarrollo, psicología del self y teoría de relaciones objetales'
+    },
+    aplicacionClinica: {
+      usoRecomendado: 'Elemento valioso pero no base suficiente para diagnóstico',
+      requiere: 'Proceso diagnóstico cuidadoso, exhaustivo y responsable',
+      complementar: 'Evaluación clínica, autoreporte e informe ajeno',
+      advertencia: 'Especialmente importante para adolescentes - no usar como herramienta diagnóstica única'
     }
   }
 } as const;
