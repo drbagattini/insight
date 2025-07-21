@@ -57,6 +57,7 @@ export default function PatientProfilePage() {
     frecuencia: string;
     proximo_envio: string;
     creado_en: string;
+    activo: boolean;
     lastSent?: string;
     respondido?: boolean;
     // Objeto del cuestionario relacionado
@@ -104,6 +105,14 @@ export default function PatientProfilePage() {
   } | null>(null);
   const [showErrorModal, setShowErrorModal] = useState<boolean>(false);
   const [selectedTabIndex, setSelectedTabIndex] = useState(0);
+
+  // Detect URL hash and set correct tab on mount
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash === '#cuestionarios') {
+      setSelectedTabIndex(1);
+    }
+  }, []);
 
   useEffect(() => {
     if (error) setShowErrorModal(true);
@@ -168,18 +177,33 @@ export default function PatientProfilePage() {
     setLoadingSends(true);
     async function loadScheduled() {
       try {
+        console.log('[DEBUG] Loading scheduled sends for patient:', patientId);
         const res = await fetch(`/api/envios_programados?pacienteId=${patientId}`);
         const data = await res.json();
+        console.log('[DEBUG] Scheduled sends API response:', data);
         if (!res.ok) throw new Error(data.error || 'Error al cargar envíos programados');
-        setScheduledSends(data);
+        
+        // Filtrar envíos cancelados completamente (activo = false)
+        const filteredSends = data.filter((send: any) => {
+          // Si cancel_all o cancel_next de envío único, no mostrar
+          if (!send.activo) return false;
+          return true;
+        });
+        
+        setScheduledSends(filteredSends);
+        console.log('[DEBUG] Set scheduled sends state (filtered):', filteredSends);
       } catch (e) {
-        console.error(e);
+        console.error('[DEBUG] Error loading scheduled sends:', e);
       } finally {
         setLoadingSends(false);
       }
     }
+    console.log('[DEBUG] useEffect for scheduled sends - selectedTabIndex:', selectedTabIndex);
     if (selectedTabIndex === 1) { // Only load if Cuestionarios tab is active
+      console.log('[DEBUG] Loading scheduled sends because tab index is 1');
       loadScheduled();
+    } else {
+      console.log('[DEBUG] Not loading scheduled sends, tab index is not 1');
     }
   }, [patientId, selectedTabIndex]);
 
@@ -263,7 +287,14 @@ export default function PatientProfilePage() {
       setNotification(`Envío programado para el ${new Date(proximoEnvioConHora).toLocaleDateString([], { year: 'numeric', month: '2-digit', day: '2-digit' })} a las 08:00 AM.`);
       const listRes = await fetch(`/api/envios_programados?pacienteId=${patientId}`);
       const listData = await listRes.json();
-      if (listRes.ok) setScheduledSends(listData);
+      if (listRes.ok) {
+        // Filtrar envíos cancelados completamente (activo = false)
+        const filteredSends = listData.filter((send: any) => {
+          if (!send.activo) return false;
+          return true;
+        });
+        setScheduledSends(filteredSends);
+      }
       setNewProximoEnvio(new Date().toISOString().split('T')[0]);
       setPendingScheduleData(null);
       setHighlight(true);
@@ -331,7 +362,14 @@ export default function PatientProfilePage() {
 
       const listRes = await fetch(`/api/envios_programados?pacienteId=${patientId}`);
       const listData = await listRes.json();
-      if (listRes.ok) setScheduledSends(listData);
+      if (listRes.ok) {
+        // Filtrar envíos cancelados completamente (activo = false)
+        const filteredSends = listData.filter((send: any) => {
+          if (!send.activo) return false;
+          return true;
+        });
+        setScheduledSends(filteredSends);
+      }
       setNewProximoEnvio(new Date().toISOString().split('T')[0]);
       setPendingScheduleData(null);
       setHighlight(true);
@@ -388,22 +426,79 @@ export default function PatientProfilePage() {
       // Refrescar lista
       const listRes = await fetch(`/api/envios_programados?pacienteId=${patientId}`);
       const listData = await listRes.json();
-      if (listRes.ok) setScheduledSends(listData);
+      if (listRes.ok) {
+        // Filtrar envíos cancelados completamente (activo = false)
+        const filteredSends = listData.filter((send: any) => {
+          if (!send.activo) return false;
+          return true;
+        });
+        setScheduledSends(filteredSends);
+      }
     } catch (e) {
       console.error(e);
       setError((e as Error).message);
     }
   };
 
+  // Cancelación avanzada con opciones granulares
+  const handleAdvancedCancel = async (id: string, action: 'cancel_next' | 'cancel_all' | 'pause' | 'unpause', razon: string) => {
+    try {
+      const res = await fetch('/api/envios_programados/cancelar-avanzado', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          envioId: id,
+          action,
+          razon
+        })
+      });
+      
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Error en la operación');
+      }
+      
+      const result = await res.json();
+      
+      // Mostrar mensaje de éxito
+      setNotification(result.message);
+      setTimeout(() => setNotification(null), 3000);
+      
+      // Cerrar el modal
+      setCancelSendId(null);
+      
+      // Refrescar lista de envíos programados
+      const listRes = await fetch(`/api/envios_programados?pacienteId=${patientId}`);
+      const listData = await listRes.json();
+      if (listRes.ok) {
+        // Filtrar envíos cancelados completamente (activo = false)
+        const filteredSends = listData.filter((send: any) => {
+          // Si cancel_all o cancel_next de envío único, no mostrar
+          if (!send.activo) return false;
+          return true;
+        });
+        setScheduledSends(filteredSends);
+      }
+      
+    } catch (e) {
+      console.error('Error en cancelación avanzada:', e);
+      setError((e as Error).message);
+      setShowErrorModal(true);
+    }
+  };
+
   // Computar próxima fecha según frecuencia
-  function computeNextDate(start: string, frequency: string): string {
-    if (frequency === 'unico') return 'N/A'; // No hay próximo envío para 'unico'
-    const date = new Date(start);
-    if (frequency === 'semanal') date.setDate(date.getDate() + 7);
-    else if (frequency === 'mensual') date.setMonth(date.getMonth() + 1);
-    else if (frequency === 'trimestral') date.setMonth(date.getMonth() + 3);
-    return date.toISOString();
-  }
+function computeNextDate(start: string, frequency: string): string {
+  if (frequency === 'unico') return 'N/A'; // No hay próximo envío para 'unico'
+  const date = new Date(start);
+  if (frequency === 'semanal') date.setDate(date.getDate() + 7);
+  else if (frequency === 'quincenal') date.setDate(date.getDate() + 14);
+  else if (frequency === 'mensual') date.setMonth(date.getMonth() + 1);
+  else if (frequency === 'trimestral') date.setMonth(date.getMonth() + 3);
+  return date.toISOString();
+} 
 
 
 
@@ -599,9 +694,10 @@ export default function PatientProfilePage() {
                       className="w-full px-2 py-1 border rounded"
                     >
                       <option value="unico">Envío único</option>
-                      <option value="semanal">Semanal</option>
-                      <option value="mensual">Mensual</option>
-                      <option value="trimestral">Trimestral</option>
+                      <option value="semanal">🗓️ Semanal</option>
+                      <option value="quincenal">📋 Quincenal</option>
+                      <option value="mensual">📅 Mensual</option>
+                      <option value="trimestral">📆 Trimestral</option>
                     </select>
                   </div>
                   <div>
@@ -684,11 +780,27 @@ export default function PatientProfilePage() {
                           </td>
                           <td className="px-4 py-2 text-center">{new Date(send.lastSent ?? send.creado_en).toLocaleDateString()}</td>
                           <td className="px-4 py-2 text-center">
-                            <span className={`px-2 py-1 rounded-full text-sm ${
-                              send.respondido ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {send.respondido ? 'respondido' : 'pendiente de respuesta'}
-                            </span>
+                            <div className="flex flex-col space-y-1">
+                              <span className={`px-2 py-1 rounded-full text-xs ${
+                                // Detectar si está pausado (fecha muy lejana en 2099-01-01)
+                                send.proximo_envio && send.proximo_envio.startsWith('2099-01-01') 
+                                  ? 'bg-orange-100 text-orange-800' 
+                                  : send.activo 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : 'bg-red-100 text-red-800'
+                              }`}>
+                                {send.proximo_envio && send.proximo_envio.startsWith('2099-01-01') 
+                                  ? 'Pausado' 
+                                  : send.activo 
+                                    ? 'Activo' 
+                                    : 'Cancelado'}
+                              </span>
+                              <span className={`px-2 py-1 rounded-full text-xs ${
+                                send.respondido ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {send.respondido ? 'Respondido' : 'Pendiente'}
+                              </span>
+                            </div>
                           </td>
                           <td className="px-4 py-2 text-center space-x-2">
                             <button onClick={() => sendNow(send)} disabled={!!reminderSent[send.id]} title="Envía un recordatorio amable para que el paciente complete el cuestionario" className={`px-2 py-1 rounded text-white ${
@@ -696,8 +808,8 @@ export default function PatientProfilePage() {
                             }`}>
                               {reminderSent[send.id] ? 'Recordatorio enviado' : 'Enviar Recordatorio'}
                             </button>
-                            <button onClick={() => setCancelSendId(send.id)} title="Cancela todo el ciclo de envíos programados" className="px-2 py-1 bg-gray-300 rounded">
-                              Cancelar envíos programados
+                            <button onClick={() => setCancelSendId(send.id)} title="Gestionar envíos programados" className="px-2 py-1 bg-gray-300 rounded hover:bg-gray-400">
+                              Gestionar envíos
                             </button>
                           </td>
                         </tr>
@@ -713,32 +825,98 @@ export default function PatientProfilePage() {
           </Tab.Panels>
         </Tab.Group>
       </div>
-      {/* Modal de confirmación para cancelar envío programado - keep at page level or move if tab-specific */}
-      {cancelSendId && (
-        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-xs">
-            <h3 className="text-lg font-semibold mb-2">Cancelar envío programado</h3>
-            <p className="mb-4">¿Seguro que deseas cancelar este envío programado?</p>
-            <div className="flex justify-end space-x-2">
-              <button
-                onClick={() => setCancelSendId(null)}
-                className="px-3 py-1 bg-gray-200 rounded"
-              >
-                Volver
-              </button>
+      {/* Modal de gestión de envíos programados */}
+      {cancelSendId && (() => {
+        // Encontrar el envío seleccionado para determinar si está pausado
+        const selectedSend = scheduledSends.find(send => send.id === cancelSendId);
+        const isPaused = selectedSend?.proximo_envio?.startsWith('2099-01-01');
+        
+        return (
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+              <h3 className="text-lg font-semibold mb-4 text-gray-800">Gestionar envíos programados</h3>
+              <p className="mb-6 text-gray-600">Selecciona qué acción deseas realizar con este envío recurrente:</p>
+            
+            <div className="space-y-3 mb-6">
+              {/* Opción 1: Posponer próximo envío */}
               <button
                 onClick={() => {
-                  cancelSendInternal(cancelSendId);
+                  handleAdvancedCancel(cancelSendId, 'cancel_next', 'Posponer próximo envío por decisión del psicólogo');
                   setCancelSendId(null);
                 }}
-                className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                className="w-full p-4 text-left border-2 border-yellow-200 rounded-lg hover:border-yellow-300 hover:bg-yellow-50 transition-colors"
               >
-                Confirmar
+                <div className="flex items-center">
+                  <div className="w-3 h-3 bg-yellow-400 rounded-full mr-3"></div>
+                  <div>
+                    <div className="font-medium text-gray-800">Posponer próximo envío</div>
+                    <div className="text-sm text-gray-600">Salta el próximo envío, continúa la recurrencia normal</div>
+                  </div>
+                </div>
+              </button>
+              
+              {/* Opción 2: Pausar/Despausar */}
+              <button
+                onClick={() => {
+                  const action = isPaused ? 'unpause' : 'pause';
+                  const reason = isPaused ? 'Reactivar envíos programados' : 'Pausar envíos temporalmente para evaluación';
+                  handleAdvancedCancel(cancelSendId, action, reason);
+                  setCancelSendId(null);
+                }}
+                className={`w-full p-4 text-left border-2 rounded-lg transition-colors ${
+                  isPaused 
+                    ? 'border-green-200 hover:border-green-300 hover:bg-green-50' 
+                    : 'border-blue-200 hover:border-blue-300 hover:bg-blue-50'
+                }`}
+              >
+                <div className="flex items-center">
+                  <div className={`w-3 h-3 rounded-full mr-3 ${
+                    isPaused ? 'bg-green-400' : 'bg-blue-400'
+                  }`}></div>
+                  <div>
+                    <div className="font-medium text-gray-800">
+                      {isPaused ? 'Reactivar envíos' : 'Pausar temporalmente'}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {isPaused 
+                        ? 'Reactiva los envíos programados con la próxima fecha' 
+                        : 'Detiene todos los envíos, se puede reactivar después'
+                      }
+                    </div>
+                  </div>
+                </div>
+              </button>
+              
+              {/* Opción 3: Finalizar completamente */}
+              <button
+                onClick={() => {
+                  handleAdvancedCancel(cancelSendId, 'cancel_all', 'Finalizar tratamiento - alta médica');
+                  setCancelSendId(null);
+                }}
+                className="w-full p-4 text-left border-2 border-red-200 rounded-lg hover:border-red-300 hover:bg-red-50 transition-colors"
+              >
+                <div className="flex items-center">
+                  <div className="w-3 h-3 bg-red-400 rounded-full mr-3"></div>
+                  <div>
+                    <div className="font-medium text-gray-800">Finalizar completamente</div>
+                    <div className="text-sm text-gray-600">Cancela todos los envíos futuros permanentemente</div>
+                  </div>
+                </div>
+              </button>
+            </div>
+            
+            <div className="flex justify-end">
+              <button
+                onClick={() => setCancelSendId(null)}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+              >
+                Cancelar
               </button>
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
     </>
   );
 }

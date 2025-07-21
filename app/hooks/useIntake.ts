@@ -77,7 +77,7 @@ const hasMeaningfulContent = (intakeData: IntakeData | null): boolean => {
     datos.presentacion ||
     datos.diagnosticoTexto ||
     datos.malestarPaciente ||
-    (datos.ayudaBuscada && datos.ayudaBuscada.length > 0) ||
+    (datos.ayudaEsperada && datos.ayudaEsperada.length > 0) ||
     datos.estrategia
   );
   
@@ -88,7 +88,7 @@ const hasMeaningfulContent = (intakeData: IntakeData | null): boolean => {
     presentacion: !!datos.presentacion,
     diagnosticoTexto: !!datos.diagnosticoTexto,
     malestarPaciente: !!datos.malestarPaciente,
-    ayudaBuscada: datos.ayudaBuscada?.length || 0,
+    ayudaEsperada: datos.ayudaEsperada?.length || 0,
     estrategia: !!datos.estrategia
   });
   

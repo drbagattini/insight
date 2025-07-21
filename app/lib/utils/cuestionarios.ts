@@ -153,10 +153,26 @@ export function generarTokenYExpiracion() {
 }
 
 // Función para calcular la próxima fecha basada en la frecuencia
-export function computeNextDate(dateStr: string, frequency: string): string {
-  const date = new Date(dateStr);
-  if (frequency === 'semanal') date.setDate(date.getDate() + 7);
-  else if (frequency === 'mensual') date.setMonth(date.getMonth() + 1);
-  else if (frequency === 'trimestral') date.setMonth(date.getMonth() + 3);
-  return date.toISOString();
+export function computeNextDate(frequency: string, currentDate: Date = new Date()): Date {
+  const nextDate = new Date(currentDate);
+  
+  switch (frequency) {
+    case 'semanal':
+      nextDate.setDate(nextDate.getDate() + 7);
+      break;
+    case 'quincenal':
+      nextDate.setDate(nextDate.getDate() + 14);
+      break;
+    case 'mensual':
+      nextDate.setMonth(nextDate.getMonth() + 1);
+      break;
+    case 'trimestral':
+      nextDate.setMonth(nextDate.getMonth() + 3);
+      break;
+    default:
+      // Default to monthly if frequency is not recognized
+      nextDate.setMonth(nextDate.getMonth() + 1);
+  }
+  
+  return nextDate;
 }

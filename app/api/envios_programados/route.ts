@@ -24,23 +24,52 @@ export async function GET(request: Request) {
     schedules.map(async (send) => {
       let lastSent: string | null = null;
       let respondido = false;
+      
       try {
-        const { data: respList, error: respError } = await supabaseAdmin
-          .from('respuestas')
-          .select('enviado_en')
-          .eq('paciente_id', send.paciente_id)
-          .eq('cuestionario_id', send.cuestionario_id)
-          .order('enviado_en', { ascending: false })
-          .limit(1);
-        if (respError) {
-          console.error('Error al obtener respuestas para envío', send.id, respError);
-        } else if (respList && respList.length > 0) {
-          lastSent = respList[0].enviado_en;
-          respondido = true;
+        // Para recurrencias, solo considerar respuestas después del último envío
+        if (send.frecuencia !== 'unico') {
+          // Buscar links generados para este envío programado
+          const { data: links, error: linksError } = await supabaseAdmin
+            .from('links_cuestionario')
+            .select('token, creado_en')
+            .eq('envio_programado_id', send.id)
+            .order('creado_en', { ascending: false })
+            .limit(1);
+            
+          if (!linksError && links && links.length > 0) {
+            const latestLink = links[0];
+            lastSent = latestLink.creado_en;
+            
+            // Buscar respuestas para este link específico
+            const { data: responses, error: respError } = await supabaseAdmin
+              .from('respuestas')
+              .select('enviado_en')
+              .eq('link_token', latestLink.token)
+              .limit(1);
+              
+            if (!respError && responses && responses.length > 0) {
+              respondido = true;
+            }
+          }
+        } else {
+          // Para envíos únicos, usar la lógica anterior
+          const { data: respList, error: respError } = await supabaseAdmin
+            .from('respuestas')
+            .select('enviado_en')
+            .eq('paciente_id', send.paciente_id)
+            .eq('cuestionario_id', send.cuestionario_id)
+            .order('enviado_en', { ascending: false })
+            .limit(1);
+            
+          if (!respError && respList && respList.length > 0) {
+            lastSent = respList[0].enviado_en;
+            respondido = true;
+          }
         }
       } catch (e) {
         console.error('Error inesperado al obtener respuestas para envío', send.id, e);
       }
+      
       return {
         ...send,
         lastSent,
@@ -64,7 +93,7 @@ export async function POST(request: Request) {
   }
 
   // Validar que la frecuencia sea uno de los valores esperados
-  const validFrequencies = ['semanal', 'mensual', 'trimestral', 'unico'];
+  const validFrequencies = ['semanal', 'quincenal', 'mensual', 'trimestral', 'unico'];
   if (!validFrequencies.includes(frecuencia)) {
     return NextResponse.json({ error: `Frecuencia inválida. Valores permitidos: ${validFrequencies.join(', ')}` }, { status: 400 });
   }
@@ -84,13 +113,13 @@ export async function POST(request: Request) {
   }
 
   // Validación de unicidad para programaciones recurrentes
-  if (['semanal', 'mensual', 'trimestral'].includes(frecuencia)) {
+  if (['semanal', 'quincenal', 'mensual', 'trimestral'].includes(frecuencia)) {
     const { data: existingActiveRecurrent, error: checkError } = await supabaseAdmin
       .from('envios_programados')
       .select('id')
       .eq('paciente_id', pacienteId)
       .eq('cuestionario_id', cuestionarioId)
-      .in('frecuencia', ['semanal', 'mensual', 'trimestral'])
+      .in('frecuencia', ['semanal', 'quincenal', 'mensual', 'trimestral'])
       .eq('activo', true)
       .maybeSingle(); // Usamos maybeSingle para no fallar si no hay ninguno
 

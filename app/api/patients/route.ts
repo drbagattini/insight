@@ -27,6 +27,7 @@ const newPatientSchema = z.object({
 function calcularProximoEnvio(frecuencia: string): string {
   const nextDate = new Date();
   if (frecuencia === 'semanal') nextDate.setDate(nextDate.getDate() + 7);
+  else if (frecuencia === 'quincenal') nextDate.setDate(nextDate.getDate() + 14);
   else if (frecuencia === 'mensual') nextDate.setMonth(nextDate.getMonth() + 1);
   else if (frecuencia === 'trimestral') nextDate.setMonth(nextDate.getMonth() + 3);
   return nextDate.toISOString();
@@ -240,27 +241,79 @@ export async function POST(req: NextRequest) {
   // Determinar canal para el envío inicial
   const metadataAny = parsed.data.metadata as any;
   const canalToSend = metadataAny.preferencias_cuestionario?.canal || 'email';
+  const frecuencia = metadataAny.preferencias_cuestionario?.frecuencia || 'mensual';
+  
   // Envío inicial si se solicitó
-  if (sendInitial) {
+  if (sendInitial && cuestionario) {
     try {
       const origin = new URL(req.url).origin;
-      const sendRes = await fetch(`${origin}/api/cuestionarios/enviar`, {
+      
+      // 1. Programar la recurrencia primero
+      const scheduleRes = await fetch(`${origin}/api/envios_programados`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Cookie': req.headers.get('cookie') || ''
         },
-        body: JSON.stringify({ pacienteId: paciente.id, cuestionarioId: cuestionario?.id, canal: canalToSend }),
+        body: JSON.stringify({
+          pacienteId: paciente.id,
+          cuestionarioId: cuestionario.id,
+          canal: canalToSend,
+          frecuencia: frecuencia,
+          proximoEnvio: calcularProximoEnvio(frecuencia)
+        }),
       });
-      const sendData = await sendRes.json();
-      if (sendRes.ok) {
-        console.log('Primer envío realizado:', sendData);
-        responsePayload.link = sendData.link;
+      
+      const scheduleData = await scheduleRes.json();
+      
+      if (scheduleRes.ok) {
+        console.log('Recurrencia programada:', scheduleData);
+        
+        // 2. Enviar inmediatamente con referencia al envío programado
+        const sendRes = await fetch(`${origin}/api/cuestionarios/enviar`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Cookie': req.headers.get('cookie') || ''
+          },
+          body: JSON.stringify({ 
+            pacienteId: paciente.id, 
+            cuestionarioId: cuestionario.id, 
+            canal: canalToSend,
+            envioProgramadoId: scheduleData.id
+          }),
+        });
+        
+        const sendData = await sendRes.json();
+        if (sendRes.ok) {
+          console.log('Primer envío realizado con recurrencia:', sendData);
+          responsePayload.link = sendData.link;
+          responsePayload.recurrencia = {
+            id: scheduleData.id,
+            frecuencia: frecuencia,
+            proximoEnvio: scheduleData.proximoEnvio
+          };
+        } else {
+          console.error('Error en primer envío:', sendData);
+        }
       } else {
-        console.error('Error en primer envío:', sendData);
+        console.error('Error al programar recurrencia:', scheduleData);
+        // Fallback: enviar sin recurrencia
+        const sendRes = await fetch(`${origin}/api/cuestionarios/enviar`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Cookie': req.headers.get('cookie') || ''
+          },
+          body: JSON.stringify({ pacienteId: paciente.id, cuestionarioId: cuestionario.id, canal: canalToSend }),
+        });
+        const sendData = await sendRes.json();
+        if (sendRes.ok) {
+          responsePayload.link = sendData.link;
+        }
       }
     } catch (error) {
-      console.error('Error al realizar primer envío:', error);
+      console.error('Error al realizar envío con recurrencia:', error);
     }
   }
 

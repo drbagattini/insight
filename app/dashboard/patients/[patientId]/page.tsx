@@ -341,6 +341,7 @@ export default function PatientEvolutionPage() {
     if (frequency === 'unico') return 'N/A'; // No hay próximo envío para 'unico'
     const date = new Date(start);
     if (frequency === 'semanal') date.setDate(date.getDate() + 7);
+    else if (frequency === 'quincenal') date.setDate(date.getDate() + 14);
     else if (frequency === 'mensual') date.setMonth(date.getMonth() + 1);
     else if (frequency === 'trimestral') date.setMonth(date.getMonth() + 3);
     return date.toISOString();
@@ -463,9 +464,10 @@ export default function PatientEvolutionPage() {
                 className="w-full px-2 py-1 border rounded"
               >
                 <option value="unico">Envío único</option>
-                <option value="semanal">Semanal</option>
-                <option value="mensual">Mensual</option>
-                <option value="trimestral">Trimestral</option>
+                <option value="semanal">🗓️ Semanal</option>
+                <option value="quincenal">📋 Quincenal</option>
+                <option value="mensual">📅 Mensual</option>
+                <option value="trimestral">📆 Trimestral</option>
               </select>
             </div>
             <div>

@@ -282,6 +282,7 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
                 }
               >
                 <option value="semanal">🗓️ Semanal</option>
+                <option value="quincenal">📋 Quincenal</option>
                 <option value="mensual">📅 Mensual</option>
                 <option value="trimestral">📆 Trimestral</option>
               </select>

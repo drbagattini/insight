@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Modal UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <h1 class="text-2xl font-bold mb-4">Test: Nueva UI de Gestión de Envíos</h1>
+    
+    <!-- Simular tabla de envíos -->
+    <div class="bg-white p-6 rounded-lg shadow">
+        <h2 class="text-xl font-semibold mb-4">Envíos programados</h2>
+        <table class="min-w-full table-auto">
+            <thead>
+                <tr>
+                    <th class="px-4 py-2 text-center">Cuestionario</th>
+                    <th class="px-4 py-2 text-center">Estado</th>
+                    <th class="px-4 py-2 text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="border-t">
+                    <td class="px-4 py-2 text-center">WHO-5</td>
+                    <td class="px-4 py-2 text-center">
+                        <span class="px-2 py-1 rounded-full text-sm bg-yellow-100 text-yellow-800">
+                            pendiente de respuesta
+                        </span>
+                    </td>
+                    <td class="px-4 py-2 text-center space-x-2">
+                        <button onclick="showModal()" class="px-2 py-1 bg-gray-300 rounded hover:bg-gray-400">
+                            Gestionar envíos
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Modal de gestión de envíos programados -->
+    <div id="modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <h3 class="text-lg font-semibold mb-4 text-gray-800">Gestionar envíos programados</h3>
+            <p class="mb-6 text-gray-600">Selecciona qué acción deseas realizar con este envío recurrente:</p>
+            
+            <div class="space-y-3 mb-6">
+                <!-- Opción 1: Posponer próximo envío -->
+                <button onclick="handleAction('cancel_next')" class="w-full p-4 text-left border-2 border-yellow-200 rounded-lg hover:border-yellow-300 hover:bg-yellow-50 transition-colors">
+                    <div class="flex items-center">
+                        <div class="w-3 h-3 bg-yellow-400 rounded-full mr-3"></div>
+                        <div>
+                            <div class="font-medium text-gray-800">Posponer próximo envío</div>
+                            <div class="text-sm text-gray-600">Salta el próximo envío, continúa la recurrencia normal</div>
+                        </div>
+                    </div>
+                </button>
+                
+                <!-- Opción 2: Pausar temporalmente -->
+                <button onclick="handleAction('pause')" class="w-full p-4 text-left border-2 border-blue-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors">
+                    <div class="flex items-center">
+                        <div class="w-3 h-3 bg-blue-400 rounded-full mr-3"></div>
+                        <div>
+                            <div class="font-medium text-gray-800">Pausar temporalmente</div>
+                            <div class="text-sm text-gray-600">Detiene todos los envíos, se puede reactivar después</div>
+                        </div>
+                    </div>
+                </button>
+                
+                <!-- Opción 3: Finalizar completamente -->
+                <button onclick="handleAction('cancel_all')" class="w-full p-4 text-left border-2 border-red-200 rounded-lg hover:border-red-300 hover:bg-red-50 transition-colors">
+                    <div class="flex items-center">
+                        <div class="w-3 h-3 bg-red-400 rounded-full mr-3"></div>
+                        <div>
+                            <div class="font-medium text-gray-800">Finalizar completamente</div>
+                            <div class="text-sm text-gray-600">Cancela todos los envíos futuros permanentemente</div>
+                        </div>
+                    </div>
+                </button>
+            </div>
+            
+            <div class="flex justify-end">
+                <button onclick="hideModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showModal() {
+            document.getElementById('modal').classList.remove('hidden');
+        }
+        
+        function hideModal() {
+            document.getElementById('modal').classList.add('hidden');
+        }
+        
+        function handleAction(action) {
+            const actions = {
+                'cancel_next': 'Próximo envío pospuesto',
+                'pause': 'Envíos pausados temporalmente',
+                'cancel_all': 'Serie de envíos finalizada'
+            };
+            
+            alert(actions[action] + ' ✅');
+            hideModal();
+        }
+    </script>
+</body>
+</html>

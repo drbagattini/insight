@@ -67,8 +67,8 @@ export async function GET(
             // Caso: objeto con claves numéricas o UUIDs
             for (const [key, value] of Object.entries(respuesta.respuestas)) {
               const idx = parseInt(key, 10);
-              if (!isNaN(idx) && idx >= 1 && idx <= 81) {
-                answersArray[idx - 1] = typeof value === 'object' && 'valor' in value ? (value as any).valor : value as any;
+              if (!isNaN(idx) && idx >= 1 && idx <= 81 && value !== null) {
+                answersArray[idx - 1] = typeof value === 'object' && value && 'valor' in value ? (value as any).valor : value as any;
               }
             }
           }

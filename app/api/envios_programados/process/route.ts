@@ -18,15 +18,20 @@ export async function POST(req: NextRequest) {
   }
 
   if (!schedules || schedules.length === 0) {
-    // console.log('No hay envíos programados para procesar en este momento.'); // Comentado para reducir logs en Vercel si se ejecuta muy seguido
+    console.log('No hay envíos programados para procesar en este momento.');
     return NextResponse.json({ success: true, processed: 0, message: 'No hay envíos para procesar.' });
   }
+
+  console.log(`📋 Found ${schedules.length} scheduled sends to process`);
+  schedules.forEach((job, index) => {
+    console.log(`   ${index + 1}. Job ${job.id}: ${job.frecuencia} via ${job.canal}, due: ${job.proximo_envio}`);
+  });
 
   let count = 0;
   for (const job of schedules) {
     try {
-      // Llamar al endpoint de envío interno, pasando el ID del job
-      const sendEndpointUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/cuestionarios/enviar`;
+      // Llamar al endpoint interno de envío (sin autenticación)
+      const sendEndpointUrl = `http://localhost:3000/api/internal/enviar-cuestionario`;
       const payload = {
         pacienteId: job.paciente_id,
         cuestionarioId: job.cuestionario_id,
@@ -34,7 +39,7 @@ export async function POST(req: NextRequest) {
         envioProgramadoId: job.id, // Pasar el ID del job de envío programado
       };
       
-      // console.log(`Procesando job ${job.id}. Payload para ${sendEndpointUrl}:`, payload); // Comentado para reducir logs
+      console.log(`🚀 Processing job ${job.id}. Payload for ${sendEndpointUrl}:`, payload);
 
       const res = await fetch(sendEndpointUrl, {
         method: 'POST',
@@ -44,12 +49,12 @@ export async function POST(req: NextRequest) {
 
       if (!res.ok) {
         const errText = await res.text();
-        console.error(`Job ${job.id} falló en el envío (endpoint /api/cuestionarios/enviar): ${res.status}`, errText);
-        // Considerar si se debe reintentar o marcar como fallido permanentemente. Por ahora, solo se salta.
+        console.error(`❌ Job ${job.id} failed to send (${res.status}):`, errText);
         continue; // Pasar al siguiente job
       }
 
-      // console.log(`Job ${job.id} enviado exitosamente via /api/cuestionarios/enviar.`); // Comentado para reducir logs
+      const responseData = await res.json();
+      console.log(`✅ Job ${job.id} sent successfully:`, responseData);
       count++;
 
       // Actualizar el job en la base de datos
@@ -57,12 +62,16 @@ export async function POST(req: NextRequest) {
         // Si es un envío único, marcar como inactivo y opcionalmente limpiar proximo_envio
         const { error: updateError } = await supabaseAdmin
           .from('envios_programados')
-          .update({ activo: false, proximo_envio: null })
+          .update({ 
+            activo: false, 
+            proximo_envio: null,
+            actualizado_en: new Date().toISOString()
+          })
           .eq('id', job.id);
         if (updateError) {
           console.error(`Error al desactivar envío único ${job.id}:`, updateError);
         }
-        // console.log(`Job ${job.id} (frecuencia: unico) marcado como inactivo.`); // Comentado para reducir logs
+        console.log(`🔄 Job ${job.id} (frequency: unico) marked as inactive.`);
       } else {
         // Si es recurrente, calcular y actualizar la próxima fecha de envío
         const nextProximoEnvio = computeNextDate(job.proximo_envio, job.frecuencia);
@@ -76,12 +85,15 @@ export async function POST(req: NextRequest) {
         }
         const { error: updateError } = await supabaseAdmin
           .from('envios_programados')
-          .update({ proximo_envio: nextProximoEnvio })
+          .update({ 
+            proximo_envio: nextProximoEnvio,
+            actualizado_en: new Date().toISOString()
+          })
           .eq('id', job.id);
         if (updateError) {
           console.error(`Error al actualizar proximo_envio para job ${job.id}:`, updateError);
         }
-        // console.log(`Job ${job.id} (frecuencia: ${job.frecuencia}) actualizado. Próximo envío: ${nextProximoEnvio}`); // Comentado para reducir logs
+        console.log(`🔄 Job ${job.id} (frequency: ${job.frecuencia}) updated. Next send: ${nextProximoEnvio}`);
       }
     } catch (e) {
       // Catch para errores inesperados durante el procesamiento del loop
