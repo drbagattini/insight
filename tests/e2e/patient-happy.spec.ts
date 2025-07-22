@@ -104,9 +104,9 @@ test('flujo completo paciente → envío → respuesta → gráfico', async ({ p
   const questionnaireSelect = page.getByTestId('questionnaire-select');
   await questionnaireSelect.waitFor({ state: 'visible', timeout: 10000 });
   
-  const who5OptionValue = await questionnaireSelect.locator('option:has-text("WHO-5")').getAttribute('value');
+  const who5OptionValue = await questionnaireSelect.locator('option:has-text("Índice de Bienestar (WHO-5)")').getAttribute('value');
   if (!who5OptionValue) {
-    throw new Error('Could not find WHO-5 questionnaire in select options');
+    throw new Error('Could not find Índice de Bienestar (WHO-5) questionnaire in select options');
   }
   await questionnaireSelect.selectOption(who5OptionValue);
 

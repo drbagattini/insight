@@ -11,6 +11,9 @@ interface RiskPatient {
   name: string;
   score: number;
   date: string; // ISO string for date
+  questionnaire: string; // Código del cuestionario que generó la alerta
+  riskType: 'suicide' | 'general'; // Tipo de riesgo
+  item9?: number; // Para PHQ-9, valor del ítem 9 (ideación suicida)
 }
 
 interface RiskPatientsDrawerProps {
@@ -67,7 +70,7 @@ const RiskPatientsDrawer: React.FC<RiskPatientsDrawerProps> = ({ isOpen, onClose
                       </div>
                       <div className="mt-1">
                         <p className="text-sm text-red-200">
-                          Pacientes con puntuación WHO-5 más reciente inferior a 25.
+                          Pacientes con puntuaciones de riesgo en cuestionarios de salud mental.
                         </p>
                       </div>
                     </div>
@@ -82,10 +85,23 @@ const RiskPatientsDrawer: React.FC<RiskPatientsDrawerProps> = ({ isOpen, onClose
                                     <User className="h-4 w-4 mr-2 text-gray-500" />
                                     {patient.name}
                                   </p>
-                                  <p className="text-sm text-red-600 flex items-center mt-1">
-                                    <AlertTriangle className="h-4 w-4 mr-2" />
-                                    WHO-5: {patient.score}
-                                  </p>
+                                  <div className="space-y-1">
+                                    <p className={`text-sm flex items-center ${patient.riskType === 'suicide' ? 'text-red-800 font-semibold' : 'text-red-600'}`}>
+                                      <AlertTriangle className={`h-4 w-4 mr-2 ${patient.riskType === 'suicide' ? 'text-red-800' : 'text-red-600'}`} />
+                                      {patient.questionnaire === 'WHO-5' && `Índice de Bienestar (WHO-5): ${patient.score}`}
+                                      {patient.questionnaire === 'PHQ-9' && `Cuestionario de Salud del Paciente-9 (PHQ-9): ${patient.score}`}
+                                    </p>
+                                    {patient.riskType === 'suicide' && patient.item9 !== undefined && (
+                                      <p className="text-xs text-red-800 font-medium bg-red-100 px-2 py-1 rounded">
+                                        ⚠️ RIESGO SUICIDA: Ítem 9 = {patient.item9} (requiere evaluación inmediata)
+                                      </p>
+                                    )}
+                                    {patient.riskType === 'general' && patient.questionnaire === 'PHQ-9' && (
+                                      <p className="text-xs text-orange-700 bg-orange-100 px-2 py-1 rounded">
+                                        Depresión moderada o superior (requiere intervención clínica)
+                                      </p>
+                                    )}
+                                  </div>
                                   <p className="text-sm text-gray-500 flex items-center mt-1">
                                     <CalendarDays className="h-4 w-4 mr-2" />
                                     Fecha: {new Date(patient.date).toLocaleDateString()}

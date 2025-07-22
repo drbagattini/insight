@@ -18,7 +18,7 @@ const patientRowNoEmail = {
 const cuestionarioRow = {
   id: '11111111-1111-1111-1111-111111111111',
   codigo: 'WHO-5',
-  titulo: 'Índice de Bienestar WHO-5',
+  titulo: 'Índice de Bienestar (WHO-5)',
   activo: true
 };
 

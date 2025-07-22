@@ -90,6 +90,90 @@ const midBandPlugin = {
   }
 };
 
+// Plugin for PHQ-9 with subtle, professional color bands and zones legend
+const phq9ThresholdPlugin = {
+  id: 'phq9Thresholds',
+  beforeDatasetsDraw(chart: any) {
+    const { ctx, chartArea: { top, bottom, left, right }, scales } = chart;
+    const yScale = scales.y;
+
+    ctx.save();
+
+    // Bandas de color con degradado suave, más saturación y presencia visual
+    const bands = [
+      { min: 0, max: 4.99, color: 'rgba(34, 197, 94, 0.20)' }, // verde más vibrante - ninguno/mínimo
+      { min: 5, max: 9.99, color: 'rgba(163, 230, 53, 0.20)' }, // verde-lima vibrante - leve
+      { min: 10, max: 14.99, color: 'rgba(251, 191, 36, 0.22)' }, // amarillo-naranja vibrante - moderado
+      { min: 15, max: 19.99, color: 'rgba(251, 113, 133, 0.22)' }, // rosa-rojo vibrante - severo
+      { min: 20, max: 27, color: 'rgba(220, 38, 127, 0.24)' } // rojo intenso vibrante - muy severo
+    ];
+
+    bands.forEach(({ min, max, color }) => {
+      const minY = yScale.getPixelForValue(max);
+      const maxY = yScale.getPixelForValue(min);
+      
+      ctx.fillStyle = color;
+      ctx.fillRect(left, minY, right - left, maxY - minY);
+    });
+
+    // Líneas de referencia discretas (todas punteadas)
+    const thresholds = [
+      { value: 5, color: 'rgba(156, 163, 175, 0.4)', dash: [4, 4], width: 1 }, // Gris sutil
+      { value: 10, color: 'rgba(156, 163, 175, 0.6)', dash: [3, 3], width: 1.2 }, // Gris medio
+      { value: 15, color: 'rgba(107, 114, 128, 0.7)', dash: [2, 2], width: 1.5 }, // Gris más visible
+      { value: 20, color: 'rgba(107, 114, 128, 0.8)', dash: [2, 2], width: 1.5 } // Nueva línea para grave
+    ];
+
+    thresholds.forEach(({ value, color, dash, width }) => {
+      const y = yScale.getPixelForValue(value);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.setLineDash(dash);
+      ctx.beginPath();
+      ctx.moveTo(left, y);
+      ctx.lineTo(right, y);
+      ctx.stroke();
+    });
+
+    ctx.restore();
+  },
+  
+  // Dibujar etiquetas de zonas dentro de las bandas
+  afterDraw(chart: any) {
+    const { ctx, chartArea } = chart;
+    
+    ctx.save();
+    ctx.font = 'bold 12px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    
+    // Definir las zonas con sus posiciones Y
+    const zones = [
+      { text: 'Muy Severo', yStart: 20, yEnd: 27, color: 'rgba(220, 38, 127, 0.9)' },
+      { text: 'Severo', yStart: 15, yEnd: 19, color: 'rgba(251, 113, 133, 0.9)' },
+      { text: 'Moderada', yStart: 10, yEnd: 14, color: 'rgba(251, 191, 36, 0.9)' },
+      { text: 'Leve', yStart: 5, yEnd: 9, color: 'rgba(163, 230, 53, 0.9)' },
+      { text: 'Mínima', yStart: 0, yEnd: 4, color: 'rgba(34, 197, 94, 0.9)' }
+    ];
+    
+    zones.forEach(zone => {
+      // Calcular posición Y en el canvas
+      const yStartPixel = chartArea.top + ((27 - zone.yEnd) / 27) * (chartArea.bottom - chartArea.top);
+      const yEndPixel = chartArea.top + ((27 - zone.yStart) / 27) * (chartArea.bottom - chartArea.top);
+      const yCenter = (yStartPixel + yEndPixel) / 2;
+      
+      // Solo dibujar si la zona es visible y tiene altura suficiente
+      if (yEndPixel - yStartPixel > 20) {
+        ctx.fillStyle = zone.color;
+        ctx.fillText(zone.text, chartArea.right - 10, yCenter);
+      }
+    });
+    
+    ctx.restore();
+  }
+
+};
+
 // Plugin for WHO-5 threshold lines (13, 25, 50, 75)
 const who5ThresholdPlugin = {
   id: 'who5Thresholds',
@@ -244,10 +328,10 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
       maintainAspectRatio: false,
       layout: {
         padding: {
-          left: 10,
-          right: 10,
-          top: 15,
-          bottom: 35
+          top: 20,
+          right: 20,
+          bottom: 20,
+          left: 20
         }
       },
       // Vertical bar chart (categorías en eje X, valores T-score en eje Y)
@@ -313,6 +397,181 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
     );
   }
 
+  // Multi-line chart for BR-WAI (total + subscales)
+  if (meta.chartType === 'line-multi' && codigo === 'BR-WAI') {
+    // Filter valid entries with score_detallado
+    const validEntries = data.filter(d => {
+      const dateField = d.creado_en || (d as any).fecha;
+      const date = new Date(dateField);
+      const hasValidDate = !isNaN(date.getTime());
+      const hasScoreDetallado = d.score_detallado && 
+        typeof d.score_detallado.total === 'number' &&
+        typeof d.score_detallado.vinculo === 'number' &&
+        typeof d.score_detallado.tareasObjetivos === 'number';
+      return hasValidDate && hasScoreDetallado;
+    });
+
+    if (validEntries.length === 0) {
+      return <div className="text-center text-gray-500 py-8">Sin datos suficientes para mostrar el gráfico.</div>;
+    }
+
+    const labels = validEntries.map((d) => {
+      const dateField = d.creado_en || (d as any).fecha;
+      const date = new Date(dateField);
+      return date.toLocaleDateString();
+    });
+
+    const datasets = [
+      {
+        label: 'Total',
+        data: validEntries.map(d => d.score_detallado.total),
+        borderColor: 'rgb(59, 130, 246)', // blue
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        fill: false,
+        tension: 0.3,
+        borderWidth: 3,
+      },
+      {
+        label: 'Vínculo',
+        data: validEntries.map(d => d.score_detallado.vinculo),
+        borderColor: 'rgb(16, 185, 129)', // green
+        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+        fill: false,
+        tension: 0.3,
+        borderWidth: 2,
+      },
+      {
+        label: 'Tareas-Objetivos',
+        data: validEntries.map(d => d.score_detallado.tareasObjetivos),
+        borderColor: 'rgb(245, 158, 11)', // amber
+        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+        fill: false,
+        tension: 0.3,
+        borderWidth: 2,
+      }
+    ];
+
+    const multiLineData = {
+      labels,
+      datasets
+    };
+
+    // Plugin for BR-WAI threshold bands
+    const brWaiThresholdPlugin = {
+      id: 'brWaiThresholds',
+      beforeDatasetsDraw(chart: any) {
+        const { ctx, chartArea: { top, bottom, left, right }, scales } = chart;
+        const yScale = scales.y;
+
+        ctx.save();
+
+        // Banda de riesgo (≤48): rojo claro
+        const riskThreshold = yScale.getPixelForValue(48);
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.1)'; // red-500 with low opacity
+        ctx.fillRect(left, riskThreshold, right - left, bottom - riskThreshold);
+
+        // Banda moderada (49-59): amarillo claro
+        const moderateStart = yScale.getPixelForValue(59);
+        const moderateEnd = yScale.getPixelForValue(49);
+        ctx.fillStyle = 'rgba(245, 158, 11, 0.1)'; // amber-500 with low opacity
+        ctx.fillRect(left, moderateStart, right - left, moderateEnd - moderateStart);
+
+        // Banda sólida (≥60): verde claro
+        const solidThreshold = yScale.getPixelForValue(60);
+        ctx.fillStyle = 'rgba(16, 185, 129, 0.1)'; // emerald-500 with low opacity
+        ctx.fillRect(left, top, right - left, solidThreshold - top);
+
+        // Líneas de threshold
+        const thresholds = [
+          { value: 48, color: 'rgba(239, 68, 68, 0.6)', label: 'Riesgo' },
+          { value: 60, color: 'rgba(16, 185, 129, 0.6)', label: 'Sólida' }
+        ];
+
+        thresholds.forEach(({ value, color }) => {
+          const y = yScale.getPixelForValue(value);
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 1;
+          ctx.setLineDash([5, 5]);
+          ctx.beginPath();
+          ctx.moveTo(left, y);
+          ctx.lineTo(right, y);
+          ctx.stroke();
+        });
+
+        ctx.restore();
+      }
+    };
+
+    const multiLineOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { 
+          position: "top" as const,
+          labels: {
+            usePointStyle: true,
+            pointStyle: 'line'
+          }
+        },
+        title: { 
+          display: true, 
+          text: titleOverride || `Evolución - ${meta.title}`
+        },
+        tooltip: {
+          mode: 'index' as const,
+          intersect: false,
+          callbacks: {
+            afterLabel: (context: any) => {
+              const value = context.parsed.y;
+              let interpretation = '';
+              if (context.datasetIndex === 0) { // Total
+                if (value <= 48) interpretation = ' (Alianza frágil)';
+                else if (value <= 59) interpretation = ' (Alianza moderada)';
+                else interpretation = ' (Alianza sólida)';
+              } else { // Subescalas
+                if (value <= 24) interpretation = ' (Frágil)';
+                else if (value <= 29) interpretation = ' (Aceptable)';
+                else interpretation = ' (Sólida)';
+              }
+              return interpretation;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          display: true,
+          title: {
+            display: true,
+            text: 'Fecha'
+          }
+        },
+        y: {
+          display: true,
+          title: {
+            display: true,
+            text: 'Puntuación'
+          },
+          min: 16, // Mínimo teórico BR-WAI
+          max: 80, // Máximo teórico BR-WAI
+          ticks: {
+            stepSize: 8
+          }
+        }
+      },
+      interaction: {
+        mode: 'index' as const,
+        intersect: false,
+      }
+    };
+
+    return (
+      <div className={`relative w-full ${className ?? "h-96"}`}>
+        <Line data={multiLineData} options={multiLineOptions as any} plugins={[brWaiThresholdPlugin]} />
+      </div>
+    );
+  }
+
   // Default chart rendering for line and simple bar charts  
   // Filter out entries with invalid dates for cleaner chart
   const validEntries = data.filter(d => {
@@ -332,12 +591,20 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
   });
 
   const primaryDataset = {
-    label: codigo === 'WHO-5' ? "Puntuación" : (meta.title || "Puntuación"),
+    label: codigo === 'WHO-5' ? "Puntuación" : 
+           codigo === 'PHQ-9' ? "Puntuación PHQ-9" :
+           ((meta as any).title || (meta as any).nombre || "Puntuación"),
     data: validEntries.map((d) => d.puntuacion || (d as any).score_total),
-    borderColor: "rgb(59, 130, 246)",
-    backgroundColor: "rgba(59, 130, 246,0.5)",
+    borderColor: codigo === 'PHQ-9' ? "rgb(99, 102, 241)" : "rgb(59, 130, 246)", // Indigo más profesional para PHQ-9
+    backgroundColor: codigo === 'PHQ-9' ? "rgba(99, 102, 241, 0.1)" : "rgba(59, 130, 246, 0.5)",
+    pointBackgroundColor: codigo === 'PHQ-9' ? "rgb(99, 102, 241)" : "rgb(59, 130, 246)",
+    pointBorderColor: codigo === 'PHQ-9' ? "rgb(255, 255, 255)" : "rgb(59, 130, 246)",
+    pointBorderWidth: codigo === 'PHQ-9' ? 2 : 1,
+    pointRadius: codigo === 'PHQ-9' ? 5 : 3,
+    pointHoverRadius: codigo === 'PHQ-9' ? 7 : 5,
     fill: false,
     tension: 0.3,
+    borderWidth: codigo === 'PHQ-9' ? 2.5 : 2,
   };
 
   const chartData = {
@@ -345,15 +612,70 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
     datasets: [primaryDataset],
   };
 
+  // Función para obtener interpretación clínica PHQ-9 completa
+  const getPhq9Interpretation = (score: number): { severity: string, recommendation: string } => {
+    if (score <= 4) {
+      return {
+        severity: 'Ninguno/Mínimo',
+        recommendation: 'Ninguna acción requerida'
+      };
+    }
+    if (score <= 9) {
+      return {
+        severity: 'Leve',
+        recommendation: 'Repita PHQ-9 en el seguimiento'
+      };
+    }
+    if (score <= 14) {
+      return {
+        severity: 'Moderado',
+        recommendation: 'Elaborar un plan de tratamiento, considerar asesoramiento, seguimiento o medicamentos recetados'
+      };
+    }
+    if (score <= 19) {
+      return {
+        severity: 'Severo',
+        recommendation: 'Recetar medicamentos recetados y asesoramiento'
+      };
+    }
+    return {
+      severity: 'Muy Severo',
+      recommendation: 'Recetar medicamentos recetados. Si las respuestas al tratamiento son deficientes, derive inmediatamente al paciente a un especialista en salud mental'
+    };
+  };
+
   const commonOptions = {
     responsive: true,
     maintainAspectRatio: false,
+
     plugins: {
-      legend: { position: "top" as const },
+      legend: codigo === 'PHQ-9' ? {
+        position: "top" as const,
+        plugins: {
+          afterDraw: function(chart: any) {
+            // Esta función se ejecuta después de dibujar la leyenda principal
+            // pero necesitamos manejar la leyenda de zonas fuera del canvas
+          }
+        }
+      } : { position: "top" as const },
       title: { 
         display: true, 
-        text: titleOverride || (codigo === 'WHO-5' ? 'Evolución del Bienestar' : meta.title) 
+        text: titleOverride || (codigo === 'WHO-5' ? 'Evolución del Bienestar' : 
+                                codigo === 'PHQ-9' ? 'Evolución - PHQ-9' : 
+                                ((meta as any).title || (meta as any).nombre)) 
       },
+      tooltip: codigo === 'PHQ-9' ? {
+        callbacks: {
+          afterLabel: function(context: any) {
+            const score = context.parsed.y;
+            const interpretation = getPhq9Interpretation(score);
+            return [
+              `Severidad: ${interpretation.severity}`,
+              `Recomendación: ${interpretation.recommendation}`
+            ];
+          }
+        }
+      } : undefined,
     },
     scales: {
       y: {
@@ -366,7 +688,15 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
 
   return (
     <div className={`relative w-full ${className ?? "h-96"}`}>
-      <Line data={chartData} options={commonOptions} plugins={codigo === 'WHO-5' ? [who5ThresholdPlugin] : [midBandPlugin]} />
+      <div className="w-full h-full">
+        <Line data={chartData} options={commonOptions} plugins={
+          codigo === 'WHO-5' ? [who5ThresholdPlugin] : 
+          codigo === 'PHQ-9' ? [phq9ThresholdPlugin] : 
+          [midBandPlugin]
+        } />
+      </div>
+      
+
     </div>
   );
 };

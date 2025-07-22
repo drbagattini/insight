@@ -22,7 +22,7 @@ export default function PatientEvolutionPage() {
   const [patientName, setPatientName] = useState<string>('');
   
   // Estado para el selector de cuestionario
-  const [selectedQuestionnaire, setSelectedQuestionnaire] = useState<'WHO-5' | 'OPD-CA2-SQ'>('WHO-5');
+  const [selectedQuestionnaire, setSelectedQuestionnaire] = useState<'WHO-5' | 'OPD-CA2-SQ' | 'BR-WAI'>('WHO-5');
   const [evolutionData, setEvolutionData] = useState<any[]>([]);
 
   // Tipado y estados para envíos programados
@@ -52,7 +52,7 @@ export default function PatientEvolutionPage() {
   );
 
   // Listado de cuestionarios para selector
-  const [questionnaires, setQuestionnaires] = useState<{ id: string; codigo: string; titulo: string }[]>([]);
+  const [questionnaires, setQuestionnaires] = useState<{ id: string; codigo: string; nombre: string }[]>([]);
   const [loadingQuestionnaires, setLoadingQuestionnaires] = useState(true);
   const [newCuestionarioId, setNewCuestionarioId] = useState<string>('');
 
@@ -393,9 +393,16 @@ export default function PatientEvolutionPage() {
               <button
                 type="button"
                 onClick={() => setSelectedQuestionnaire('OPD-CA2-SQ')}
-                className={`px-4 py-2 text-sm font-medium ${selectedQuestionnaire === 'OPD-CA2-SQ' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700'} border-t border-b border-r border-gray-200 rounded-r-lg hover:bg-gray-100 focus:z-10 focus:ring-2 focus:ring-blue-500`}
+                className={`px-4 py-2 text-sm font-medium ${selectedQuestionnaire === 'OPD-CA2-SQ' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700'} border-t border-b border-gray-200 hover:bg-gray-100 focus:z-10 focus:ring-2 focus:ring-blue-500`}
               >
                 {questionnairesMeta['OPD-CA2-SQ'].title}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedQuestionnaire('BR-WAI')}
+                className={`px-4 py-2 text-sm font-medium ${selectedQuestionnaire === 'BR-WAI' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700'} border-t border-b border-r border-gray-200 rounded-r-lg hover:bg-gray-100 focus:z-10 focus:ring-2 focus:ring-blue-500`}
+              >
+                {questionnairesMeta['BR-WAI'].title}
               </button>
             </div>
           </div>
@@ -439,7 +446,7 @@ export default function PatientEvolutionPage() {
                 >
                   {questionnaires.map(q => (
                     <option key={q.id} value={q.id}>
-                      {q.codigo}
+                      {q.nombre}
                     </option>
                   ))}
                 </select>

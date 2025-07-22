@@ -19,7 +19,7 @@ export default function QuickSendDialog({
 }: QuickSendDialogProps) {
   const [selectedId, setSelectedId] = useState<string>(cuestionarioId ?? "");
 
-  const { data: questionnaires = [], isLoading: loadingQuestionnaires } = useQuery<{ id: string; codigo: string }[]>({
+  const { data: questionnaires = [], isLoading: loadingQuestionnaires } = useQuery<{ id: string; codigo: string; nombre: string }[]>({
     queryKey: ["questionnaires"],
     queryFn: async () => {
       const res = await fetch("/api/questionnaires");
@@ -95,7 +95,7 @@ export default function QuickSendDialog({
                       >
                         {questionnaires.map((q) => (
                           <option key={q.id} value={q.id}>
-                            {q.codigo}
+                            {q.nombre}
                           </option>
                         ))}
                       </select>

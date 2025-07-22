@@ -9,6 +9,9 @@ interface RiskPatient {
   name: string;
   score: number;
   date: string; // ISO string for date
+  questionnaire: string; // Código del cuestionario que generó la alerta
+  riskType: 'suicide' | 'general'; // Tipo de riesgo
+  item9?: number; // Para PHQ-9, valor del ítem 9 (ideación suicida)
 }
 
 interface DashboardSummary {
@@ -141,54 +144,105 @@ export async function GET() {
     
     const weekVariation = calculateDelta(weekAppointments, previousWeekAppointments);
 
-    // 4. Patients at Risk (WHO-5 score < 25)
+    // 4. Patients at Risk (WHO-5 score < 25, PHQ-9 ≥ 10 or item 9 > 0)
     let riskPatients: RiskPatient[] = [];
-    const { data: who5Cuestionario, error: who5Error } = await supabase
+    
+    // Fetch questionnaire IDs
+    const { data: questionnaires, error: questionnairesError } = await supabase
       .from('cuestionarios')
-      .select('id')
-      .eq('codigo', 'WHO-5')
-      .single();
+      .select('id, codigo')
+      .in('codigo', ['WHO-5', 'PHQ-9']);
 
-    if (who5Error || !who5Cuestionario) {
-      console.error('[DashboardSummary] Error fetching WHO-5 questionnaire ID:', who5Error?.message);
+    if (questionnairesError || !questionnaires) {
+      console.error('[DashboardSummary] Error fetching questionnaire IDs:', questionnairesError?.message);
     } else {
-      const who5CuestionarioId = who5Cuestionario.id;
-      // Fetch all WHO-5 responses for the psychologist's patients, then process
-      const { data: allWho5Responses, error: responsesError } = await supabase
-        .from('respuestas')
-        .select('paciente_id, puntuacion, creado_en, patient:patients!inner (id, name, psychologist_id)')
-        .eq('cuestionario_id', who5CuestionarioId)
-        .eq('patient.psychologist_id', psychologistId) // Ensure patient belongs to the psychologist
-        .not('puntuacion', 'is', null)
-        .order('creado_en', { ascending: false }); // Get latest first overall
+      const who5Id = questionnaires.find(q => q.codigo === 'WHO-5')?.id;
+      const phq9Id = questionnaires.find(q => q.codigo === 'PHQ-9')?.id;
+      
+      const allRiskPatients = new Map<string, RiskPatient>();
 
-      if (responsesError) {
-        console.error('[DashboardSummary] Error fetching WHO-5 responses for risk assessment:', responsesError.message);
-      } else if (allWho5Responses) {
-        const latestScoresByPatient = new Map<string, typeof allWho5Responses[0]>();
-        for (const response of allWho5Responses) {
-           // Ensure patient is not null before accessing its properties
-          if (response.patient && response.paciente_id) { 
-            if (!latestScoresByPatient.has(response.paciente_id)) {
-              latestScoresByPatient.set(response.paciente_id, response);
+      // WHO-5 Risk Assessment (score < 25)
+      if (who5Id) {
+        const { data: who5Responses, error: who5ResponsesError } = await supabase
+          .from('respuestas')
+          .select('paciente_id, puntuacion, creado_en, patient:patients!inner (id, name, psychologist_id)')
+          .eq('cuestionario_id', who5Id)
+          .eq('patient.psychologist_id', psychologistId)
+          .not('puntuacion', 'is', null)
+          .order('creado_en', { ascending: false });
+
+        if (!who5ResponsesError && who5Responses) {
+          const latestWho5ByPatient = new Map<string, typeof who5Responses[0]>();
+          for (const response of who5Responses) {
+            if (response.patient && response.paciente_id && !latestWho5ByPatient.has(response.paciente_id)) {
+              latestWho5ByPatient.set(response.paciente_id, response);
+            }
+          }
+
+          for (const response of latestWho5ByPatient.values()) {
+            if (response.puntuacion < 25 && response.patient) {
+              const patient = Array.isArray(response.patient) ? response.patient[0] : response.patient;
+              allRiskPatients.set(response.paciente_id, {
+                id: patient!.id,
+                name: (patient!.name || '').trim(),
+                score: response.puntuacion,
+                date: response.creado_en,
+                questionnaire: 'WHO-5',
+                riskType: 'general'
+              });
             }
           }
         }
-
-        riskPatients = Array.from(latestScoresByPatient.values())
-          .filter(r => r.puntuacion < 25 && r.patient)
-          .map(r => {
-            // Supabase foreign key joins can sometimes be interpreted as arrays by TypeScript
-            // Cast r.patient to a single object with the expected properties
-            const patient = Array.isArray(r.patient) ? r.patient[0] : r.patient;
-            return {
-              id: patient!.id,
-              name: (patient!.name || '').trim(), 
-              score: r.puntuacion,
-              date: r.creado_en,
-            };
-          });
       }
+
+      // PHQ-9 Risk Assessment (total ≥ 10 or item 9 > 0)
+      if (phq9Id) {
+        const { data: phq9Responses, error: phq9ResponsesError } = await supabase
+          .from('respuestas')
+          .select('paciente_id, puntuacion, score_detallado, creado_en, patient:patients!inner (id, name, psychologist_id)')
+          .eq('cuestionario_id', phq9Id)
+          .eq('patient.psychologist_id', psychologistId)
+          .not('puntuacion', 'is', null)
+          .order('creado_en', { ascending: false });
+
+        if (!phq9ResponsesError && phq9Responses) {
+          const latestPhq9ByPatient = new Map<string, typeof phq9Responses[0]>();
+          for (const response of phq9Responses) {
+            if (response.patient && response.paciente_id && !latestPhq9ByPatient.has(response.paciente_id)) {
+              latestPhq9ByPatient.set(response.paciente_id, response);
+            }
+          }
+
+          for (const response of latestPhq9ByPatient.values()) {
+            if (response.patient) {
+              const patient = Array.isArray(response.patient) ? response.patient[0] : response.patient;
+              const scoreDetallado = response.score_detallado;
+              const item9 = scoreDetallado?.item9 || 0;
+              const isAtRisk = response.puntuacion >= 10 || item9 > 0;
+              
+              if (isAtRisk) {
+                const riskType = item9 > 0 ? 'suicide' : 'general';
+                
+                // Si ya hay un paciente de WHO-5, mantener el más crítico (suicidio > general)
+                const existingRisk = allRiskPatients.get(response.paciente_id);
+                if (!existingRisk || (riskType === 'suicide' && existingRisk.riskType === 'general')) {
+                  allRiskPatients.set(response.paciente_id, {
+                    id: patient!.id,
+                    name: (patient!.name || '').trim(),
+                    score: response.puntuacion,
+                    date: response.creado_en,
+                    questionnaire: 'PHQ-9',
+                    riskType,
+                    item9
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+
+      riskPatients = Array.from(allRiskPatients.values());
     }
 
     const summaryData: DashboardSummary = {

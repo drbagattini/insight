@@ -160,7 +160,7 @@ export default function DashboardPage() {
       {/* Gráfico WHO-5 Scatter Plot */}
       <div className="bg-white p-6 rounded-lg shadow">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
-          <h3 className="text-lg font-semibold text-gray-700 mb-1">Tendencia WHO-5</h3>
+          <h3 className="text-lg font-semibold text-gray-700 mb-1">Tendencia Índice de Bienestar (WHO-5)</h3>
           <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 items-start sm:items-center w-full sm:w-auto">
             <div className='flex items-center w-full sm:w-auto'>
               <label htmlFor="startDateWho5" className="text-sm font-medium text-gray-700 mr-2 whitespace-nowrap">Desde:</label>
@@ -194,7 +194,7 @@ export default function DashboardPage() {
               data={{
                 datasets: [
                   {
-                    label: 'Puntuaciones WHO-5',
+                    label: 'Puntuaciones Índice de Bienestar (WHO-5)',
                     data: who5ScatterData,
                     backgroundColor: 'rgb(59, 130, 246)',
                     borderColor: 'rgb(59, 130, 246)',
@@ -230,7 +230,7 @@ export default function DashboardPage() {
                     title: { display: true, text: 'Fecha' },
                   },
                   y: {
-                    title: { display: true, text: 'Puntuación WHO-5' },
+                    title: { display: true, text: 'Puntuación Índice de Bienestar (WHO-5)' },
                     beginAtZero: true,
                     suggestedMax: 100,
                     ticks: { stepSize: 10 }

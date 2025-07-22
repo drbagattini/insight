@@ -14,6 +14,7 @@ type Pregunta = {
 
 type Cuestionario = {
   id: string;
+  codigo?: string;
   titulo: string;
   descripcion: string;
   items: Pregunta[];
@@ -113,12 +114,30 @@ export default function CuestionarioPage() {
         "A menudo cierto",
         "Exactamente cierto"
       ];
+    } else if (codigo === 'BR-WAI') {
+      return [
+        "Totalmente en desacuerdo",
+        "En desacuerdo",
+        "Ni de acuerdo ni en desacuerdo",
+        "De acuerdo",
+        "Totalmente de acuerdo"
+      ];
+    } else if (codigo === 'PHQ-9') {
+      return [
+        "Nunca",
+        "Varios días",
+        "Más de la mitad de los días",
+        "Casi todos los días"
+      ];
     }
     return [];
   };
   
   const getMaxScale = (codigo: string) => {
-    return codigo === 'WHO-5' ? 5 : 4;
+    if (codigo === 'WHO-5') return 5;
+    if (codigo === 'BR-WAI') return 5;
+    if (codigo === 'PHQ-9') return 3;
+    return 4; // OPD-CA2-SQ y otros
   };
   
   const getScaleEndLabels = (codigo: string) => {
@@ -126,6 +145,10 @@ export default function CuestionarioPage() {
       return { min: 'Nunca', max: 'Siempre' };
     } else if (codigo === 'OPD-CA2-SQ') {
       return { min: 'No se aplica', max: 'Exactamente cierto' };
+    } else if (codigo === 'BR-WAI') {
+      return { min: 'Totalmente en desacuerdo', max: 'Totalmente de acuerdo' };
+    } else if (codigo === 'PHQ-9') {
+      return { min: 'Nunca', max: 'Casi todos los días' };
     }
     return { min: '', max: '' };
   };
@@ -235,24 +258,52 @@ export default function CuestionarioPage() {
   const handleSubmit = async () => {
     if (!linkInfo) return;
 
-    // Permitimos respuestas parciales o con valor cero
-    // La antigua validación bloqueaba el envío si no se contestaban todas las preguntas
-    // Ahora convertimos directamente las respuestas disponibles para enviar
-
     setEnviando(true);
     try {
-      // Convertir respuestas a formato esperado
-      const respuestasArray = Object.entries(respuestas).map(([id, valor]) => {
-        // Para OPD-CA2-SQ, el id puede ser el orden (número)
-        // Para WHO-5, el id es el id de la pregunta
-        const preguntaId = isNaN(Number(id)) ? id : parseInt(id);
-        return {
-          pregunta_id: preguntaId,
-          valor,
-        };
-      });
+      let respuestasArray;
+      
+      console.log('=== DEBUG CUESTIONARIO ID ===');
+      console.log('linkInfo.cuestionario.id:', linkInfo.cuestionario.id);
+      console.log('linkInfo.cuestionario.codigo:', linkInfo.cuestionario?.codigo);
+      console.log('Tipo de linkInfo.cuestionario.id:', typeof linkInfo.cuestionario.id);
+      console.log('Comparación linkInfo.cuestionario.codigo === "PHQ-9":', linkInfo.cuestionario.codigo === 'PHQ-9');
+      console.log('=== FIN DEBUG ID ===');
+      
+      // Para PHQ-9, necesitamos asegurar que se envíen todas las 9 respuestas
+      if (linkInfo.cuestionario.codigo === 'PHQ-9') {
+        // Procesar todos los ítems del PHQ-9 (ahora solo hay 9)
+        respuestasArray = linkInfo.cuestionario.items.map((pregunta) => {
+          // Para PHQ-9, usar el orden como pregunta_id y como uniqueKey (igual que en el renderizado)
+          const preguntaId = pregunta.orden!;
+          const uniqueKey = String(pregunta.orden!);
+          const valor = respuestas[uniqueKey] !== undefined ? respuestas[uniqueKey] : 0;
+          return {
+            pregunta_id: preguntaId,
+            valor,
+          };
+        });
+      } else {
+        // Para otros cuestionarios, usar la lógica anterior
+        respuestasArray = Object.entries(respuestas).map(([id, valor]) => {
+          // Para OPD-CA2-SQ, el id puede ser el orden (número)
+          // Para WHO-5, el id es el id de la pregunta
+          const preguntaId = isNaN(Number(id)) ? id : parseInt(id);
+          return {
+            pregunta_id: preguntaId,
+            valor,
+          };
+        });
+      }
 
+      console.log('=== PHQ-9 DEBUG FRONTEND ===');
+      console.log('Cuestionario ID:', linkInfo.cuestionario.id);
+      console.log('Total de preguntas en cuestionario:', linkInfo.cuestionario.items.length);
+      console.log('Items del cuestionario:', linkInfo.cuestionario.items.map(item => ({ orden: item.orden, id: item.id, texto: item.texto?.substring(0, 50) })));
+      console.log('Respuestas capturadas:', respuestas);
+      console.log('Keys en respuestas:', Object.keys(respuestas));
       console.log('Enviando respuestas:', respuestasArray);
+      console.log('Total de respuestas enviadas:', respuestasArray.length);
+      console.log('=== FIN DEBUG ===');
 
       const res = await fetch(`/api/cuestionarios/responder/${token}`, {
         method: "POST",

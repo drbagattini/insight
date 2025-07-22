@@ -56,7 +56,9 @@ export async function POST(
     }
 
     // 4. Calcular puntuación según el código del cuestionario
+    console.log(`[PHQ-9 DEBUG] Respuestas recibidas:`, JSON.stringify(respuestas, null, 2));
     const answersNumeric = respuestas.map((r) => r.valor);
+    console.log(`[PHQ-9 DEBUG] Respuestas numéricas mapeadas:`, answersNumeric);
 
     // Obtener el código del cuestionario
     const { data: cuestionarioRow } = await supabaseAdmin
@@ -66,8 +68,12 @@ export async function POST(
       .single();
 
     const codigo = cuestionarioRow?.codigo || "WHO-5";
+    console.log(`[PHQ-9 DEBUG] Procesando cuestionario: ${codigo}`);
+    console.log(`[PHQ-9 DEBUG] Respuestas numéricas:`, answersNumeric);
+    
     const { scores } = await import("@/src/scoring");
     const scoreResult = scores[codigo] ? scores[codigo](answersNumeric) : null;
+    console.log(`[PHQ-9 DEBUG] Resultado del scoring:`, scoreResult);
 
     // 4.1. Preparar los datos para la inserción, manejando puntuaciones simples y detalladas
     const dataToInsert: {
@@ -97,6 +103,7 @@ export async function POST(
     }
 
     // 5. Registrar las respuestas
+    console.log(`[PHQ-9 DEBUG] Datos a insertar:`, JSON.stringify(dataToInsert, null, 2));
     const { data: respuestaData, error: respuestaError } = await supabaseAdmin
       .from("respuestas")
       .insert(dataToInsert)

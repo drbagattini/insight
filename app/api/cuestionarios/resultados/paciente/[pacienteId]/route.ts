@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabaseAdmin';
 import { scoreOpdCa2 } from '@/src/scoring/opdCa2';
-import { ResultadoCuestionario, ScoreDetalladoOpdCa2 } from '@/src/types/cuestionarios';
+import { scoreBrWai } from '@/src/scoring/scoreBrWai';
+import { scorePhq9 } from '@/src/scoring/scorePhq9';
+import { ResultadoCuestionario, ScoreDetalladoOpdCa2, ScoreDetalladoBrWai, ScoreDetalladoPhq9 } from '@/src/types/cuestionarios';
 
 export async function GET(
   request: Request,
@@ -48,7 +50,7 @@ export async function GET(
 
   // 3) Procesar respuestas y calcular scores
   const processedData: ResultadoCuestionario[] = respuestasData.map(respuesta => {
-    let score_detallado: ScoreDetalladoOpdCa2 | {} = {};
+    let score_detallado: ScoreDetalladoOpdCa2 | ScoreDetalladoBrWai | {} = {};
 
     if (codigo === 'OPD-CA2-SQ') {
       // 1) Si ya existe un score_detallado persistido, úsalo directamente
@@ -74,6 +76,56 @@ export async function GET(
           }
         }
         score_detallado = scoreOpdCa2(answersArray);
+      }
+    } else if (codigo === 'BR-WAI') {
+      // 1) Si ya existe un score_detallado persistido, úsalo directamente
+      if (respuesta.score_detallado && typeof respuesta.score_detallado === 'object') {
+        score_detallado = respuesta.score_detallado as ScoreDetalladoBrWai;
+      } else {
+        // 2) De lo contrario, intenta reconstruirlo a partir de las respuestas
+        const answersArray = Array(16).fill(null);
+        if (respuesta.respuestas && typeof respuesta.respuestas === 'object') {
+          if (Array.isArray(respuesta.respuestas)) {
+            // Caso: respuestas guardadas como array indexado 0-15
+            respuesta.respuestas.forEach((val: any, idx: number) => {
+              if (idx < 16) answersArray[idx] = typeof val === 'object' && 'valor' in val ? (val as any).valor : val;
+            });
+          } else {
+            // Caso: objeto con claves numéricas o UUIDs
+            for (const [key, value] of Object.entries(respuesta.respuestas)) {
+              const idx = parseInt(key, 10);
+              if (!isNaN(idx) && idx >= 1 && idx <= 16 && value !== null) {
+                answersArray[idx - 1] = typeof value === 'object' && value && 'valor' in value ? (value as any).valor : value as any;
+              }
+            }
+          }
+        }
+        score_detallado = scoreBrWai(answersArray);
+      }
+    } else if (codigo === 'PHQ-9') {
+      // 1) Si ya existe un score_detallado persistido, úsalo directamente
+      if (respuesta.score_detallado && typeof respuesta.score_detallado === 'object') {
+        score_detallado = respuesta.score_detallado as ScoreDetalladoPhq9;
+      } else {
+        // 2) De lo contrario, intenta reconstruirlo a partir de las respuestas
+        const answersArray = Array(9).fill(null); // PHQ-9 tiene 9 ítems principales
+        if (respuesta.respuestas && typeof respuesta.respuestas === 'object') {
+          if (Array.isArray(respuesta.respuestas)) {
+            // Caso: respuestas guardadas como array indexado 0-8
+            respuesta.respuestas.forEach((val: any, idx: number) => {
+              if (idx < 9) answersArray[idx] = typeof val === 'object' && 'valor' in val ? (val as any).valor : val;
+            });
+          } else {
+            // Caso: objeto con claves numéricas o UUIDs
+            for (const [key, value] of Object.entries(respuesta.respuestas)) {
+              const idx = parseInt(key, 10);
+              if (!isNaN(idx) && idx >= 1 && idx <= 9 && value !== null) {
+                answersArray[idx - 1] = typeof value === 'object' && value && 'valor' in value ? (value as any).valor : value as any;
+              }
+            }
+          }
+        }
+        score_detallado = scorePhq9(answersArray);
       }
     } else {
       // Lógica para otros cuestionarios podría ir aquí

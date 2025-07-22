@@ -7,10 +7,14 @@
 import { ScoreFn } from "@/types/questionnaire";
 import { scoreWho5 } from "./who5";
 import { scoreOpdCa2 } from "./opdCa2";
+import { scoreBrWai } from "./scoreBrWai";
+import { scorePhq9 } from "./scorePhq9";
 
 export const scores: Record<string, ScoreFn> = {
   "WHO-5": scoreWho5,
   "OPD-CA2-SQ": scoreOpdCa2,
+  "BR-WAI": scoreBrWai,
+  "PHQ-9": scorePhq9,
 };
 
 /**

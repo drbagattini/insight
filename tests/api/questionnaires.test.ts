@@ -32,7 +32,7 @@ describe('Questionnaires API endpoints', () => {
 
   it('GET /api/questionnaires returns list shape', async () => {
     const mockData = [
-      { codigo: 'WHO-5', titulo: 'Índice de Bienestar WHO-5' }
+      { codigo: 'WHO-5', titulo: 'Índice de Bienestar (WHO-5)' }
     ];
 
     fromMock = vi.fn().mockReturnValue(createListChain(mockData));
@@ -46,7 +46,7 @@ describe('Questionnaires API endpoints', () => {
     expect(body).toEqual([
       {
         codigo: 'WHO-5',
-        nombre: 'Índice de Bienestar WHO-5',
+        nombre: 'Índice de Bienestar (WHO-5)',
         dominio: 'Bienestar'
       }
     ]);
@@ -56,7 +56,7 @@ describe('Questionnaires API endpoints', () => {
     const mockData = {
       id: 1,
       codigo: 'WHO-5',
-      titulo: 'Índice de Bienestar WHO-5',
+      titulo: 'Índice de Bienestar (WHO-5)',
       activo: true
     };
 
@@ -70,6 +70,6 @@ describe('Questionnaires API endpoints', () => {
 
 
     expect(body.meta?.title).toBeDefined();
-    expect(body.meta?.title).toBe('Índice de Bienestar WHO-5');
+    expect(body.meta?.title).toBe('Índice de Bienestar (WHO-5)');
   });
 });

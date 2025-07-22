@@ -75,6 +75,33 @@ export interface ScoreDetalladoOpdCa2 {
 }
 
 /**
+ * Estructura para el `score_detallado` del cuestionario BR-WAI.
+ */
+export interface ScoreDetalladoBrWai {
+  total: number;
+  vinculo: number;
+  tareasObjetivos: number;
+  interpretacion: {
+    total: string;
+    vinculo: string;
+    tareasObjetivos: string;
+  };
+}
+
+/**
+ * Estructura para el `score_detallado` del cuestionario PHQ-9.
+ */
+export interface ScoreDetalladoPhq9 {
+  total: number;
+  item9: number; // Ítem de ideación suicida
+  severidad: string;
+  accionClinica: string;
+  riesgoSuicida: boolean;
+  alertaGeneral: boolean;
+  impactoFuncional?: string; // Ítem 10 (no puntuable)
+}
+
+/**
  * Estructura genérica para el resultado de un cuestionario.
  * `score_detallado` es opcional y su tipo puede variar.
  */
@@ -83,7 +110,7 @@ export interface ResultadoCuestionario {
   fecha: string;
   codigo_cuestionario: string;
   score_total: number | null;
-  score_detallado?: ScoreDetalladoOpdCa2 | any; // `any` para otros cuestionarios
+  score_detallado?: ScoreDetalladoOpdCa2 | ScoreDetalladoBrWai | ScoreDetalladoPhq9 | any; // `any` para otros cuestionarios
   respuestas: any;
   meta?: any;
 }
