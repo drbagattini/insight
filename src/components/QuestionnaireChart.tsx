@@ -143,18 +143,21 @@ const phq9ThresholdPlugin = {
     const { ctx, chartArea } = chart;
     
     ctx.save();
-    ctx.font = 'bold 12px system-ui, -apple-system, sans-serif';
+    ctx.font = '10px system-ui, -apple-system, sans-serif';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
     
     // Definir las zonas con sus posiciones Y
     const zones = [
-      { text: 'Muy Severo', yStart: 20, yEnd: 27, color: 'rgba(220, 38, 127, 0.9)' },
-      { text: 'Severo', yStart: 15, yEnd: 19, color: 'rgba(251, 113, 133, 0.9)' },
-      { text: 'Moderada', yStart: 10, yEnd: 14, color: 'rgba(251, 191, 36, 0.9)' },
-      { text: 'Leve', yStart: 5, yEnd: 9, color: 'rgba(163, 230, 53, 0.9)' },
-      { text: 'Mínima', yStart: 0, yEnd: 4, color: 'rgba(34, 197, 94, 0.9)' }
+      { text: 'Muy Severo', yStart: 20, yEnd: 27 },
+      { text: 'Severo', yStart: 15, yEnd: 19 },
+      { text: 'Moderada', yStart: 10, yEnd: 14 },
+      { text: 'Leve', yStart: 5, yEnd: 9 },
+      { text: 'Mínima', yStart: 0, yEnd: 4 }
     ];
+    
+    // Color negro para todos los textos
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
     
     zones.forEach(zone => {
       // Calcular posición Y en el canvas
@@ -164,7 +167,6 @@ const phq9ThresholdPlugin = {
       
       // Solo dibujar si la zona es visible y tiene altura suficiente
       if (yEndPixel - yStartPixel > 20) {
-        ctx.fillStyle = zone.color;
         ctx.fillText(zone.text, chartArea.right - 10, yCenter);
       }
     });
