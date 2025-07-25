@@ -17,7 +17,7 @@ export default function PatientProfilePage() {
   const patientId = params.patientId;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedQuestionnaire, setSelectedQuestionnaire] = useState<'WHO-5' | 'OPD-CA2-SQ' | 'BR-WAI' | 'PHQ-9'>('WHO-5');
+  const [selectedQuestionnaire, setSelectedQuestionnaire] = useState<'WHO-5' | 'OPD-CA2-SQ' | 'BR-WAI' | 'PHQ-9' | 'GAD-7'>('WHO-5');
   const [evolutionData, setEvolutionData] = useState<any[]>([]);
   const [patientName, setPatientName] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -29,7 +29,7 @@ export default function PatientProfilePage() {
 
   // Seleccionar fecha por defecto o limpiar según cuestionario
   useEffect(() => {
-    if (selectedQuestionnaire === 'WHO-5' || selectedQuestionnaire === 'BR-WAI' || selectedQuestionnaire === 'PHQ-9') {
+    if (selectedQuestionnaire === 'WHO-5' || selectedQuestionnaire === 'BR-WAI' || selectedQuestionnaire === 'PHQ-9' || selectedQuestionnaire === 'GAD-7') {
       setSelectedDate(null);
     } else if (selectedQuestionnaire === 'OPD-CA2-SQ' && availableDates.length > 0) {
       // última fecha por defecto
@@ -584,7 +584,7 @@ function computeNextDate(start: string, frequency: string): string {
                         leaveTo="opacity-0"
                       >
                         <Listbox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm">
-                          {(Object.keys(questionnairesMeta) as Array<'WHO-5' | 'OPD-CA2-SQ' | 'BR-WAI' | 'PHQ-9'>).map((key) => (
+                          {(Object.keys(questionnairesMeta) as Array<'WHO-5' | 'OPD-CA2-SQ' | 'BR-WAI' | 'PHQ-9' | 'GAD-7'>).map((key) => (
                             <Listbox.Option
                               key={key}
                               className={({ active }) =>

@@ -385,6 +385,81 @@ const questionnairesMeta = {
       complementar: 'Entrevista clínica estructurada, evaluación de riesgo suicida, escalas de ansiedad (GAD-7)',
       advertencia: '⚠️ CRÍTICO: Cualquier puntuación > 0 en ítem 9 requiere evaluación inmediata de riesgo suicida. No es sustituto del juicio clínico profesional.'
     }
+  },
+  'GAD-7': {
+    code: 'GAD-7',
+    title: 'Ansiedad Generalizada (GAD-7)',
+    shortTitle: 'GAD-7',
+    chartType: 'line' as const,
+    thresholds: {
+      warning: 10, // Ansiedad moderada - requiere intervención
+      danger: 15 // Ansiedad severa - tratamiento activo
+    },
+    // Extended metadata for UI/UX
+    dominio: 'Ansiedad',
+    descripcion: 'Durante las últimas 2 semanas, ¿con qué frecuencia ha tenido molestias debido a los siguientes problemas? Seleccione la opción que mejor describa su experiencia.',
+    poblacion: 'Adolescentes y adultos',
+    tiempoMin: 2,
+    autores: 'Spitzer, Kroenke, Williams & Löwe (2006)',
+    añoPublicacion: 2006,
+    items: [
+      { orden: 1, texto: 'Sentirse nervioso/a, ansioso/a o tenso/a' },
+      { orden: 2, texto: 'No poder parar ni controlar la preocupación' },
+      { orden: 3, texto: 'Preocuparse demasiado por diferentes cosas' },
+      { orden: 4, texto: 'Dificultad para relajarse' },
+      { orden: 5, texto: 'Estar tan inquieto/a que le cuesta quedarse quieto/a' },
+      { orden: 6, texto: 'Irritable o fácilmente enfadado/a' },
+      { orden: 7, texto: 'Sentir miedo como si algo terrible pudiera pasar' }
+    ],
+    respuestaTipo: 'Likert 0-3 (0=Nunca, 1=Varios días, 2=Más de la mitad de los días, 3=Casi todos los días)',
+    scoring: {
+      rango: [0, 21] as const,
+      sentido: 'A mayor puntuación, mayor severidad de ansiedad',
+      tipo: 'Suma directa de ítems 1-7 (rango 0-3 cada uno)',
+      puntosDeCorte: [
+        { umbral: 5, label: 'Ansiedad leve' },
+        { umbral: 10, label: 'Ansiedad moderada' },
+        { umbral: 15, label: 'Ansiedad severa' }
+      ] as const,
+      interpretacion: {
+        direccion: 'Puntuaciones más altas indican mayor severidad de síntomas de ansiedad',
+        escalas: '0-4: Ninguna-mínima | 5-9: Leve | 10-14: Moderada | 15-21: Severa',
+        puntuacionTotal: 'Suma de ítems 1-7'
+      },
+      alertas: {
+        riesgoGeneral: {
+          umbral: 10,
+          descripcion: 'Puntuación total ≥ 10 indica necesidad de plan de tratamiento'
+        }
+      } as const
+    },
+    validez: {
+      fiabilidad: 'Consistencia interna α = 0.92. Test-retest r = 0.83',
+      muestra: 'Validado en atención primaria y poblaciones clínicas diversas',
+      validezClinica: 'Sensibilidad 89% y especificidad 82% para trastorno de ansiedad generalizada (punto de corte ≥10)',
+      estudiosClave: [
+        {
+          cita: 'Spitzer, R. L., Kroenke, K., Williams, J. B. W., & Löwe, B. (2006). A brief measure for assessing generalized anxiety disorder: the GAD-7. Archives of Internal Medicine, 166(10), 1092-1097.',
+          doi: '10.1001/archinte.166.10.1092'
+        },
+        {
+          cita: 'Löwe, B., Decker, O., Müller, S., et al. (2008). Validation and standardization of the Generalized Anxiety Disorder Screener (GAD-7) in the general population. Medical Care, 46(3), 266-274.',
+          doi: '10.1097/MLR.0b013e318160d093'
+        }
+      ]
+    },
+    fundamentoTeorico: {
+      modelo: 'Criterios diagnósticos DSM-5 para trastorno de ansiedad generalizada',
+      enfoque: 'Modelo biomédico de la ansiedad con énfasis en síntomas observables',
+      objetivo: 'Cribado, diagnóstico y monitoreo de la severidad de síntomas de ansiedad generalizada',
+      baseConceptual: 'Correspondencia con criterios clínicos para trastorno de ansiedad generalizada'
+    },
+    aplicacionClinica: {
+      usoRecomendado: 'Cribado en atención primaria, seguimiento en tratamiento, investigación clínica. Aplicación sugerida cada 2 semanas durante tratamiento activo',
+      requiere: 'Capacitación básica en salud mental. Evaluación clínica complementaria para diagnóstico definitivo',
+      complementar: 'Entrevista clínica estructurada, escalas de depresión (PHQ-9), evaluación de otros trastornos de ansiedad',
+      advertencia: '⚠️ Puntuación ≥ 10 requiere consulta con profesional de salud mental. No es sustituto del juicio clínico profesional.'
+    }
   }
 } as const;
 

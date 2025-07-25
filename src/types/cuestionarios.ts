@@ -102,6 +102,16 @@ export interface ScoreDetalladoPhq9 {
 }
 
 /**
+ * Estructura para el `score_detallado` del cuestionario GAD-7.
+ */
+export interface ScoreDetalladoGad7 {
+  total: number;
+  severidad: string;
+  recomendacion: string;
+  alertFlag: boolean;
+}
+
+/**
  * Estructura genérica para el resultado de un cuestionario.
  * `score_detallado` es opcional y su tipo puede variar.
  */
@@ -110,7 +120,7 @@ export interface ResultadoCuestionario {
   fecha: string;
   codigo_cuestionario: string;
   score_total: number | null;
-  score_detallado?: ScoreDetalladoOpdCa2 | ScoreDetalladoBrWai | ScoreDetalladoPhq9 | any; // `any` para otros cuestionarios
+  score_detallado?: ScoreDetalladoOpdCa2 | ScoreDetalladoBrWai | ScoreDetalladoPhq9 | ScoreDetalladoGad7 | any; // `any` para otros cuestionarios
   respuestas: any;
   meta?: any;
 }

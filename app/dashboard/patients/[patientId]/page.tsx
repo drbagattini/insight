@@ -22,7 +22,7 @@ export default function PatientEvolutionPage() {
   const [patientName, setPatientName] = useState<string>('');
   
   // Estado para el selector de cuestionario
-  const [selectedQuestionnaire, setSelectedQuestionnaire] = useState<'WHO-5' | 'OPD-CA2-SQ' | 'BR-WAI'>('WHO-5');
+  const [selectedQuestionnaire, setSelectedQuestionnaire] = useState<'WHO-5' | 'OPD-CA2-SQ' | 'BR-WAI' | 'PHQ-9' | 'GAD-7'>('WHO-5');
   const [evolutionData, setEvolutionData] = useState<any[]>([]);
 
   // Tipado y estados para envíos programados
@@ -400,9 +400,23 @@ export default function PatientEvolutionPage() {
               <button
                 type="button"
                 onClick={() => setSelectedQuestionnaire('BR-WAI')}
-                className={`px-4 py-2 text-sm font-medium ${selectedQuestionnaire === 'BR-WAI' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700'} border-t border-b border-r border-gray-200 rounded-r-lg hover:bg-gray-100 focus:z-10 focus:ring-2 focus:ring-blue-500`}
+                className={`px-4 py-2 text-sm font-medium ${selectedQuestionnaire === 'BR-WAI' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700'} border-t border-b border-gray-200 hover:bg-gray-100 focus:z-10 focus:ring-2 focus:ring-blue-500`}
               >
                 {questionnairesMeta['BR-WAI'].title}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedQuestionnaire('PHQ-9')}
+                className={`px-4 py-2 text-sm font-medium ${selectedQuestionnaire === 'PHQ-9' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700'} border-t border-b border-gray-200 hover:bg-gray-100 focus:z-10 focus:ring-2 focus:ring-blue-500`}
+              >
+                {questionnairesMeta['PHQ-9'].title}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedQuestionnaire('GAD-7')}
+                className={`px-4 py-2 text-sm font-medium ${selectedQuestionnaire === 'GAD-7' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700'} border-t border-b border-r border-gray-200 rounded-r-lg hover:bg-gray-100 focus:z-10 focus:ring-2 focus:ring-blue-500`}
+              >
+                {questionnairesMeta['GAD-7'].title}
               </button>
             </div>
           </div>

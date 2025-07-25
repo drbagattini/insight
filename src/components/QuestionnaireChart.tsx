@@ -176,6 +176,89 @@ const phq9ThresholdPlugin = {
 
 };
 
+// Plugin for GAD-7 with subtle, professional color bands and zones legend
+const gad7ThresholdPlugin = {
+  id: 'gad7Thresholds',
+  beforeDatasetsDraw(chart: any) {
+    const { ctx, chartArea: { top, bottom, left, right }, scales } = chart;
+    const yScale = scales.y;
+
+    ctx.save();
+
+    // Bandas de color con degradado suave, misma lógica que PHQ-9 pero para GAD-7
+    const bands = [
+      { min: 0, max: 4.99, color: 'rgba(34, 197, 94, 0.20)' }, // verde más vibrante - ninguno/mínimo
+      { min: 5, max: 9.99, color: 'rgba(163, 230, 53, 0.20)' }, // verde-lima vibrante - leve
+      { min: 10, max: 14.99, color: 'rgba(251, 191, 36, 0.22)' }, // amarillo-naranja vibrante - moderado
+      { min: 15, max: 21, color: 'rgba(220, 38, 127, 0.24)' } // rojo intenso vibrante - severo
+    ];
+
+    bands.forEach(({ min, max, color }) => {
+      const minY = yScale.getPixelForValue(max);
+      const maxY = yScale.getPixelForValue(min);
+      
+      ctx.fillStyle = color;
+      ctx.fillRect(left, minY, right - left, maxY - minY);
+    });
+
+    // Líneas de referencia discretas (todas punteadas)
+    const thresholds = [
+      { value: 5, color: 'rgba(156, 163, 175, 0.4)', dash: [4, 4], width: 1 }, // Gris sutil
+      { value: 10, color: 'rgba(156, 163, 175, 0.6)', dash: [3, 3], width: 1.2 }, // Gris medio
+      { value: 15, color: 'rgba(107, 114, 128, 0.7)', dash: [2, 2], width: 1.5 } // Gris más visible
+    ];
+
+    thresholds.forEach(({ value, color, dash, width }) => {
+      const y = yScale.getPixelForValue(value);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.setLineDash(dash);
+      ctx.beginPath();
+      ctx.moveTo(left, y);
+      ctx.lineTo(right, y);
+      ctx.stroke();
+    });
+
+    ctx.restore();
+  },
+  
+  // Dibujar etiquetas de zonas dentro de las bandas
+  afterDraw(chart: any) {
+    const { ctx, chartArea } = chart;
+    
+    ctx.save();
+    ctx.font = '10px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    
+    // Definir las zonas con sus posiciones Y para GAD-7
+    const zones = [
+      { text: 'Severa', yStart: 15, yEnd: 21 },
+      { text: 'Moderada', yStart: 10, yEnd: 14 },
+      { text: 'Leve', yStart: 5, yEnd: 9 },
+      { text: 'Mínima', yStart: 0, yEnd: 4 }
+    ];
+    
+    // Color negro para todos los textos
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    
+    zones.forEach(zone => {
+      // Calcular posición Y en el canvas (escala 0-21 para GAD-7)
+      const yStartPixel = chartArea.top + ((21 - zone.yEnd) / 21) * (chartArea.bottom - chartArea.top);
+      const yEndPixel = chartArea.top + ((21 - zone.yStart) / 21) * (chartArea.bottom - chartArea.top);
+      const yCenter = (yStartPixel + yEndPixel) / 2;
+      
+      // Solo dibujar si la zona es visible y tiene altura suficiente
+      if (yEndPixel - yStartPixel > 20) {
+        ctx.fillText(zone.text, chartArea.right - 10, yCenter);
+      }
+    });
+    
+    ctx.restore();
+  }
+
+};
+
 // Plugin for WHO-5 threshold lines (13, 25, 50, 75)
 const who5ThresholdPlugin = {
   id: 'who5Thresholds',
@@ -595,18 +678,19 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
   const primaryDataset = {
     label: codigo === 'WHO-5' ? "Puntuación" : 
            codigo === 'PHQ-9' ? "Puntuación PHQ-9" :
+           codigo === 'GAD-7' ? "Puntuación GAD-7" :
            ((meta as any).title || (meta as any).nombre || "Puntuación"),
     data: validEntries.map((d) => d.puntuacion || (d as any).score_total),
-    borderColor: codigo === 'PHQ-9' ? "rgb(99, 102, 241)" : "rgb(59, 130, 246)", // Indigo más profesional para PHQ-9
-    backgroundColor: codigo === 'PHQ-9' ? "rgba(99, 102, 241, 0.1)" : "rgba(59, 130, 246, 0.5)",
-    pointBackgroundColor: codigo === 'PHQ-9' ? "rgb(99, 102, 241)" : "rgb(59, 130, 246)",
-    pointBorderColor: codigo === 'PHQ-9' ? "rgb(255, 255, 255)" : "rgb(59, 130, 246)",
-    pointBorderWidth: codigo === 'PHQ-9' ? 2 : 1,
-    pointRadius: codigo === 'PHQ-9' ? 5 : 3,
-    pointHoverRadius: codigo === 'PHQ-9' ? 7 : 5,
+    borderColor: codigo === 'PHQ-9' ? "rgb(99, 102, 241)" : codigo === 'GAD-7' ? "rgb(168, 85, 247)" : "rgb(59, 130, 246)", // Indigo para PHQ-9, púrpura para GAD-7
+    backgroundColor: codigo === 'PHQ-9' ? "rgba(99, 102, 241, 0.1)" : codigo === 'GAD-7' ? "rgba(168, 85, 247, 0.1)" : "rgba(59, 130, 246, 0.5)",
+    pointBackgroundColor: codigo === 'PHQ-9' ? "rgb(99, 102, 241)" : codigo === 'GAD-7' ? "rgb(168, 85, 247)" : "rgb(59, 130, 246)",
+    pointBorderColor: codigo === 'PHQ-9' ? "rgb(255, 255, 255)" : codigo === 'GAD-7' ? "rgb(255, 255, 255)" : "rgb(59, 130, 246)",
+    pointBorderWidth: codigo === 'PHQ-9' ? 2 : codigo === 'GAD-7' ? 2 : 1,
+    pointRadius: codigo === 'PHQ-9' ? 5 : codigo === 'GAD-7' ? 5 : 3,
+    pointHoverRadius: codigo === 'PHQ-9' ? 7 : codigo === 'GAD-7' ? 7 : 5,
     fill: false,
     tension: 0.3,
-    borderWidth: codigo === 'PHQ-9' ? 2.5 : 2,
+    borderWidth: codigo === 'PHQ-9' ? 2.5 : codigo === 'GAD-7' ? 2.5 : 2,
   };
 
   const chartData = {
@@ -646,12 +730,38 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
     };
   };
 
+  // Función para obtener interpretación clínica GAD-7 completa
+  const getGad7Interpretation = (score: number): { severity: string, recommendation: string } => {
+    if (score <= 4) {
+      return {
+        severity: 'Ninguna-Mínima',
+        recommendation: 'Sin intervención formal necesaria'
+      };
+    }
+    if (score <= 9) {
+      return {
+        severity: 'Leve',
+        recommendation: 'Repetir GAD-7 en próximo control'
+      };
+    }
+    if (score <= 14) {
+      return {
+        severity: 'Moderada',
+        recommendation: 'Plan de tratamiento; considerar TCC ± fármacos'
+      };
+    }
+    return {
+      severity: 'Severa',
+      recommendation: 'Tratamiento activo; derivar si respuesta insuficiente'
+    };
+  };
+
   const commonOptions = {
     responsive: true,
     maintainAspectRatio: false,
 
     plugins: {
-      legend: codigo === 'PHQ-9' ? {
+      legend: (codigo === 'PHQ-9' || codigo === 'GAD-7') ? {
         position: "top" as const,
         plugins: {
           afterDraw: function(chart: any) {
@@ -664,6 +774,7 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
         display: true, 
         text: titleOverride || (codigo === 'WHO-5' ? 'Evolución del Bienestar' : 
                                 codigo === 'PHQ-9' ? 'Evolución - PHQ-9' : 
+                                codigo === 'GAD-7' ? 'Evolución - GAD-7' : 
                                 ((meta as any).title || (meta as any).nombre)) 
       },
       tooltip: codigo === 'PHQ-9' ? {
@@ -671,6 +782,17 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
           afterLabel: function(context: any) {
             const score = context.parsed.y;
             const interpretation = getPhq9Interpretation(score);
+            return [
+              `Severidad: ${interpretation.severity}`,
+              `Recomendación: ${interpretation.recommendation}`
+            ];
+          }
+        }
+      } : codigo === 'GAD-7' ? {
+        callbacks: {
+          afterLabel: function(context: any) {
+            const score = context.parsed.y;
+            const interpretation = getGad7Interpretation(score);
             return [
               `Severidad: ${interpretation.severity}`,
               `Recomendación: ${interpretation.recommendation}`
@@ -694,6 +816,7 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
         <Line data={chartData} options={commonOptions} plugins={
           codigo === 'WHO-5' ? [who5ThresholdPlugin] : 
           codigo === 'PHQ-9' ? [phq9ThresholdPlugin] : 
+          codigo === 'GAD-7' ? [gad7ThresholdPlugin] : 
           [midBandPlugin]
         } />
       </div>

@@ -129,6 +129,13 @@ export default function CuestionarioPage() {
         "Más de la mitad de los días",
         "Casi todos los días"
       ];
+    } else if (codigo === 'GAD-7') {
+      return [
+        "Nunca",
+        "Varios días",
+        "Más de la mitad de los días",
+        "Casi todos los días"
+      ];
     }
     return [];
   };
@@ -137,6 +144,7 @@ export default function CuestionarioPage() {
     if (codigo === 'WHO-5') return 5;
     if (codigo === 'BR-WAI') return 5;
     if (codigo === 'PHQ-9') return 3;
+    if (codigo === 'GAD-7') return 3;
     return 4; // OPD-CA2-SQ y otros
   };
   
@@ -148,6 +156,8 @@ export default function CuestionarioPage() {
     } else if (codigo === 'BR-WAI') {
       return { min: 'Totalmente en desacuerdo', max: 'Totalmente de acuerdo' };
     } else if (codigo === 'PHQ-9') {
+      return { min: 'Nunca', max: 'Casi todos los días' };
+    } else if (codigo === 'GAD-7') {
       return { min: 'Nunca', max: 'Casi todos los días' };
     }
     return { min: '', max: '' };
