@@ -170,7 +170,8 @@ const questionnairesMeta = {
     },
     // Extended metadata for UI/UX
     dominio: 'Alianza Terapéutica',
-    descripcion: 'Cuestionario de 16 ítems que evalúa la calidad de la alianza terapéutica en sus dos componentes fundamentales: el vínculo emocional y el acuerdo sobre tareas y objetivos del tratamiento.',
+    descripcion:
+      'Este cuestionario evalúa cómo te sientes respecto a la relación con tu terapeuta y el trabajo que están realizando juntos. Tus respuestas ayudarán a mejorar la calidad de tu tratamiento.',
     poblacion: 'Pacientes en psicoterapia (adolescentes y adultos)',
     tiempoMin: 3,
     frecuenciaRecomendada: 'Cada 4 semanas',

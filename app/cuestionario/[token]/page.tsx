@@ -44,11 +44,12 @@ const getColorForValue = (value: number, codigo: string, maxValue: number) => {
   } else {
     // Escala normal para cuestionarios de bienestar (WHO-5, BR-WAI, etc.)
     const colors = [
-      '#ef4444', // 0 - red-500 (bajo bienestar)
-      '#f97316', // 1 - orange-500
-      '#eab308', // 2 - yellow-500
-      '#84cc16', // 3 - lime-500
-      '#22c55e', // 4 - green-500 (alto bienestar)
+      '#ef4444', // 0 - red-500 (muy bajo bienestar)
+      '#ef4444', // 1 - red-500 (bajo bienestar) 
+      '#f97316', // 2 - orange-500 (en desacuerdo)
+      '#fde047', // 3 - yellow-300 (neutral - amarillo puro)
+      '#84cc16', // 4 - lime-500 (de acuerdo)
+      '#22c55e', // 5 - green-500 (totalmente de acuerdo)
     ];
     return colors[value] || '#22c55e';
   }
@@ -96,6 +97,23 @@ export default function CuestionarioPage() {
   const [error, setError] = useState<string | null>(null);
   const [linkInfo, setLinkInfo] = useState<LinkInfo | null>(null);
   const [respuestas, setRespuestas] = useState<{ [key: string | number]: number }>({});
+  
+  // Función para verificar si el cuestionario está completo
+  const isQuestionnaireComplete = () => {
+    if (!linkInfo) return false;
+    const totalQuestions = linkInfo.cuestionario.items.length;
+    const answeredQuestions = Object.keys(respuestas).length;
+    return answeredQuestions === totalQuestions;
+  };
+  
+  // Función para obtener el progreso
+  const getProgress = () => {
+    if (!linkInfo) return { answered: 0, total: 0, percentage: 0 };
+    const total = linkInfo.cuestionario.items.length;
+    const answered = Object.keys(respuestas).length;
+    const percentage = total > 0 ? Math.round((answered / total) * 100) : 0;
+    return { answered, total, percentage };
+  };
   
   // Estado para paginación
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -422,56 +440,60 @@ export default function CuestionarioPage() {
   return (
     <>
       <style jsx>{`
-        .slider-enhanced::-webkit-slider-thumb {
-          appearance: none;
-          height: 24px;
-          width: 24px;
-          border-radius: 50%;
-          background: #ffffff;
-          border: 3px solid currentColor;
-          cursor: pointer;
-          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-          transition: all 0.2s ease;
+        /* Estilos para botones de respuesta */
+        .response-button {
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
-        .slider-enhanced::-webkit-slider-thumb:hover {
-          transform: scale(1.1);
-          box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        .response-button:hover {
+          transform: translateY(-1px);
         }
         
-        .slider-enhanced::-moz-range-thumb {
-          height: 24px;
-          width: 24px;
-          border-radius: 50%;
-          background: #ffffff;
-          border: 3px solid currentColor;
-          cursor: pointer;
-          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-          transition: all 0.2s ease;
+        .response-button:active {
+          transform: translateY(0);
         }
         
-        .slider-enhanced::-moz-range-thumb:hover {
-          transform: scale(1.1);
-          box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        .response-button.selected {
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
       `}</style>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="max-w-4xl mx-auto px-4 py-8">
-          <div className="bg-white p-8 rounded-xl shadow-lg border border-gray-100 mb-8">
+        <div className="max-w-4xl mx-auto px-4 py-4">
+          <div className="bg-white p-5 rounded-xl shadow-lg border border-gray-100 mb-6">
             <div className="text-center">
               <h1 className="text-4xl font-bold text-gray-900 mb-2">{linkInfo.cuestionario.titulo}</h1>
               <div className="w-24 h-1 bg-gradient-to-r from-blue-500 to-indigo-600 mx-auto mb-4 rounded-full"></div>
               <p className="font-semibold text-xl text-blue-700 mb-4">{linkInfo.pacienteNombre}</p>
-              <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
-                <p className="text-gray-700 text-lg leading-relaxed">
+              
+              {/* Indicador de Progreso */}
+              <div className="mb-4">
+                <div className="flex items-center justify-center mb-2">
+                  <span className="text-sm font-medium text-gray-600 mr-3">
+                    Progreso: {getProgress().answered} de {getProgress().total} preguntas
+                  </span>
+                  <span className="text-sm font-bold text-blue-600">
+                    {getProgress().percentage}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div 
+                    className="bg-gradient-to-r from-blue-500 to-indigo-600 h-2.5 rounded-full transition-all duration-300"
+                    style={{ width: `${getProgress().percentage}%` }}
+                  ></div>
+                </div>
+              </div>
+              
+              <div className="bg-blue-50 p-3 rounded-lg border-l-4 border-blue-500">
+                <p className="text-gray-700 text-base leading-relaxed">
                   {linkInfo.cuestionario.descripcion || 'Cuestionario de 81 ítems que evalúa cuatro dimensiones de capacidades psicodinámicas según el modelo OPD.'}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="mb-8 flex justify-center">
-            <div className="bg-white p-4 rounded-xl shadow-md border border-gray-100">
+          {/* Paginación Superior */}
+          <div className="mb-4 flex justify-center">
+            <div className="bg-white p-3 rounded-xl shadow-md border border-gray-100">
               <Pagination
                 currentPage={currentPage}
                 totalItems={linkInfo.cuestionario.items.length}
@@ -481,7 +503,7 @@ export default function CuestionarioPage() {
             </div>
           </div>
 
-          <div className="space-y-8">
+          <div className="space-y-4">
           {linkInfo.cuestionario.items
             .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
             .map((pregunta, index) => {
@@ -489,33 +511,54 @@ export default function CuestionarioPage() {
               const uniqueKey = String(pregunta.orden || pregunta.id || `item-${globalIndex}`);
               const valor = respuestas[uniqueKey];
               const opciones = pregunta.opciones_respuesta || [];
-              const max = opciones.length > 0 ? opciones.length - 1 : maxScale;
-              const fillPercentage = valor !== undefined ? (valor / max) * 100 : 0;
-              const trackColor = valor !== undefined ? getColorForValue(valor, linkInfo.cuestionario.codigo || '', max) : '#e5e7eb';
+              
+              // Determinar rango dinámicamente según el cuestionario
+              const minValue = opciones.length > 0 ? opciones[0].valor : 0;
+              const maxValue = opciones.length > 0 ? opciones[opciones.length - 1].valor : maxScale;
+              
+              const fillPercentage = valor !== undefined ? ((valor - minValue) / (maxValue - minValue)) * 100 : 0;
+              const trackColor = valor !== undefined ? getColorForValue(valor, linkInfo.cuestionario.codigo || '', maxValue) : '#e5e7eb';
 
               return (
-                <div key={uniqueKey} className="bg-white p-8 rounded-xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300">
-                  <p className="font-semibold text-gray-900 mb-6 text-lg leading-relaxed">{`${globalIndex + 1}. ${pregunta.texto}`}</p>
+                <div key={uniqueKey} className="bg-white p-4 rounded-xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300">
+                  <p className="font-semibold text-gray-900 mb-4 text-lg leading-relaxed text-center">{pregunta.texto}</p>
                   <div className="relative pt-2">
-                    <input
-                      type="range"
-                      min="0"
-                      max={max}
-                      value={valor !== undefined ? valor : 0}
-                      onChange={(e) => handleRespuesta(uniqueKey, parseInt(e.target.value))}
-                      className="w-full h-3 bg-transparent rounded-full appearance-none cursor-pointer slider-enhanced"
-                      style={{
-                        background: `linear-gradient(to right, ${trackColor} 0%, ${trackColor} ${fillPercentage}%, #f3f4f6 ${fillPercentage}%, #f3f4f6 100%)`,
-                        boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.1)'
-                      }}
-                    />
-                    <div className="w-full flex justify-between text-xs text-gray-600 px-2 mt-3">
-                      {opciones.map((opt) => (
-                        <span key={opt.valor} className="font-semibold bg-gray-50 px-2 py-1 rounded-md">{opt.valor}</span>
-                      ))}
+                    {/* Botones Horizontales */}
+                    <div className="flex gap-2 justify-center">
+                      {opciones.map((opt) => {
+                        const isSelected = valor === opt.valor;
+                        const buttonColor = isSelected 
+                          ? getColorForValue(opt.valor, linkInfo.cuestionario.codigo || '', maxValue)
+                          : '#f3f4f6';
+                        const textColor = isSelected ? '#ffffff' : '#6b7280';
+                        
+                        return (
+                          <button
+                            key={opt.valor}
+                            type="button"
+                            onClick={() => handleRespuesta(uniqueKey, opt.valor)}
+                            className={`
+                              response-button flex-1 py-3 px-2 rounded-lg font-semibold text-sm
+                              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50
+                              ${
+                                isSelected 
+                                  ? 'selected' 
+                                  : 'hover:bg-gray-200 shadow-sm'
+                              }
+                            `}
+                            style={{
+                              backgroundColor: buttonColor,
+                              color: textColor,
+                              border: isSelected ? 'none' : '2px solid #e5e7eb'
+                            }}
+                          >
+                            {opt.valor}
+                          </button>
+                        );
+                      })}
                     </div>
-                    <div className="mt-6 p-4 bg-gray-50 rounded-lg border-l-4" style={{ borderLeftColor: valor !== undefined ? getColorForValue(valor, linkInfo.cuestionario.codigo || '', max) : '#d1d5db' }}>
-                      <p className="text-center font-semibold text-lg" style={{ color: valor !== undefined ? getColorForValue(valor, linkInfo.cuestionario.codigo || '', max) : '#6b7280' }}>
+                    <div className="mt-4 p-3 bg-gray-50 rounded-lg border-l-4" style={{ borderLeftColor: valor !== undefined ? getColorForValue(valor, linkInfo.cuestionario.codigo || '', maxValue) : '#d1d5db' }}>
+                      <p className="text-center font-semibold text-lg" style={{ color: valor !== undefined ? getColorForValue(valor, linkInfo.cuestionario.codigo || '', maxValue) : '#6b7280' }}>
                         {valor !== undefined
                           ? opciones.find((o) => o.valor === valor)?.texto
                           : <span className="text-gray-500 italic">Selecciona una opción</span>}
@@ -527,8 +570,9 @@ export default function CuestionarioPage() {
             })}
         </div>
 
-          <div className="mt-8 flex justify-center">
-            <div className="bg-white p-4 rounded-xl shadow-md border border-gray-100">
+          {/* Paginación Inferior */}
+          <div className="mt-4 flex justify-center">
+            <div className="bg-white p-3 rounded-xl shadow-md border border-gray-100">
               <Pagination
                 currentPage={currentPage}
                 totalItems={linkInfo.cuestionario.items.length}
@@ -538,11 +582,26 @@ export default function CuestionarioPage() {
             </div>
           </div>
 
-          <div className="mt-12 bg-white p-8 rounded-xl shadow-lg border border-gray-100">
+          <div className="mt-6 bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+            {/* Mensaje de validación si no está completo */}
+            {!isQuestionnaireComplete() && (
+              <div className="mb-4 p-3 bg-amber-50 rounded-lg border-l-4 border-amber-500">
+                <p className="text-sm text-amber-700 text-center font-medium">
+                  ⚠️ Por favor, responde todas las preguntas antes de enviar el cuestionario.
+                </p>
+              </div>
+            )}
+            
             <button
               onClick={handleSubmit}
-              disabled={enviando}
-              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 px-8 rounded-xl hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 transition-all duration-300 transform hover:scale-105 disabled:hover:scale-100 font-semibold text-lg shadow-lg"
+              disabled={enviando || !isQuestionnaireComplete()}
+              className={`w-full py-4 px-8 rounded-xl font-semibold text-lg shadow-lg transition-all duration-300 transform ${
+                !isQuestionnaireComplete() 
+                  ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
+                  : enviando 
+                    ? 'bg-gradient-to-r from-gray-400 to-gray-500 text-white cursor-not-allowed'
+                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 hover:scale-105'
+              }`}
             >
               {enviando ? (
                 <div className="flex items-center justify-center">
@@ -552,11 +611,13 @@ export default function CuestionarioPage() {
                   </svg>
                   Enviando...
                 </div>
+              ) : !isQuestionnaireComplete() ? (
+                'Completa todas las preguntas'
               ) : (
                 'Enviar respuestas'
               )}
             </button>
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
               <p className="text-sm text-blue-700 text-center font-medium">
                 🔒 Tus respuestas son confidenciales y solo serán vistas por tu profesional de salud.
               </p>
