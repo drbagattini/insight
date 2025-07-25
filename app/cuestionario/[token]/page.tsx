@@ -28,15 +28,30 @@ type LinkInfo = {
   expirado: boolean;
 };
 
-const getColorForValue = (value: number) => {
-  const colors = [
-    '#ef4444', // 0 - red-500
-    '#f97316', // 1 - orange-500
-    '#eab308', // 2 - yellow-500
-    '#84cc16', // 3 - lime-500
-    '#22c55e', // 4 - green-500
-  ];
-  return colors[value];
+const getColorForValue = (value: number, codigo: string, maxValue: number) => {
+  // Para cuestionarios clínicos (PHQ-9, GAD-7): mayor valor = mayor severidad = más rojo
+  const isClinicalScale = ['PHQ-9', 'GAD-7'].includes(codigo);
+  
+  if (isClinicalScale) {
+    // Escala invertida para cuestionarios clínicos
+    const colors = [
+      '#22c55e', // 0 - green-500 (sin síntomas)
+      '#84cc16', // 1 - lime-500 (leve)
+      '#eab308', // 2 - yellow-500 (moderado)
+      '#f97316', // 3 - orange-500 (severo)
+    ];
+    return colors[value] || '#ef4444'; // rojo para valores altos
+  } else {
+    // Escala normal para cuestionarios de bienestar (WHO-5, BR-WAI, etc.)
+    const colors = [
+      '#ef4444', // 0 - red-500 (bajo bienestar)
+      '#f97316', // 1 - orange-500
+      '#eab308', // 2 - yellow-500
+      '#84cc16', // 3 - lime-500
+      '#22c55e', // 4 - green-500 (alto bienestar)
+    ];
+    return colors[value] || '#22c55e';
+  }
 };
 
 
@@ -405,27 +420,68 @@ export default function CuestionarioPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-3xl mx-auto px-4 py-8">
-        <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-          <h1 className="text-3xl font-bold text-gray-800">{linkInfo.cuestionario.titulo}</h1>
-          <p className="font-bold text-lg mt-4">{linkInfo.pacienteNombre}</p>
-          <p className="mt-2 mb-6 text-gray-700 text-lg">
-            {linkInfo.cuestionario.descripcion || 'Cuestionario de 81 ítems que evalúa cuatro dimensiones de capacidades psicodinámicas según el modelo OPD.'}
-          </p>
+    <>
+      <style jsx>{`
+        .slider-enhanced::-webkit-slider-thumb {
+          appearance: none;
+          height: 24px;
+          width: 24px;
+          border-radius: 50%;
+          background: #ffffff;
+          border: 3px solid currentColor;
+          cursor: pointer;
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+          transition: all 0.2s ease;
+        }
+        
+        .slider-enhanced::-webkit-slider-thumb:hover {
+          transform: scale(1.1);
+          box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .slider-enhanced::-moz-range-thumb {
+          height: 24px;
+          width: 24px;
+          border-radius: 50%;
+          background: #ffffff;
+          border: 3px solid currentColor;
+          cursor: pointer;
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+          transition: all 0.2s ease;
+        }
+        
+        .slider-enhanced::-moz-range-thumb:hover {
+          transform: scale(1.1);
+          box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+      `}</style>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          <div className="bg-white p-8 rounded-xl shadow-lg border border-gray-100 mb-8">
+            <div className="text-center">
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">{linkInfo.cuestionario.titulo}</h1>
+              <div className="w-24 h-1 bg-gradient-to-r from-blue-500 to-indigo-600 mx-auto mb-4 rounded-full"></div>
+              <p className="font-semibold text-xl text-blue-700 mb-4">{linkInfo.pacienteNombre}</p>
+              <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
+                <p className="text-gray-700 text-lg leading-relaxed">
+                  {linkInfo.cuestionario.descripcion || 'Cuestionario de 81 ítems que evalúa cuatro dimensiones de capacidades psicodinámicas según el modelo OPD.'}
+                </p>
+              </div>
+            </div>
+          </div>
 
-        </div>
+          <div className="mb-8 flex justify-center">
+            <div className="bg-white p-4 rounded-xl shadow-md border border-gray-100">
+              <Pagination
+                currentPage={currentPage}
+                totalItems={linkInfo.cuestionario.items.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+              />
+            </div>
+          </div>
 
-        <div className="mb-6 flex justify-center">
-          <Pagination
-            currentPage={currentPage}
-            totalItems={linkInfo.cuestionario.items.length}
-            itemsPerPage={itemsPerPage}
-            onPageChange={setCurrentPage}
-          />
-        </div>
-
-        <div className="space-y-6">
+          <div className="space-y-8">
           {linkInfo.cuestionario.items
             .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
             .map((pregunta, index) => {
@@ -435,61 +491,79 @@ export default function CuestionarioPage() {
               const opciones = pregunta.opciones_respuesta || [];
               const max = opciones.length > 0 ? opciones.length - 1 : maxScale;
               const fillPercentage = valor !== undefined ? (valor / max) * 100 : 0;
-              const trackColor = valor !== undefined ? getColorForValue(valor) : '#e5e7eb';
+              const trackColor = valor !== undefined ? getColorForValue(valor, linkInfo.cuestionario.codigo || '', max) : '#e5e7eb';
 
               return (
-                <div key={uniqueKey} className="bg-white p-6 rounded-lg shadow-sm">
-                  <p className="font-semibold text-gray-800 mb-4">{`${globalIndex + 1}. ${pregunta.texto}`}</p>
-                  <div className="relative pt-1">
+                <div key={uniqueKey} className="bg-white p-8 rounded-xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300">
+                  <p className="font-semibold text-gray-900 mb-6 text-lg leading-relaxed">{`${globalIndex + 1}. ${pregunta.texto}`}</p>
+                  <div className="relative pt-2">
                     <input
                       type="range"
                       min="0"
                       max={max}
                       value={valor !== undefined ? valor : 0}
                       onChange={(e) => handleRespuesta(uniqueKey, parseInt(e.target.value))}
-                      className="w-full h-2 bg-transparent rounded-lg appearance-none cursor-pointer"
+                      className="w-full h-3 bg-transparent rounded-full appearance-none cursor-pointer slider-enhanced"
                       style={{
-                        background: `linear-gradient(to right, ${trackColor} 0%, ${trackColor} ${fillPercentage}%, #e5e7eb ${fillPercentage}%, #e5e7eb 100%)`
+                        background: `linear-gradient(to right, ${trackColor} 0%, ${trackColor} ${fillPercentage}%, #f3f4f6 ${fillPercentage}%, #f3f4f6 100%)`,
+                        boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.1)'
                       }}
                     />
-                    <div className="w-full flex justify-between text-xs text-gray-500 px-1 mt-2">
+                    <div className="w-full flex justify-between text-xs text-gray-600 px-2 mt-3">
                       {opciones.map((opt) => (
-                        <span key={opt.valor} className="font-bold">{opt.valor}</span>
+                        <span key={opt.valor} className="font-semibold bg-gray-50 px-2 py-1 rounded-md">{opt.valor}</span>
                       ))}
                     </div>
-                    <p className="mt-4 text-center font-semibold text-lg h-8 flex items-center justify-center" style={{ color: valor !== undefined ? getColorForValue(valor) : '#6b7280' }}>
-                      {valor !== undefined
-                        ? opciones.find((o) => o.valor === valor)?.texto
-                        : <span className="text-gray-500 italic">Selecciona una opción</span>}
-                    </p>
+                    <div className="mt-6 p-4 bg-gray-50 rounded-lg border-l-4" style={{ borderLeftColor: valor !== undefined ? getColorForValue(valor, linkInfo.cuestionario.codigo || '', max) : '#d1d5db' }}>
+                      <p className="text-center font-semibold text-lg" style={{ color: valor !== undefined ? getColorForValue(valor, linkInfo.cuestionario.codigo || '', max) : '#6b7280' }}>
+                        {valor !== undefined
+                          ? opciones.find((o) => o.valor === valor)?.texto
+                          : <span className="text-gray-500 italic">Selecciona una opción</span>}
+                      </p>
+                    </div>
                   </div>
                 </div>
               );
             })}
         </div>
 
-        <div className="mt-6 flex justify-center">
-          <Pagination
-            currentPage={currentPage}
-            totalItems={linkInfo.cuestionario.items.length}
-            itemsPerPage={itemsPerPage}
-            onPageChange={setCurrentPage}
-          />
-        </div>
+          <div className="mt-8 flex justify-center">
+            <div className="bg-white p-4 rounded-xl shadow-md border border-gray-100">
+              <Pagination
+                currentPage={currentPage}
+                totalItems={linkInfo.cuestionario.items.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+              />
+            </div>
+          </div>
 
-        <div className="mt-8">
-          <button
-            onClick={handleSubmit}
-            disabled={enviando}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
-          >
-            {enviando ? 'Enviando...' : 'Enviar respuestas'}
-          </button>
-          <p className="mt-4 text-sm text-gray-500 text-center">
-            Tus respuestas son confidenciales y solo serán vistas por tu profesional de salud.
-          </p>
+          <div className="mt-12 bg-white p-8 rounded-xl shadow-lg border border-gray-100">
+            <button
+              onClick={handleSubmit}
+              disabled={enviando}
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 px-8 rounded-xl hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 transition-all duration-300 transform hover:scale-105 disabled:hover:scale-100 font-semibold text-lg shadow-lg"
+            >
+              {enviando ? (
+                <div className="flex items-center justify-center">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Enviando...
+                </div>
+              ) : (
+                'Enviar respuestas'
+              )}
+            </button>
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+              <p className="text-sm text-blue-700 text-center font-medium">
+                🔒 Tus respuestas son confidenciales y solo serán vistas por tu profesional de salud.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
