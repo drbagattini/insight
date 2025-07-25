@@ -804,7 +804,7 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
     scales: {
       y: {
         beginAtZero: true,
-        min: meta.scoring?.rango ? meta.scoring.rango[0] : undefined,
+        min: 0, // Siempre empezar en 0 para mejor visualización
         max: meta.scoring?.rango ? meta.scoring.rango[1] : undefined,
       },
     },
