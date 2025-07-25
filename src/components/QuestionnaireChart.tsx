@@ -637,7 +637,7 @@ export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, co
             display: true,
             text: 'Puntuación'
           },
-          min: 16, // Mínimo teórico BR-WAI
+          min: 0, // Empezar en 0 para mejor visualización
           max: 80, // Máximo teórico BR-WAI
           ticks: {
             stepSize: 8
