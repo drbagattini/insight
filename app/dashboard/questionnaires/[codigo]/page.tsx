@@ -483,7 +483,30 @@ export default function QuestionnaireDetailPage({
                     </span>
                   </li>
                 </ul>
-              ) : (
+              ) : codigo === 'GAD-7' ? (
+                <ul className="space-y-2">
+                  <li>
+                    <a
+                      href="https://doi.org/10.1186/1477-7525-8-8"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-primary"
+                    >
+                      Adaptación cultural española del GAD-7 (García-Campayo et al., 2010)
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="https://doi.org/10.1001/archinte.166.10.1092"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-primary"
+                    >
+                      Estudio original del GAD-7 (Spitzer et al., 2006)
+                    </a>
+                  </li>
+                </ul>
+              ) : codigo === 'WHO-5' ? (
                 <ul className="space-y-2">
                   <li>
                     <a
@@ -504,6 +527,60 @@ export default function QuestionnaireDetailPage({
                     >
                       The WHO-5 Well-Being Index: A Systematic Review of the Literature (Topp et al., 2015)
                     </a>
+                  </li>
+                </ul>
+              ) : codigo === 'PHQ-9' ? (
+                <ul className="space-y-2">
+                  <li>
+                    <a
+                      href="https://doi.org/10.1001/jamanetworkopen.2023.36529"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-primary"
+                    >
+                      Validez del PHQ-9 en español: Revisión sistemática y meta-análisis (Martinez et al., 2023)
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="https://doi.org/10.1046/j.1525-1497.2001.016009606.x"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-primary"
+                    >
+                      Estudio original del PHQ-9 (Kroenke et al., 2001)
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="https://doi.org/10.1016/j.jad.2020.09.131"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-primary"
+                    >
+                      Cribado de depresión en atención primaria con PHQ-9: Revisión sistemática (Costantini et al., 2021)
+                    </a>
+                  </li>
+                </ul>
+              ) : codigo === 'BR-WAI' ? (
+                <ul className="space-y-2">
+                  <li>
+                    <a
+                      href="https://doi.org/10.1080/10503307.2015.1061718"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-primary"
+                    >
+                      Análisis IRT del Working Alliance Inventory y Brief Alliance Inventory (Mallinckrodt & Tekie, 2015)
+                    </a>
+                  </li>
+                </ul>
+              ) : (
+                <ul className="space-y-2">
+                  <li>
+                    <span className="text-gray-600">
+                      Recursos específicos disponibles en los metadatos del cuestionario
+                    </span>
                   </li>
                 </ul>
               )}

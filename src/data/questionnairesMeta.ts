@@ -14,7 +14,7 @@ const questionnairesMeta = {
     // Extended metadata for UI/UX
     dominio: 'Bienestar',
     descripcion:
-      'Cuestionario de 5 ítems que evalúa el bienestar subjetivo durante las últimas dos semanas. Traducción española oficial (WHO-5, versión 1998).',
+      'Por favor, responda a cada pregunta en relación a cómo se sintió en las últimas dos semanas.',
     poblacion: 'Adolescentes y adultos',
     tiempoMin: 1,
     items: [
@@ -256,16 +256,14 @@ const questionnairesMeta = {
       }
     },
     validez: {
-      fiabilidad: 'α de Cronbach: .93 (total), .85 (Vínculo), .87 (Tareas-Objetivos)',
-      validezConstructo: 'Estructura bifactorial confirmada en múltiples estudios',
+      fiabilidad: 'Análisis IRT (2015): α = .87 (Vínculo), .91 (Tareas), .90 (Objetivos). Versión breve BAI: α = .93 (Vínculo), .89 (Tareas/Objetivos)',
+      muestra: 'Análisis IRT 2015: 1,786 clientes de centros de asesoramiento universitario y clínicas comunitarias (70% mujeres, 81% blancos)',
+      validezConstructo: 'Análisis IRT confirma problemas con escala de 7 puntos original. Estructura bifactorial (Vínculo + Tareas/Objetivos combinados) con mejor ajuste que modelo trifactorial',
+      hallazgosIRT: 'Umbrales de categoría cruzados en escala 7 puntos. Recodificación 5/4 puntos mejora fiabilidad y reduce varianza de error (11-26%). Correlaciones superiores con proceso y resultado terapéutico',
       estudiosClave: [
         {
-          cita: 'Horvath, A. O., & Greenberg, L. S. (1989). Development and validation of the Working Alliance Inventory',
-          doi: '10.1037/0022-0167.36.2.223'
-        },
-        {
-          cita: 'Tracey, T. J., & Kokotovic, A. M. (1989). Factor structure of the Working Alliance Inventory',
-          doi: '10.1037/0033-2909.105.3.323'
+          cita: 'Mallinckrodt, B., & Tekie, Y. T. (2015). Item response theory analysis of Working Alliance Inventory, revised response format, and new Brief Alliance Inventory. Psychotherapy Research, 26(6), 694-718.',
+          doi: '10.1080/10503307.2015.1061718'
         }
       ]
     },
@@ -273,13 +271,15 @@ const questionnairesMeta = {
       modelo: 'Teoría de la Alianza Terapéutica (Bordin, 1979)',
       enfoque: 'Evaluación de la calidad de la relación terapéutica',
       objetivo: 'Monitoreo y mejora de la alianza terapéutica durante el tratamiento',
-      baseConceptual: 'Tres componentes: vínculo emocional, acuerdo sobre objetivos y acuerdo sobre tareas'
+      baseConceptual: 'Modelo original trifactorial (vínculo, tareas, objetivos). Análisis IRT 2015 sugiere estructura bifactorial más robusta: Vínculo + Tareas/Objetivos combinados (r=.99 entre Tareas y Objetivos)',
+      evidenciaEmpírica: 'Clientes no distinguen significativamente entre tareas y objetivos terapéuticos. Ambos constructos representan "actividades de asesoramiento" unificadas'
     },
     aplicacionClinica: {
-      usoRecomendado: 'Aplicación cada 4 semanas durante el proceso terapéutico',
+      usoRecomendado: 'Aplicación cada 4 semanas durante el proceso terapéutico. Considerar formato de respuesta Likert 5 puntos (acuerdo) vs. frecuencia 7 puntos para mejor precisión',
       requiere: 'Relación terapéutica establecida (no en primeras sesiones)',
-      complementar: 'Discusión clínica de resultados con el paciente',
-      advertencia: 'Herramienta de proceso, no de resultado terapéutico'
+      complementar: 'Discusión clínica de resultados con el paciente. Monitoreo de subescalas por separado (Vínculo vs. Tareas/Objetivos)',
+      advertencia: '⚠️ IMPORTANTE: Escala frecuencia 7 puntos presenta problemas psicométricos (umbrales cruzados). Recodificación 5/4 puntos mejora fiabilidad. Herramienta de proceso, no de resultado terapéutico',
+      recomendacionesIRT: 'Combinar categorías bajas de respuesta (nunca/raramente/ocasionalmente) para mejorar discriminación. Considerar Brief Alliance Inventory (BAI) para aplicaciones de investigación'
     }
   },
 
@@ -360,10 +360,14 @@ const questionnairesMeta = {
       } as const
     },
     validez: {
-      fiabilidad: 'Consistencia interna α = 0.89. Test-retest r = 0.84',
-      muestra: 'Validado en atención primaria y poblaciones clínicas diversas',
-      validezClinica: 'Sensibilidad 88% y especificidad 88% para depresión mayor (punto de corte ≥10)',
+      fiabilidad: 'Consistencia interna α = 0.78-0.90 (versión española). Test-retest r = 0.84 (versión original)',
+      muestra: 'Meta-análisis 2023: 5,164 adultos hispanohablantes en 10 estudios (edad media 34.1-71.8 años). Validado principalmente en atención primaria (8/10 estudios)',
+      validezClinica: 'Versión española: Sensibilidad 86% (IC 95%: 82-90%), especificidad 80% (IC 95%: 75-85%), AUC 0.88 (IC 95%: 0.87-0.90). Puntos de corte óptimos variables: 5-12 (vs. ≥10 estándar)',
       estudiosClave: [
+        {
+          cita: 'Martinez, A., Teklu, S. M., Tahir, P., & Garcia, M. E. (2023). Validity of the Spanish-Language Patient Health Questionnaires 2 and 9: A Systematic Review and Meta-Analysis. JAMA Network Open, 6(10), e2336529.',
+          doi: '10.1001/jamanetworkopen.2023.36529'
+        },
         {
           cita: 'Kroenke, K., Spitzer, R. L., & Williams, J. B. (2001). The PHQ-9: validity of a brief depression severity measure. Journal of General Internal Medicine, 16(9), 606-613.',
           doi: '10.1046/j.1525-1497.2001.016009606.x'
@@ -378,13 +382,13 @@ const questionnairesMeta = {
       modelo: 'Criterios diagnósticos DSM-5 para episodio depresivo mayor',
       enfoque: 'Modelo biomédico de la depresión con énfasis en síntomas observables',
       objetivo: 'Cribado, diagnóstico y monitoreo de la severidad de síntomas depresivos',
-      baseConceptual: 'Correspondencia directa con los 9 criterios del DSM-5 para episodio depresivo mayor'
+      baseConceptual: 'Correspondencia directa con los 9 criterios del DSM-5 para episodio depresivo mayor. Meta-análisis 2023 confirma validez en poblaciones hispanohablantes con variabilidad en puntos de corte óptimos (5-12) según contexto cultural y clínico'
     },
     aplicacionClinica: {
       usoRecomendado: 'Cribado en atención primaria, seguimiento en tratamiento, investigación clínica. Aplicación sugerida cada 2 semanas durante tratamiento activo',
       requiere: 'Capacitación básica en salud mental. Evaluación clínica complementaria para diagnóstico definitivo',
       complementar: 'Entrevista clínica estructurada, evaluación de riesgo suicida, escalas de ansiedad (GAD-7)',
-      advertencia: '⚠️ CRÍTICO: Cualquier puntuación > 0 en ítem 9 requiere evaluación inmediata de riesgo suicida. No es sustituto del juicio clínico profesional.'
+      advertencia: '⚠️ CRÍTICO: Cualquier puntuación > 0 en ítem 9 requiere evaluación inmediata de riesgo suicida. ⚠️ IMPORTANTE: En poblaciones hispanohablantes, considerar depresión con puntuaciones menores (puntos de corte óptimos 5-12 vs. ≥10 estándar). No es sustituto del juicio clínico profesional.'
     }
   },
   'GAD-7': {
@@ -398,11 +402,12 @@ const questionnairesMeta = {
     },
     // Extended metadata for UI/UX
     dominio: 'Ansiedad',
-    descripcion: 'Durante las últimas 2 semanas, ¿con qué frecuencia ha tenido molestias debido a los siguientes problemas? Seleccione la opción que mejor describa su experiencia.',
-    poblacion: 'Adolescentes y adultos',
-    tiempoMin: 2,
-    autores: 'Spitzer, Kroenke, Williams & Löwe (2006)',
-    añoPublicacion: 2006,
+    descripcion: 'Durante las últimas 2 semanas, ¿con qué frecuencia ha tenido molestias debido a los siguientes problemas?',
+    poblacion: 'Adolescentes y adultos (validado en España en población de 19-85 años)',
+    tiempoMin: 2.5,
+    autores: 'García-Campayo, Zamorano, Ruiz et al. (adaptación española, 2010)',
+    autoresOriginales: 'Spitzer, Kroenke, Williams & Löwe (versión original, 2006)',
+    añoPublicacion: 2010,
     items: [
       { orden: 1, texto: 'Sentirse nervioso/a, ansioso/a o tenso/a' },
       { orden: 2, texto: 'No poder parar ni controlar la preocupación' },
@@ -435,10 +440,14 @@ const questionnairesMeta = {
       } as const
     },
     validez: {
-      fiabilidad: 'Consistencia interna α = 0.92. Test-retest r = 0.83',
-      muestra: 'Validado en atención primaria y poblaciones clínicas diversas',
-      validezClinica: 'Sensibilidad 89% y especificidad 82% para trastorno de ansiedad generalizada (punto de corte ≥10)',
+      fiabilidad: 'Consistencia interna α = 0.936. Test-retest r = 0.844. Correlación intraclase = 0.926',
+      muestra: 'Validado en España: 212 sujetos (106 con TAG, 106 controles) en atención primaria de Madrid, Zaragoza y Barcelona',
+      validezClinica: 'Sensibilidad 86.8% y especificidad 93.4% para TAG (punto de corte ≥10). AUC = 0.957',
       estudiosClave: [
+        {
+          cita: 'García-Campayo, J., Zamorano, E., Ruiz, M. A., Pardo, A., Pérez-Páramo, M., López-Gómez, V., Freire, O., & Rejas, J. (2010). Cultural adaptation into Spanish of the generalized anxiety disorder-7 (GAD-7) scale as a screening tool. Health and Quality of Life Outcomes, 8, 8.',
+          doi: '10.1186/1477-7525-8-8'
+        },
         {
           cita: 'Spitzer, R. L., Kroenke, K., Williams, J. B. W., & Löwe, B. (2006). A brief measure for assessing generalized anxiety disorder: the GAD-7. Archives of Internal Medicine, 166(10), 1092-1097.',
           doi: '10.1001/archinte.166.10.1092'
@@ -450,16 +459,16 @@ const questionnairesMeta = {
       ]
     },
     fundamentoTeorico: {
-      modelo: 'Criterios diagnósticos DSM-5 para trastorno de ansiedad generalizada',
-      enfoque: 'Modelo biomédico de la ansiedad con énfasis en síntomas observables',
-      objetivo: 'Cribado, diagnóstico y monitoreo de la severidad de síntomas de ansiedad generalizada',
-      baseConceptual: 'Correspondencia con criterios clínicos para trastorno de ansiedad generalizada'
+      modelo: 'Criterios diagnósticos DSM-IV para trastorno de ansiedad generalizada (adaptado a DSM-5)',
+      enfoque: 'Modelo dimensional de la ansiedad basado en frecuencia de síntomas en las últimas 2 semanas',
+      objetivo: 'Cribado, identificación de casos probables y monitoreo de severidad de TAG en atención primaria',
+      baseConceptual: 'Estructura unidimensional validada que explica 72% de la varianza. Correlación alta con HAM-A (r=0.852) y HADS-A (r=0.903)'
     },
     aplicacionClinica: {
-      usoRecomendado: 'Cribado en atención primaria, seguimiento en tratamiento, investigación clínica. Aplicación sugerida cada 2 semanas durante tratamiento activo',
-      requiere: 'Capacitación básica en salud mental. Evaluación clínica complementaria para diagnóstico definitivo',
-      complementar: 'Entrevista clínica estructurada, escalas de depresión (PHQ-9), evaluación de otros trastornos de ansiedad',
-      advertencia: '⚠️ Puntuación ≥ 10 requiere consulta con profesional de salud mental. No es sustituto del juicio clínico profesional.'
+      usoRecomendado: 'Cribado en atención primaria española, seguimiento en tratamiento, estudios epidemiológicos. Tiempo de aplicación: 2.5 minutos',
+      requiere: 'Autoadministrado. No requiere supervisión clínica para completar. Evaluación profesional para interpretación diagnóstica',
+      complementar: 'HAM-A, HADS, WHO-DAS II para evaluación de discapacidad. Entrevista clínica para diagnóstico definitivo',
+      advertencia: '⚠️ Punto de corte ≥ 10: Sensibilidad 86.8%, Especificidad 93.4%. Personas mayores pueden necesitar asistencia para completarlo'
     }
   }
 } as const;

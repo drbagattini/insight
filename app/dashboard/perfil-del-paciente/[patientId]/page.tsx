@@ -11,6 +11,7 @@ import { PatientIntakeTab } from '@/components/patient/PatientIntakeTab';
 import { PatientDetails } from '@/components/patient/PatientDetails';
 import QuestionnaireChart from '@/src/components/QuestionnaireChart';
 import questionnairesMeta from '@/src/data/questionnairesMeta';
+import InformesTab from '@/components/informes/InformesTab';
 
 export default function PatientProfilePage() {
   const params = useParams() as { patientId: string };
@@ -522,11 +523,11 @@ function computeNextDate(start: string, frequency: string): string {
         </div>
       )}
       <div className="p-6 space-y-6">
-        <h1 className="text-2xl font-semibold mb-4">Perfil del paciente</h1>
+        <h1 className="text-2xl font-semibold mb-4">{patientName || 'Perfil del paciente'}</h1>
         <Tab.Group selectedIndex={selectedTabIndex} onChange={setSelectedTabIndex}>
           <div className="mb-8">
             <Tab.List className="flex bg-gray-50 rounded-xl p-1.5 shadow-sm border border-gray-200">
-              {['Entrevista inicial', 'Cuestionarios psicométricos'].map((category, index) => (
+              {['Entrevista inicial', 'Cuestionarios psicométricos', 'Informes'].map((category, index) => (
                 <Tab
                   key={category}
                   className={({ selected }) =>
@@ -821,6 +822,12 @@ function computeNextDate(start: string, frequency: string): string {
                 )}
               </div>
               </div>
+            </Tab.Panel>
+            <Tab.Panel className="focus:outline-none">
+              <InformesTab 
+                patientId={patientId} 
+                patientName={patientName}
+              />
             </Tab.Panel>
           </Tab.Panels>
         </Tab.Group>

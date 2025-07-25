@@ -160,6 +160,70 @@ export type Database = {
           },
         ]
       }
+      informes_clinicos: {
+        Row: {
+          contenido: string
+          created_at: string
+          estado: string
+          fecha_actualizacion: string
+          fecha_generacion: string
+          id: string
+          metadatos: Json | null
+          paciente_id: string
+          psicologo_id: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          contenido: string
+          created_at?: string
+          estado?: string
+          fecha_actualizacion?: string
+          fecha_generacion?: string
+          id?: string
+          metadatos?: Json | null
+          paciente_id: string
+          psicologo_id: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          contenido?: string
+          created_at?: string
+          estado?: string
+          fecha_actualizacion?: string
+          fecha_generacion?: string
+          id?: string
+          metadatos?: Json | null
+          paciente_id?: string
+          psicologo_id?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "informes_clinicos_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "anonymous_patient_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "informes_clinicos_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "informes_clinicos_psicologo_id_fkey"
+            columns: ["psicologo_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       links_cuestionario: {
         Row: {
           consumido: boolean
