@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useToast } from '@/components/providers/ToastProvider';
 import { Button } from '@/components/ui/button';
 import { 
   SparklesIcon, 
@@ -22,18 +23,15 @@ interface InformesTabProps {
 
 type ViewMode = 'list' | 'edit' | 'view';
 
-interface Toast {
-  id: string;
-  type: 'success' | 'error' | 'warning' | 'info';
-  message: string;
-}
+// ELIMINADO: Interface Toast local reemplazada por sistema global
 
 export default function InformesTab({ patientId, patientName }: InformesTabProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedInformeId, setSelectedInformeId] = useState<string | null>(null);
   const [editingTitulo, setEditingTitulo] = useState('');
   const [editingContenido, setEditingContenido] = useState('');
-  const [toasts, setToasts] = useState<Toast[]>([]);
+  // Usar sistema global de toasts en lugar del local
+  const { showToast } = useToast();
 
   const {
     informes,
@@ -58,57 +56,35 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
     isLoading: isLoadingInforme,
   } = useInforme(selectedInformeId);
 
-  // Contador para IDs únicos
-  const toastIdCounter = useRef(0);
-
-  // Manejar toasts
-  const addToast = (type: Toast['type'], message: string) => {
-    const id = `toast-${Date.now()}-${++toastIdCounter.current}`;
-    setToasts(prev => [...prev, { id, type, message }]);
-    
-    // Duración diferente según el tipo
-    const duration = type === 'info' ? 8000 : type === 'error' ? 10000 : 5000;
-    
-    setTimeout(() => {
-      setToasts(prev => prev.filter(toast => toast.id !== id));
-    }, duration);
-  };
-
-  const removeToast = (id: string) => {
-    setToasts(prev => prev.filter(toast => toast.id !== id));
-  };
+  // ELIMINADO: Sistema local de toasts reemplazado por sistema global
 
   // Efectos para manejar errores
   useEffect(() => {
     if (generateError) {
-      addToast('error', `Error generando informe: ${generateError.message}`);
+      showToast(`Error generando informe: ${generateError.message}`, 'error');
     }
-  }, [generateError]);
+  }, [generateError, showToast]);
 
   useEffect(() => {
     if (createError) {
-      addToast('error', `Error creando informe: ${createError.message}`);
+      showToast(`Error creando informe: ${createError.message}`, 'error');
     }
-  }, [createError]);
+  }, [createError, showToast]);
 
   useEffect(() => {
     if (updateError) {
-      addToast('error', `Error actualizando informe: ${updateError.message}`);
+      showToast(`Error actualizando informe: ${updateError.message}`, 'error');
     }
-  }, [updateError]);
+  }, [updateError, showToast]);
 
   useEffect(() => {
     if (deleteError) {
-      addToast('error', `Error eliminando informe: ${deleteError.message}`);
+      showToast(`Error eliminando informe: ${deleteError.message}`, 'error');
     }
-  }, [deleteError]);
+  }, [deleteError, showToast]);
 
-  // Toast automático cuando inicia la generación
-  useEffect(() => {
-    if (isGenerating) {
-      addToast('info', 'Analizando datos del paciente y generando informe... Esto puede tomar 30-60 segundos.');
-    }
-  }, [isGenerating]);
+  // ELIMINADO: Toast automático del useEffect para evitar duplicación
+  // El toast se maneja directamente en handleGenerateNewReport
 
   // Cargar datos del informe seleccionado en el editor
   useEffect(() => {
@@ -120,6 +96,8 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
 
   const handleGenerateNewReport = async () => {
     try {
+      // ELIMINADO: Toast de inicio - el botón ya muestra el estado
+      
       const generatedData = await generateReport({ pacienteId: patientId });
       
       // Crear el informe en la base de datos
@@ -130,7 +108,7 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
         metadatos: generatedData.metadatos
       });
 
-      addToast('success', 'Informe generado exitosamente');
+      showToast('Informe generado exitosamente', 'success');
       
       // Abrir el informe recién creado en el editor
       setSelectedInformeId(newInforme.id);
@@ -140,7 +118,7 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
       
     } catch (error) {
       console.error('Error generating report:', error);
-      addToast('error', 'Error generando el informe. Por favor, verifique su conexión e intente nuevamente.');
+      showToast('Error generando el informe. Por favor, verifique su conexión e intente nuevamente.', 'error');
     }
   };
 
@@ -157,7 +135,7 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
   const handleDeleteInforme = async (informeId: string) => {
     try {
       await deleteReport(informeId);
-      addToast('success', 'Informe eliminado exitosamente');
+      showToast('Informe eliminado exitosamente', 'success');
       
       // Si estábamos editando/viendo este informe, volver a la lista
       if (selectedInformeId === informeId) {
@@ -171,7 +149,7 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
 
   const handleSaveInforme = async () => {
     if (!selectedInformeId || !editingTitulo.trim() || !editingContenido.trim()) {
-      addToast('warning', 'Título y contenido son requeridos');
+      showToast('Título y contenido son requeridos', 'info');
       return;
     }
 
@@ -185,7 +163,7 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
         }
       });
       
-      addToast('success', 'Borrador guardado exitosamente');
+      showToast('Borrador guardado exitosamente', 'success');
       
       // Regresar a la lista después de guardar
       setViewMode('list');
@@ -194,13 +172,13 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
       setEditingContenido('');
     } catch (error) {
       console.error('Error saving report:', error);
-      addToast('error', 'Error al guardar el borrador');
+      showToast('Error al guardar el borrador', 'error');
     }
   };
 
   const handleFinalizeInforme = async () => {
     if (!selectedInformeId || !editingTitulo.trim() || !editingContenido.trim()) {
-      addToast('warning', 'Título y contenido son requeridos para finalizar');
+      showToast('Título y contenido son requeridos para finalizar', 'info');
       return;
     }
 
@@ -214,7 +192,7 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
         }
       });
       
-      addToast('success', 'Informe finalizado exitosamente');
+      showToast('Informe finalizado exitosamente', 'success');
       setViewMode('list');
       setSelectedInformeId(null);
       setEditingTitulo('');
@@ -275,7 +253,7 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
       });
       
       if (!response.ok) {
-        addToast('error', 'Error al obtener el informe');
+        showToast('Error al obtener el informe', 'error');
         return;
       }
       
@@ -283,7 +261,7 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
       await handleDownloadPDF(informe);
     } catch (error) {
       console.error('Error downloading PDF:', error);
-      addToast('error', 'Error al descargar PDF');
+      showToast('Error al descargar PDF', 'error');
     }
   };
 
@@ -637,7 +615,7 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
       }
     } catch (error) {
       console.error('Error generating PDF:', error);
-      addToast('error', 'Error al generar PDF');
+      showToast('Error al generar PDF', 'error');
     }
   };
 
@@ -766,31 +744,7 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
     };
   };
 
-  const getToastIcon = (type: Toast['type']) => {
-    switch (type) {
-      case 'success':
-        return <CheckCircleIcon className="h-5 w-5 text-green-400" />;
-      case 'error':
-        return <XCircleIcon className="h-5 w-5 text-red-400" />;
-      case 'warning':
-        return <ExclamationTriangleIcon className="h-5 w-5 text-yellow-400" />;
-      default:
-        return <CheckCircleIcon className="h-5 w-5 text-blue-400" />;
-    }
-  };
-
-  const getToastStyles = (type: Toast['type']) => {
-    switch (type) {
-      case 'success':
-        return 'bg-green-50 border-green-200 text-green-800';
-      case 'error':
-        return 'bg-red-50 border-red-200 text-red-800';
-      case 'warning':
-        return 'bg-yellow-50 border-yellow-200 text-yellow-800';
-      default:
-        return 'bg-blue-50 border-blue-200 text-blue-800';
-    }
-  };
+  // ELIMINADO: Funciones helper de toasts locales reemplazadas por sistema global
 
   if (error) {
     return (
@@ -814,36 +768,7 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
 
   return (
     <div className="space-y-6">
-      {/* Toasts */}
-      <div className="fixed top-4 right-4 z-50 space-y-2">
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            className={`min-w-96 max-w-md shadow-lg rounded-lg pointer-events-auto border ${getToastStyles(toast.type)} transform transition-all duration-300 ease-in-out`}
-          >
-            <div className="px-4 py-3">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  {getToastIcon(toast.type)}
-                </div>
-                <div className="ml-3 flex-1">
-                  <p className="text-sm font-medium leading-5">
-                    {toast.message}
-                  </p>
-                </div>
-                <div className="ml-4 flex-shrink-0">
-                  <button
-                    className="inline-flex text-gray-400 hover:text-gray-600 focus:outline-none transition-colors"
-                    onClick={() => removeToast(toast.id)}
-                  >
-                    <XCircleIcon className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+      {/* ELIMINADO: Toasts locales reemplazados por sistema global */}
 
       {/* Vista de lista */}
       {viewMode === 'list' && (

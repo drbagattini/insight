@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
         temperature: 0.2, // Más determinístico para informes clínicos con Gemini 2.5 Pro
         topK: 32,
         topP: 0.9,
-        maxOutputTokens: 8192 // Suficiente para informes largos
+        maxOutputTokens: 16384 // Aumentado para informes largos con mega-prompt
       }
     };
 
@@ -158,7 +158,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let generatedContent = geminiData.candidates[0].content.parts[0].text;
+    const candidate = geminiData.candidates[0];
+    let generatedContent = candidate.content.parts[0].text;
+    
+    // 4.0. Logging para diagnosticar problemas de generación
+    console.log('[DEBUG] Gemini finishReason:', candidate.finishReason);
+    console.log('[DEBUG] Content length:', generatedContent.length);
+    console.log('[DEBUG] Content ends with:', generatedContent.substring(generatedContent.length - 200));
+    
+    // Verificar si se cortó por límite de tokens
+    if (candidate.finishReason === 'MAX_TOKENS') {
+      console.warn('[WARNING] Informe cortado por límite de tokens. Considerar aumentar maxOutputTokens.');
+    } else if (candidate.finishReason !== 'STOP') {
+      console.warn('[WARNING] Informe terminado por razón inesperada:', candidate.finishReason);
+    }
     
     // 4.1. Limpiar el contenido HTML de etiquetas de código markdown
     generatedContent = generatedContent

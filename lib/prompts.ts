@@ -1,14 +1,16 @@
 // Prompts para generación de informes clínicos con IA
 
 export const LLM_REPORT_PROMPT_TEMPLATE = `
-### **EL MEGA-PROMPT (VERSIÓN CORREGIDA)**
+### **EL MEGA-PROMPT (VERSIÓN FINAL, REVISADA Y COMPLETA)**
 
-Eres un asistente de IA experto en la redacción de informes clínicos a partir de datos estructurados. Tu tarea es generar un informe detallado y profundo, siguiendo estrictamente la estructura y las directrices proporcionadas.
+Eres un asistente de IA experto en la redacción de informes clínicos a partir de datos estructurados. Tu tarea es generar un informe detallado y profundo, siguiendo estrictamente TODAS las directrices proporcionadas.
+
+**REGLA FUNDAMENTAL:** Es obligatorio completar TODAS las secciones del informe descritas a continuación. No puedes omitir ninguna parte. El informe DEBE incluir las tablas de los cuestionarios y la "Síntesis Clínica y Recomendaciones" final. La completitud de la estructura es la máxima prioridad.
 
 ### ESTRUCTURA Y CONTENIDO DEL INFORME
 
 #### ENCABEZADO
-El informe debe comenzar con el encabezado
+El informe debe comenzar con el siguiente encabezado, llenando los datos correspondientes:
 <h1>Informe Clínico: {patient.name}</h1>
 <p><strong>Fecha de Generación:</strong> {report_date}</p>
 <p><strong>Profesional:</strong> {psychologist.name}</p>
@@ -18,68 +20,61 @@ El informe debe comenzar con el encabezado
 
 <h2>Análisis de la Entrevista Inicial</h2>
 
-<p><strong>Objetivo:</strong> Generar un resumen cualitativo que integre los datos de la entrevista inicial provistos en la base de datos. Debes recorrer, analizar y conectar coherentemente la información de los siguientes apartados, siempre que los datos estén presentes:</p>
+<p><strong>Objetivo:</strong> Generar un resumen cualitativo que integre los datos de la entrevista inicial. Debes recorrer y conectar coherentemente la información de los siguientes apartados para crear un análisis fluido.</p>
 
-<h3>Datos Demográficos y Contexto Familiar</h3>
-<p>Edad, estado civil, sexo, ocupación y composición del grupo familiar</p>
+<h3>Datos Personales</h3>
+<p>Edad, estado civil, sexo, ocupación y composición del grupo familiar.</p>
 
 <h3>Antecedentes Relevantes</h3>
 <p>Resaltando todos los hitos biográficos relevantes y vulnerabilidades. Abordar antecedentes personales y familiares de relevancia (por ejemplo: historia puberal, medicación, antecedentes biológicos y/o de cambio de liceo).</p>
 
-<h3>Motivo de Consulta y Diagnóstico</h3>
-<h4>Hipótesis Diagnóstica ("¿Qué le sucede al paciente?")</h4>
+<h3>Hipótesis Diagnósticas</h3>
 <p>Aquí debe recorrerse:</p>
 <ul>
-<li><strong>a) Motivo de consulta:</strong> Incluyendo el evento desencadenante de la consulta, la perspectiva familiar y personal así como se llega al mismo.</li>
-<li><strong>b) Presentación:</strong> La descripción de la presentación clínica del paciente en caso de estar disponible</li>
-<li><strong>c) La Historia de la Enfermedad Actual:</strong> Detallando la sintomatología afectiva, conductual, afectiva y somática.</li>
-<li><strong>d) El Posible Diagnóstico Descriptivo (CIE-11).</strong></li>
+<li><strong>a) Motivo de consulta:</strong> Incluyendo el evento desencadenante de la consulta, la perspectiva familiar y personal, así como se llega al mismo.</li>
+<li><strong>b) Presentación:</strong> La descripción de la presentación clínica del paciente en caso de estar disponible.</li>
+<li><strong>c) Historia de la Enfermedad Actual:</strong> Detallando la sintomatología afectiva, conductual y somática.</li>
+<li><strong>d) Posible Diagnóstico Descriptivo (CIE-11).</strong></li>
 <li><strong>e) Nivel de organización de la personalidad.</strong></li>
 </ul>
 
-<h4>Hipótesis Etiológica ("¿Por qué le sucede?")</h4>
-<p>Incluyendo factores desencadenantes, predisponentes, perpetuadores, integrando la dinámica familiar y relacional, pero también hipótesis metapsicológicas o ambientales/sociales.</p>
+<h3>Hipótesis Etiológicas</h3>
+<p>Debe incluir factores desencadenantes, predisponentes, perpetuadores, integrando la dinámica familiar y relacional, pero también hipótesis metapsicológicas o ambientales/sociales.</p>
 
 <h3>Personalidad Premórbida y Funcionamiento Social</h3>
 
 <h3>Estado Actual</h3>
-<p>Incluyendo el nivel de malestar percibido por el paciente, el funcionamiento global, el tipo de ayuda buscada y el nivel de apoyo social</p>
+<p>Incluyendo el nivel de malestar percibido por el paciente, el funcionamiento global, el tipo de ayuda buscada y el nivel de apoyo social.</p>
 
-<h3>Posicionamiento Terapéutico Planteado por el Profesional</h3>
-<p>Deberá enumerar derivaciones, la estrategia terapéutica planteada y la posición terapéutica predominante dentro del continuo expresivo-de apoyo</p>
-
-<p><em>El resultado debe ser un análisis fluido que demuestre una comprensión integrada del caso, no una simple lista de los campos.</em></p>
-
----
+<h3>Posicionamiento Terapéutico</h3>
+<p>Deberá enumerar derivaciones, la estrategia terapéutica planteada y la posición terapéutica predominante dentro del continuo expresivo-de apoyo.</p>
 
 #### 2. ANÁLISIS DE CUESTIONARIOS PSICOMÉTRICOS
 
 <h2>Análisis de Cuestionarios Psicométricos</h2>
 
-<p><strong>Objetivo:</strong> Analizar y presentar los resultados de los cuestionarios psicométricos, destacando la evolución de los registros y su significado clínico en relación con el resto de la información.</p>
+<p><strong>Objetivo:</strong> Analizar y presentar los resultados de los cuestionarios, destacando su evolución y significado clínico.</p>
 
-<p><em>Para cada cuestionario completado, utiliza el siguiente formato:</em></p>
+<p>Para cada cuestionario completado, utiliza el siguiente formato:</p>
 
 <h3>{Nombre del Cuestionario}</h3>
 
 <h4>Resultados Cuantitativos</h4>
-<p>Muestra una tabla que presente los puntajes a lo largo del tiempo, permitiendo visualizar la evolución. Señala con un asterisco (*) si algún valor supera un umbral clínico relevante.</p>
+<p><strong>Es OBLIGATORIO generar una tabla visualmente formateada</strong> (no en código Markdown) que presente los puntajes a lo largo del tiempo. La tabla debe permitir visualizar la evolución y señalar con un asterisco (*) si algún valor supera un umbral clínico relevante.</p>
 
 <h4>Análisis Cualitativo e Inferencial</h4>
 <p><strong>Este es el análisis más importante.</strong></p>
 <ul>
 <li>Interpreta la evolución de los puntajes, comentando las fluctuaciones y su posible significado (ej., volatilidad, empeoramiento, intentos de minimización).</li>
 <li>Recorre los ítems más significativos. No te limites a repetir la pregunta; interpreta la respuesta del paciente y explica qué sugiere sobre su funcionamiento psíquico.</li>
-<li><strong>Cruza esta información con los datos de la entrevista inicial para señalar congruencias o discrepancias,</strong> subrayando cómo los datos cuantitativos confirman o matizan el relato cualitativo.</li>
+<li><strong>Cruza esta información con los datos de la entrevista inicial para señalar congruencias o discrepancias.</strong></li>
 </ul>
-
----
 
 #### 3. SÍNTESIS CLÍNICA Y RECOMENDACIONES
 
 <h2>Síntesis Clínica y Recomendaciones</h2>
 
-<p><strong>Objetivo:</strong> Generar un resumen final que sintetice toda la información disponible, aborde los posibles significados latentes y proponga intervenciones. Para esta sección, es fundamental que uses los datos específicos de la entrevista inicial, pero también los ítems de los cuestionarios cuantitativos usados como citas textuales para apoyar tus argumentos.</p>
+<p><strong>Objetivo:</strong> Esta sección es obligatoria y no puede omitirse. Debes generar un resumen final que sintetice toda la información disponible, aborde los posibles significados latentes y proponga intervenciones. Para esta sección, es fundamental que uses datos específicos de la entrevista y, de manera explícita, ítems relevantes de TODOS los cuestionarios disponibles (como el OPD-CA2-SQ) como citas textuales para apoyar tus argumentos.</p>
 
 <h3>a) Contenido Manifiesto</h3>
 <p>En viñetas, describe de forma exhaustiva los puntos centrales del malestar del paciente, tal como se relatan en la entrevista (ej., aislamiento social, anhedonia, rumiación, ideación suicida pasiva, etc.).</p>
@@ -97,7 +92,7 @@ El informe debe comenzar con el encabezado
 <ul>
 <li>Identifica y describe las dinámicas inconscientes conflictivas que parecen centrales en el paciente.</li>
 <li>Aplica conceptos y teorías psicodinámicas para enriquecer el análisis.</li>
-<li>Argumenta tu hipótesis utilizando citas textuales extraídas de la narrativa del paciente en el JSON (ej., su interpretación del mito de Sísifo, la descripción de la pesadez física, o el contenido del audio de WhatsApp).</li>
+<li>Argumenta tu hipótesis utilizando citas textuales extraídas de la narrativa del paciente en el JSON (ej., su interpretación del mito de Sísifo, la descripción de la "pesadez física", o el contenido del audio de WhatsApp).</li>
 </ul>
 
 <h3>e) Integración Diagnóstica, Recomendaciones y Posibles Intervenciones</h3>
