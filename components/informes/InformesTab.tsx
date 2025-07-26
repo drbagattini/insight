@@ -90,7 +90,7 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
   useEffect(() => {
     if (selectedInforme && viewMode === 'edit') {
       setEditingTitulo(selectedInforme.titulo);
-      setEditingContenido(selectedInforme.contenido);
+      setEditingContenido(prepareContentForContext(selectedInforme.contenido, 'editor'));
     }
   }, [selectedInforme, viewMode]);
 
@@ -242,6 +242,54 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
     return cleaned.trim();
   };
 
+  // Función para convertir tablas HTML a formato más compatible
+  const enhanceTablesForEditor = (content: string): string => {
+    if (!content) return '';
+    
+    // Mejorar tablas HTML para mejor compatibilidad con TipTap y PDF
+    let enhanced = content;
+    
+    // Asegurar que las tablas tengan clases CSS apropiadas
+    enhanced = enhanced.replace(/<table(?![^>]*class)/gi, '<table class="clinical-table"');
+    enhanced = enhanced.replace(/<table([^>]*class="[^"]*)/gi, '<table$1 clinical-table');
+    
+    // Asegurar estructura completa de tabla
+    enhanced = enhanced.replace(/<table([^>]*)>(?!\s*<thead>)(?!\s*<tbody>)/gi, '<table$1><tbody>');
+    enhanced = enhanced.replace(/<\/table>/gi, '</tbody></table>');
+    
+    // Limpiar tablas duplicadas o mal formadas
+    enhanced = enhanced.replace(/<tbody>\s*<tbody>/gi, '<tbody>');
+    enhanced = enhanced.replace(/<\/tbody>\s*<\/tbody>/gi, '</tbody>');
+    
+    return enhanced;
+  };
+
+  // Función para preparar contenido para diferentes contextos
+  const prepareContentForContext = (content: string, context: 'editor' | 'pdf' | 'view'): string => {
+    if (!content) return '';
+    
+    let prepared = cleanHTMLContent(content);
+    
+    switch (context) {
+      case 'editor':
+        // Para el editor, mantener HTML simple pero funcional
+        prepared = enhanceTablesForEditor(prepared);
+        break;
+      case 'pdf':
+        // Para PDF, asegurar que las tablas sean compatibles con impresión
+        prepared = enhanceTablesForEditor(prepared);
+        // Agregar saltos de página apropiados
+        prepared = prepared.replace(/<h2/gi, '<div class="page-break-before"></div><h2');
+        break;
+      case 'view':
+        // Para vista previa, mantener HTML completo
+        prepared = enhanceTablesForEditor(prepared);
+        break;
+    }
+    
+    return prepared;
+  };
+
 
 
   // Función wrapper para descargar PDF desde la lista
@@ -268,7 +316,7 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
   const handleDownloadPDF = async (informe: InformeClinico) => {
     try {
       // Limpiar el contenido HTML
-      const cleanedContent = cleanHTMLContent(informe.contenido);
+      const cleanedContent = prepareContentForContext(informe.contenido, 'pdf');
       
       // Crear iframe oculto para impresión limpia (mejor UX)
       const iframe = document.createElement('iframe');
@@ -632,7 +680,7 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
     if (!printWindow || !selectedInforme) return;
 
     // Limpiar el contenido HTML
-    const cleanedContent = cleanHTMLContent(selectedInforme.contenido);
+    const cleanedContent = prepareContentForContext(selectedInforme.contenido, 'pdf');
 
     // HTML completo para la ventana de impresión
     const printHTML = `
@@ -880,7 +928,7 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
               <div 
                 className="bg-white border border-gray-300 rounded-lg shadow-lg document-view print-document"
                 dangerouslySetInnerHTML={{ 
-                  __html: cleanHTMLContent(selectedInforme.contenido)
+                  __html: prepareContentForContext(selectedInforme.contenido, 'view')
                 }}
               />
             </div>
@@ -912,7 +960,7 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
             <div 
               className="document-view"
               dangerouslySetInnerHTML={{ 
-                __html: cleanHTMLContent(selectedInforme.contenido)
+                __html: prepareContentForContext(selectedInforme.contenido, 'view')
               }}
             />
           </div>
@@ -994,28 +1042,59 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
               font-style: italic;
             }
             
-            .document-view table {
+            .document-view table,
+            .document-view .clinical-table {
               width: 100%;
               border-collapse: collapse;
               margin: 1.5em 0;
               font-size: 11pt;
+              border: 2px solid #333;
+              page-break-inside: avoid;
             }
             
             .document-view th,
             .document-view td {
-              border: 1px solid #ddd;
-              padding: 8px 12px;
+              border: 1px solid #333;
+              padding: 10px 12px;
               text-align: left;
               vertical-align: top;
+              word-wrap: break-word;
             }
             
             .document-view th {
-              background-color: #f8f9fa;
+              background-color: #e9ecef;
               font-weight: bold;
+              border-bottom: 2px solid #333;
             }
             
             .document-view tr:nth-child(even) {
-              background-color: #f9f9f9;
+              background-color: #f8f9fa;
+            }
+            
+            .document-view tbody tr:hover {
+              background-color: #e3f2fd;
+            }
+            
+            /* Estilos específicos para tablas clínicas */
+            .document-view .clinical-table {
+              font-family: 'Times New Roman', serif;
+              margin: 2em 0;
+            }
+            
+            .document-view .clinical-table th {
+              background-color: #d1ecf1;
+              color: #0c5460;
+              text-align: center;
+              font-weight: bold;
+            }
+            
+            .document-view .clinical-table td {
+              text-align: center;
+            }
+            
+            .document-view .clinical-table td:first-child {
+              text-align: left;
+              font-weight: 500;
             }
             
             .document-view .page-break {

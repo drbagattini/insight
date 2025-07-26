@@ -324,28 +324,49 @@ export default function InformeEditor({
           font-style: italic;
         }
         
-        .document-style .ProseMirror table {
+        .document-style .ProseMirror table,
+        .document-style .ProseMirror .clinical-table {
           width: 100%;
           border-collapse: collapse;
           margin: 1.5em 0;
           font-size: 11pt;
+          border: 2px solid #333;
         }
         
         .document-style .ProseMirror th,
         .document-style .ProseMirror td {
-          border: 1px solid #ddd;
-          padding: 8px 12px;
+          border: 1px solid #333;
+          padding: 10px 12px;
           text-align: left;
           vertical-align: top;
+          word-wrap: break-word;
         }
         
         .document-style .ProseMirror th {
-          background-color: #f8f9fa;
+          background-color: #e9ecef;
           font-weight: bold;
+          border-bottom: 2px solid #333;
         }
         
         .document-style .ProseMirror tr:nth-child(even) {
-          background-color: #f9f9f9;
+          background-color: #f8f9fa;
+        }
+        
+        /* Estilos específicos para tablas clínicas en el editor */
+        .document-style .ProseMirror .clinical-table th {
+          background-color: #d1ecf1;
+          color: #0c5460;
+          text-align: center;
+          font-weight: bold;
+        }
+        
+        .document-style .ProseMirror .clinical-table td {
+          text-align: center;
+        }
+        
+        .document-style .ProseMirror .clinical-table td:first-child {
+          text-align: left;
+          font-weight: 500;
         }
         
         .document-style .ProseMirror .is-editor-empty:first-child::before {

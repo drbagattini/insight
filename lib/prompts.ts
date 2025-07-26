@@ -28,76 +28,80 @@ El informe debe comenzar con el siguiente encabezado, llenando los datos corresp
 <h3>Antecedentes Relevantes</h3>
 <p>Resaltando todos los hitos biográficos relevantes y vulnerabilidades. Abordar antecedentes personales y familiares de relevancia (por ejemplo: historia puberal, medicación, antecedentes biológicos y/o de cambio de liceo).</p>
 
-<h3>Hipótesis Diagnósticas</h3>
-<p>Aquí debe recorrerse:</p>
-<ul>
-<li><strong>a) Motivo de consulta:</strong> Incluyendo el evento desencadenante de la consulta, la perspectiva familiar y personal, así como se llega al mismo.</li>
-<li><strong>b) Presentación:</strong> La descripción de la presentación clínica del paciente en caso de estar disponible.</li>
-<li><strong>c) Historia de la Enfermedad Actual:</strong> Detallando la sintomatología afectiva, conductual y somática.</li>
-<li><strong>d) Posible Diagnóstico Descriptivo (CIE-11).</strong></li>
-<li><strong>e) Nivel de organización de la personalidad.</strong></li>
-</ul>
+<h3>Cuadro Clínico e Hipótesis Diagnósticas</h3>
+<h4>a) Motivo de consulta</h4>
+<p>Incluyendo el evento desencadenante de la consulta, la perspectiva familiar y personal, así como se llega al mismo.</p>
 
-<h3>Hipótesis Etiológicas</h3>
+<h4>b) Presentación</h4>
+<p>La descripción de la presentación clínica del paciente en caso de estar disponible.</p>
+
+<h4>c) Historia de la Enfermedad Actual</h4>
+<p>Detallando la sintomatología afectiva, conductual y somática.</p>
+
+<h4>d) Posible Diagnóstico Descriptivo (CIE-11)</h4>
+
+<h4>e) Nivel de organización de la personalidad</h4>
+
+<h3>Análisis Etiológico</h3>
 <p>Debe incluir factores desencadenantes, predisponentes, perpetuadores, integrando la dinámica familiar y relacional, pero también hipótesis metapsicológicas o ambientales/sociales.</p>
 
-<h3>Personalidad Premórbida y Funcionamiento Social</h3>
+<h3>Funcionamiento Previo</h3>
 
-<h3>Estado Actual</h3>
+<h3>Nivel de Afectación Actual</h3>
 <p>Incluyendo el nivel de malestar percibido por el paciente, el funcionamiento global, el tipo de ayuda buscada y el nivel de apoyo social.</p>
 
-<h3>Posicionamiento Terapéutico</h3>
+<h3>Plan de Intervención</h3>
 <p>Deberá enumerar derivaciones, la estrategia terapéutica planteada y la posición terapéutica predominante dentro del continuo expresivo-de apoyo.</p>
 
-#### 2. ANÁLISIS DE CUESTIONARIOS PSICOMÉTRICOS
+**2. ANÁLISIS DE CUESTIONARIOS PSICOMÉTRICOS**
+(Debe seguir la "Filosofía y Voz" descrita, aplicando el principio de triangulación)
 
 <h2>Análisis de Cuestionarios Psicométricos</h2>
 
-<p><strong>Objetivo:</strong> Analizar y presentar los resultados de los cuestionarios, destacando su evolución y significado clínico.</p>
-
-<p>Para cada cuestionario completado, utiliza el siguiente formato:</p>
+Para cada cuestionario completado, utiliza el siguiente formato:
 
 <h3>{Nombre del Cuestionario}</h3>
 
 <h4>Resultados Cuantitativos</h4>
-<p><strong>Es OBLIGATORIO generar una tabla visualmente formateada</strong> (no en código Markdown) que presente los puntajes a lo largo del tiempo. La tabla debe permitir visualizar la evolución y señalar con un asterisco (*) si algún valor supera un umbral clínico relevante.</p>
+<p>Es OBLIGATORIO generar una tabla visualmente formateada (no en código Markdown) que presente los puntajes a lo largo del tiempo. La tabla debe permitir visualizar la evolución y señalar con un asterisco (*) si algún valor supera un umbral clínico relevante.</p>
 
 <h4>Análisis Cualitativo e Inferencial</h4>
-<p><strong>Este es el análisis más importante.</strong></p>
+<p>Este es el análisis más importante.</p>
 <ul>
 <li>Interpreta la evolución de los puntajes, comentando las fluctuaciones y su posible significado (ej., volatilidad, empeoramiento, intentos de minimización).</li>
-<li>Recorre los ítems más significativos. No te limites a repetir la pregunta; interpreta la respuesta del paciente y explica qué sugiere sobre su funcionamiento psíquico.</li>
-<li><strong>Cruza esta información con los datos de la entrevista inicial para señalar congruencias o discrepancias.</strong></li>
+<li>Recorre los ítems más significativos. No te limites a repetir la pregunta; interpreta la respuesta del paciente y explica qué sugiere sobre su funcionamiento psíquico, tratando el texto del ítem como un dato cualitativo en sí mismo.</li>
+<li><strong>ESPECIAL para OPD-CA2-SQ:</strong> Utiliza TANTO las subescalas con T-scores (ej., "Regulación de la Autoestima T=68", "Base Segura Interna T=67") COMO ítems individuales específicos de los 81 ítems que sean clínicamente relevantes. Las subescalas proporcionan el marco cuantitativo, mientras que los ítems individuales ofrecen la riqueza cualitativa del funcionamiento psíquico del paciente.</li>
+<li>Cruza esta información con los datos de la entrevista inicial para señalar congruencias o discrepancias.</li>
 </ul>
 
-#### 3. SÍNTESIS CLÍNICA Y RECOMENDACIONES
+**3. FORMULACIÓN CLÍNICA INTEGRADA**
+(Esta sección es la culminación de la "Filosofía y Voz", donde los "ejes centrales" deben ser más evidentes que nunca)
 
-<h2>Síntesis Clínica y Recomendaciones</h2>
+<h2>Formulación Clínica Integrada</h2>
 
-<p><strong>Objetivo:</strong> Esta sección es obligatoria y no puede omitirse. Debes generar un resumen final que sintetice toda la información disponible, aborde los posibles significados latentes y proponga intervenciones. Para esta sección, es fundamental que uses datos específicos de la entrevista y, de manera explícita, ítems relevantes de TODOS los cuestionarios disponibles (como el OPD-CA2-SQ) como citas textuales para apoyar tus argumentos.</p>
+<p><strong>Objetivo:</strong> Esta sección final y obligatoria debe integrar todo el material anterior en una comprensión profunda del caso y un plan de acción claro, siguiendo la estructura de subtítulos que se detalla a continuación. <strong>Para el OPD-CA2-SQ específicamente:</strong> utiliza tanto las subescalas con T-scores (ej., "Regulación de la Autoestima T=68") como ítems individuales relevantes de los 81 ítems para enriquecer y dar profundidad a tu argumento, evitando que las referencias se sientan como simples citas o listas.</p>
 
-<h3>a) Contenido Manifiesto</h3>
+<h3>a) Formulación Comprensiva del Caso</h3>
+<p>Bajo este subtítulo, debes desarrollar la valoración clínica final. Integra los siguientes análisis en una prosa fluida y coherente, culminando en un párrafo de "en suma" que funcione como la formulación psicodinámica central.</p>
+
+<h4>Contenido Manifiesto</h4>
 <p>En viñetas, describe de forma exhaustiva los puntos centrales del malestar del paciente, tal como se relatan en la entrevista (ej., aislamiento social, anhedonia, rumiación, ideación suicida pasiva, etc.).</p>
 
-<h3>b) Emociones Predominantes</h3>
-<ul>
-<li>Describe el estado afectivo del paciente (ej., desesperanza, vergüenza, apatía).</li>
-<li>A partir de la información del caso, infiere las posibles emociones contratransferenciales del terapeuta y cómo estas podrían influir en la relación terapéutica.</li>
-</ul>
+<h4>Emociones Predominantes</h4>
+<p>Describe el estado afectivo del paciente (ej., desesperanza, vergüenza, apatía). A partir de la información del caso, infiere las posibles emociones contratransferenciales del terapeuta y cómo estas podrían influir en la relación terapéutica.</p>
 
-<h3>c) Transferencia y Contratransferencia</h3>
-<p><strong>Transferencia del Paciente:</strong> Analiza la oferta relacional que el paciente presenta. Describe explícitamente qué rol dramatiza en sus vínculos y que probablemente se active en la terapia (ej., "niño desvalido que busca un cuidador idealizado", "fracasado frente a un otro exigente").</p>
+<h4>Transferencia</h4>
+<p>Analiza la oferta relacional que el paciente presenta. Describe explícitamente qué rol dramatiza en sus vínculos y que probablemente se active en la terapia (ej., "niño desvalido que busca un cuidador idealizado", "fracasado frente a un otro exigente").</p>
 
-<h3>d) Conflicto Inconsciente</h3>
-<ul>
-<li>Identifica y describe las dinámicas inconscientes conflictivas que parecen centrales en el paciente.</li>
-<li>Aplica conceptos y teorías psicodinámicas para enriquecer el análisis.</li>
-<li>Argumenta tu hipótesis utilizando citas textuales extraídas de la narrativa del paciente en el JSON (ej., su interpretación del mito de Sísifo, la descripción de la "pesadez física", o el contenido del audio de WhatsApp).</li>
-</ul>
+<h4>Conflicto Inconsciente</h4>
+<p>Identifica y describe las dinámicas inconscientes conflictivas que parecen centrales en el paciente. Aplica conceptos y teorías psicodinámicas para enriquecer el análisis y argumenta tu hipótesis utilizando citas textuales.</p>
 
-<h3>e) Integración Diagnóstica, Recomendaciones y Posibles Intervenciones</h3>
+<h4>Párrafo de "En Suma"</h4>
+<p>Redacta uno o dos párrafos que desarrollen la formulación psicodinámica integrada del caso, conectando los hallazgos en una narrativa cohesiva.</p>
+
+<h3>b) Plan de Intervención</h3>
+<p>Bajo este subtítulo, presenta las recomendaciones prácticas en formato de lista. Deben ser claras, accionables y estar fundamentadas en el análisis anterior.</p>
 <ul>
-<li>Redacta un "en suma" de dos o tres párrafos que integre todo lo discutido en una síntesis psicodinámica.</li>
 <li>Reflexiona sobre las posibles intervenciones e indicaciones biopsicosociales (considerando la derivación a psiquiatría ya sugerida en el plan).</li>
 <li>Incorpora referencias a teorías o modelos específicos si son relevantes para el caso.</li>
 </ul>
