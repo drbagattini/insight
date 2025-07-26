@@ -4,6 +4,10 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Typography from '@tiptap/extension-typography';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableHeader } from '@tiptap/extension-table-header';
+import { TableCell } from '@tiptap/extension-table-cell';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -63,6 +67,12 @@ export default function InformeEditor({
         placeholder: 'Comience a escribir el informe clínico aquí...',
       }),
       Typography,
+      Table.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
     ],
     content: contenido,
     immediatelyRender: false, // Soluciona el error de SSR
@@ -239,6 +249,54 @@ export default function InformeEditor({
             >
               1. Lista
             </button>
+            
+            {/* Separador */}
+            <div className="w-px h-6 bg-gray-300 mx-1"></div>
+            
+            {/* Botones de tabla */}
+            <button
+              onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+              className="px-3 py-1 text-sm rounded border bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+              title="Insertar tabla 3x3"
+            >
+              📊 Tabla
+            </button>
+            <button
+              onClick={() => editor.chain().focus().addColumnBefore().run()}
+              disabled={!editor.isActive('table')}
+              className={`px-3 py-1 text-sm rounded border ${
+                !editor.isActive('table')
+                  ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+              }`}
+              title="Agregar columna"
+            >
+              ➕ Col
+            </button>
+            <button
+              onClick={() => editor.chain().focus().addRowBefore().run()}
+              disabled={!editor.isActive('table')}
+              className={`px-3 py-1 text-sm rounded border ${
+                !editor.isActive('table')
+                  ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+              }`}
+              title="Agregar fila"
+            >
+              ➕ Fila
+            </button>
+            <button
+              onClick={() => editor.chain().focus().deleteTable().run()}
+              disabled={!editor.isActive('table')}
+              className={`px-3 py-1 text-sm rounded border ${
+                !editor.isActive('table')
+                  ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-red-50 border-red-300 text-red-700 hover:bg-red-100'
+              }`}
+              title="Eliminar tabla"
+            >
+              🗑️ Tabla
+            </button>
           </div>
         </div>
       )}
@@ -367,6 +425,40 @@ export default function InformeEditor({
         .document-style .ProseMirror .clinical-table td:first-child {
           text-align: left;
           font-weight: 500;
+        }
+        
+        /* Estilos específicos para tablas de TipTap */
+        .document-style .ProseMirror .tableWrapper {
+          overflow-x: auto;
+          margin: 1.5em 0;
+        }
+        
+        .document-style .ProseMirror .selectedCell:after {
+          z-index: 2;
+          position: absolute;
+          content: "";
+          left: 0; right: 0; top: 0; bottom: 0;
+          background: rgba(200, 200, 255, 0.4);
+          pointer-events: none;
+        }
+        
+        .document-style .ProseMirror .column-resize-handle {
+          position: absolute;
+          right: -2px;
+          top: 0;
+          bottom: -2px;
+          width: 4px;
+          background-color: #adf;
+          pointer-events: none;
+        }
+        
+        .document-style .ProseMirror table .selectedCell {
+          background: rgba(200, 200, 255, 0.4);
+        }
+        
+        .document-style .ProseMirror .resize-cursor {
+          cursor: ew-resize;
+          cursor: col-resize;
         }
         
         .document-style .ProseMirror .is-editor-empty:first-child::before {

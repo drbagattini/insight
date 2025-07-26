@@ -533,12 +533,35 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
                 width: 100%; 
                 border-collapse: collapse; 
                 margin: 1.5em 0; 
-                font-size: 11pt; 
+                font-size: 11pt;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                display: table !important;
               }
+              
+              table thead {
+                display: table-header-group !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+              }
+              
+              table tbody {
+                display: table-row-group !important;
+              }
+              
+              table tr {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                display: table-row !important;
+              }
+              
               th, td { 
                 border: 1px solid #bdc3c7; 
                 padding: 8px 12px; 
-                text-align: left; 
+                text-align: left;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                display: table-cell !important;
               }
               th { 
                 background-color: #ecf0f1; 
@@ -638,6 +661,38 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
                   ul, ol {
                     page-break-inside: avoid !important;
                     break-inside: avoid !important;
+                  }
+                  
+                  /* Reglas específicas para tablas - REFORZADO */
+                  table {
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
+                    break-inside: avoid-page !important;
+                    display: table !important;
+                    margin-top: 1.5em !important;
+                    margin-bottom: 2em !important;
+                  }
+                  
+                  table thead {
+                    display: table-header-group !important;
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
+                  }
+                  
+                  table tbody {
+                    display: table-row-group !important;
+                  }
+                  
+                  table tr {
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
+                    display: table-row !important;
+                  }
+                  
+                  table td, table th {
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
+                    display: table-cell !important;
                   }
                 </style>
               `;
@@ -753,12 +808,35 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
               border-collapse: collapse;
               margin: 1.5em 0;
               font-size: 11pt;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              display: table !important;
             }
+            
+            table thead {
+              display: table-header-group !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            
+            table tbody {
+              display: table-row-group !important;
+            }
+            
+            table tr {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              display: table-row !important;
+            }
+            
             th, td {
               border: 1px solid #ddd;
               padding: 8px 12px;
               text-align: left;
               vertical-align: top;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              display: table-cell !important;
             }
             th {
               background-color: #f8f9fa;
@@ -994,9 +1072,14 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
               font-weight: bold;
               margin: 2.5em 0 1em 0;
               color: #000;
-              border-bottom: 1px solid #ddd;
+              border-bottom: none;
               padding-bottom: 0.5em;
               page-break-after: avoid;
+            }
+            
+            /* Solo agregar border-bottom a h2 que NO sean el primero */
+            .document-view h2:not(:first-of-type) {
+              border-bottom: 1px solid #ddd;
             }
             
             .document-view h3 {
@@ -1049,7 +1132,35 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
               margin: 1.5em 0;
               font-size: 11pt;
               border: 2px solid #333;
-              page-break-inside: avoid;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              page-break-before: auto;
+              page-break-after: auto;
+              display: table;
+            }
+            
+            /* Reglas adicionales para evitar corte de tablas */
+            .document-view table thead {
+              display: table-header-group;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            
+            .document-view table tbody {
+              display: table-row-group;
+            }
+            
+            .document-view table tr {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              display: table-row;
+            }
+            
+            .document-view table td,
+            .document-view table th {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              display: table-cell;
             }
             
             .document-view th,
@@ -1145,6 +1256,45 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
                 size: A4;
               }
               
+              /* Reglas específicas y robustas para tablas */
+              .document-view table {
+                page-break-inside: avoid !important;
+                break-inside: avoid-page !important;
+                break-inside: avoid !important;
+                margin-top: 1.5em !important;
+                margin-bottom: 2em !important;
+              }
+              
+              .document-view table,
+              .document-view .clinical-table {
+                display: table !important;
+                table-layout: fixed !important;
+                width: 100% !important;
+              }
+              
+              .document-view table thead {
+                display: table-header-group !important;
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+              }
+              
+              .document-view table tbody {
+                display: table-row-group !important;
+              }
+              
+              .document-view table tr {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                display: table-row !important;
+              }
+              
+              .document-view table td,
+              .document-view table th {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                display: table-cell !important;
+              }
+              
               /* Asegurar que solo se imprima el documento */
               body {
                 margin: 0 !important;
@@ -1167,6 +1317,42 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
                 top: 0;
                 width: 100%;
               }
+              
+              /* Reglas específicas para tablas en impresión */
+              .document-view table,
+              .document-view .clinical-table {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                margin-top: 1em !important;
+                margin-bottom: 2em !important;
+              }
+              
+              .document-view table thead {
+                display: table-header-group !important;
+              }
+              
+              .document-view table tbody {
+                display: table-row-group !important;
+              }
+              
+              .document-view table tr {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+              }
+            }
+            
+            /* Eliminar línea debajo del nombre del profesional */
+            .document-view p:has(+ p:contains("Profesional:")) {
+              border-bottom: none !important;
+            }
+            
+            .document-view p + p {
+              border-bottom: none !important;
+            }
+            
+            /* Regla más específica para eliminar líneas no deseadas */
+            .document-view p[style*="border-bottom"] {
+              border-bottom: none !important;
             }
           `}</style>
         </div>

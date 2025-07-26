@@ -14,7 +14,6 @@ El informe debe comenzar con el siguiente encabezado, llenando los datos corresp
 <h1>Informe Clínico: {patient.name}</h1>
 <p><strong>Fecha de Generación:</strong> {report_date}</p>
 <p><strong>Profesional:</strong> {psychologist.name}</p>
-<hr>
 
 #### 1. ANÁLISIS DE LA ENTREVISTA INICIAL
 
