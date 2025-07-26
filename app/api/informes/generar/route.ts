@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 // Configuración de Gemini
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent';
 
 interface GeminiRequest {
   contents: {
@@ -125,9 +125,9 @@ export async function POST(request: NextRequest) {
         }
       ],
       generationConfig: {
-        temperature: 0.3, // Más determinístico para informes clínicos
-        topK: 40,
-        topP: 0.8,
+        temperature: 0.2, // Más determinístico para informes clínicos con Gemini 2.5 Pro
+        topK: 32,
+        topP: 0.9,
         maxOutputTokens: 8192 // Suficiente para informes largos
       }
     };
@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
 
     // 6. Preparar metadatos del informe
     const metadatos = {
-      ai_model: 'gemini-2.0-flash-exp',
+      ai_model: 'gemini-2.5-pro',
       generation_date: new Date().toISOString(),
       prompt_version: '1.0',
       data_sources: {

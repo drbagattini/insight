@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { 
   SparklesIcon, 
@@ -58,9 +58,12 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
     isLoading: isLoadingInforme,
   } = useInforme(selectedInformeId);
 
+  // Contador para IDs únicos
+  const toastIdCounter = useRef(0);
+
   // Manejar toasts
   const addToast = (type: Toast['type'], message: string) => {
-    const id = Date.now().toString();
+    const id = `toast-${Date.now()}-${++toastIdCounter.current}`;
     setToasts(prev => [...prev, { id, type, message }]);
     
     // Duración diferente según el tipo
@@ -100,6 +103,13 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
     }
   }, [deleteError]);
 
+  // Toast automático cuando inicia la generación
+  useEffect(() => {
+    if (isGenerating) {
+      addToast('info', 'Analizando datos del paciente y generando informe... Esto puede tomar 30-60 segundos.');
+    }
+  }, [isGenerating]);
+
   // Cargar datos del informe seleccionado en el editor
   useEffect(() => {
     if (selectedInforme && viewMode === 'edit') {
@@ -110,20 +120,7 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
 
   const handleGenerateNewReport = async () => {
     try {
-      addToast('info', 'Iniciando generación de informe con IA...');
-      
-      // Agregar toast de progreso
-      const progressToastId = Date.now().toString();
-      setToasts(prev => [...prev, { 
-        id: progressToastId, 
-        type: 'info', 
-        message: 'Analizando datos del paciente y generando informe... Esto puede tomar 30-60 segundos.' 
-      }]);
-      
       const generatedData = await generateReport({ pacienteId: patientId });
-      
-      // Remover toast de progreso
-      setToasts(prev => prev.filter(toast => toast.id !== progressToastId));
       
       // Crear el informe en la base de datos
       const newInforme = await createReport({
