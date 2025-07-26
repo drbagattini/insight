@@ -11,7 +11,7 @@ import {
   PencilIcon,
   TrashIcon
 } from '@heroicons/react/24/outline';
-import { useInformes, useInforme } from '@/app/hooks/useInformes';
+import { useInformes, useInforme, InformeClinico } from '@/app/hooks/useInformes';
 import InformesList from './InformesList';
 import InformeEditor from './InformeEditor';
 
@@ -240,94 +240,34 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
     
     let cleaned = content;
     
-    // Limpiar al inicio del contenido
-    cleaned = cleaned.replace(/^\s*```html\s*\n?/i, '');
-    cleaned = cleaned.replace(/^\s*```\s*\n?/i, '');
-    cleaned = cleaned.replace(/^\s*html\s*\n?/i, '');
-    cleaned = cleaned.replace(/^\s*`html`\s*\n?/i, '');
+    // Eliminar bloques de código markdown al inicio
+    cleaned = cleaned.replace(/^\s*```html\s*\n?/gi, '');
+    cleaned = cleaned.replace(/^\s*```\s*\n?/gi, '');
+    cleaned = cleaned.replace(/^\s*html\s*\n?/gi, '');
+    cleaned = cleaned.replace(/^\s*`html`\s*\n?/gi, '');
     
-    // Limpiar al final del contenido
-    cleaned = cleaned.replace(/\n?\s*```\s*$/i, '');
-    cleaned = cleaned.replace(/\n?\s*html\s*$/i, '');
+    // Eliminar bloques de código markdown al final
+    cleaned = cleaned.replace(/\n?\s*```\s*$/gi, '');
+    cleaned = cleaned.replace(/\n?\s*html\s*$/gi, '');
     
-    // Limpiar líneas que solo contienen markdown
-    cleaned = cleaned.replace(/^\s*```\s*$/gm, '');
+    // Eliminar líneas que solo contienen markdown
+    cleaned = cleaned.replace(/^\s*```[a-zA-Z]*\s*$/gm, '');
     cleaned = cleaned.replace(/^\s*html\s*$/gm, '');
     cleaned = cleaned.replace(/^\s*`html`\s*$/gm, '');
+    
+    // Eliminar texto "html" suelto al inicio de líneas
+    cleaned = cleaned.replace(/^html\s*/gm, '');
+    
+    // Eliminar markdown headers que no son HTML válido
+    cleaned = cleaned.replace(/^#{1,6}\s*/gm, '');
+    
+    // Eliminar backticks sueltos
+    cleaned = cleaned.replace(/`{1,3}/g, '');
     
     return cleaned.trim();
   };
 
-  const handleDownloadPDF = () => {
-    if (!selectedInforme) return;
-    
-    const cleanedContent = cleanHTMLContent(selectedInforme.contenido);
 
-    // Crear iframe oculto para impresión
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'absolute';
-    iframe.style.left = '-9999px';
-    iframe.style.width = '1px';
-    iframe.style.height = '1px';
-    document.body.appendChild(iframe);
-
-    // HTML optimizado para PDF
-    const pdfHTML = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <title>${selectedInforme.titulo}</title>
-          <style>
-            @page {
-              size: A4;
-              margin: 2cm;
-            }
-            body {
-              font-family: 'Times New Roman', Times, serif;
-              font-size: 12pt;
-              line-height: 1.8;
-              color: #000;
-              margin: 0;
-              padding: 0;
-            }
-            h1 { font-size: 20pt; font-weight: bold; margin: 0 0 2em 0; text-align: center; }
-            h2 { font-size: 16pt; font-weight: bold; margin: 2.5em 0 1em 0; border-bottom: 1px solid #ddd; padding-bottom: 0.5em; }
-            h3 { font-size: 14pt; font-weight: bold; margin: 2em 0 0.8em 0; }
-            h4 { font-size: 12pt; font-weight: bold; margin: 1.5em 0 0.5em 0; }
-            p { margin: 0 0 1.2em 0; text-align: justify; }
-            ul, ol { margin: 1em 0 1.5em 0; padding-left: 2em; }
-            li { margin: 0.5em 0; text-align: justify; }
-            table { width: 100%; border-collapse: collapse; margin: 1.5em 0; font-size: 11pt; }
-            th, td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; }
-            th { background-color: #f8f9fa; font-weight: bold; }
-          </style>
-        </head>
-        <body>
-          ${cleanedContent}
-        </body>
-      </html>
-    `;
-
-    // Escribir contenido al iframe
-    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (iframeDoc) {
-      iframeDoc.open();
-      iframeDoc.write(pdfHTML);
-      iframeDoc.close();
-
-      // Esperar a que se cargue y luego imprimir
-      iframe.onload = () => {
-        setTimeout(() => {
-          iframe.contentWindow?.print();
-          // Limpiar después de un tiempo
-          setTimeout(() => {
-            document.body.removeChild(iframe);
-          }, 1000);
-        }, 100);
-      };
-    }
-  };
 
   // Función wrapper para descargar PDF desde la lista
   const handleDownloadPDFFromList = async (informeId: string) => {
@@ -343,14 +283,25 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
       }
       
       const informe = await response.json();
-      const cleanedContent = cleanHTMLContent(informe.contenido);
+      await handleDownloadPDF(informe);
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      addToast('error', 'Error al descargar PDF');
+    }
+  };
 
-      // Crear iframe oculto para impresión
+  const handleDownloadPDF = async (informe: InformeClinico) => {
+    try {
+      // Limpiar el contenido HTML
+      const cleanedContent = cleanHTMLContent(informe.contenido);
+      
+      // Crear iframe oculto para impresión limpia (mejor UX)
       const iframe = document.createElement('iframe');
       iframe.style.position = 'absolute';
       iframe.style.left = '-9999px';
-      iframe.style.width = '1px';
-      iframe.style.height = '1px';
+      iframe.style.width = '210mm'; // A4 width
+      iframe.style.height = '297mm'; // A4 height
+      iframe.style.border = 'none';
       document.body.appendChild(iframe);
 
       // HTML optimizado para PDF
@@ -361,32 +312,233 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
             <meta charset="utf-8">
             <title>${informe.titulo}</title>
             <style>
+              /* Configuración de página con márgenes optimizados */
               @page {
                 size: A4;
-                margin: 2cm;
+                margin: 2.5cm 1.5cm 2.5cm 1.5cm !important;
+                /* Eliminar headers y footers del navegador */
+                @top-left-corner { content: ""; }
+                @top-left { content: ""; }
+                @top-center { content: ""; }
+                @top-right { content: ""; }
+                @top-right-corner { content: ""; }
+                @bottom-left-corner { content: ""; }
+                @bottom-left { content: ""; }
+                @bottom-center { content: ""; }
+                @bottom-right { content: ""; }
+                @bottom-right-corner { content: ""; }
               }
+              
+              /* Configuración base para todos los medios */
+              * {
+                box-sizing: border-box;
+              }
+              
+              html, body {
+                margin: 0;
+                padding: 0;
+                font-family: 'Times New Roman', Times, serif;
+                font-size: 12pt;
+                line-height: 1.3;
+              }
+              
+              @media print {
+                @page {
+                  size: A4;
+                  margin: 2.5cm 1.5cm 2.5cm 1.5cm !important;
+                  /* Forzar eliminación de headers/footers */
+                  @top-left-corner { content: "" !important; }
+                  @top-left { content: "" !important; }
+                  @top-center { content: "" !important; }
+                  @top-right { content: "" !important; }
+                  @top-right-corner { content: "" !important; }
+                  @bottom-left-corner { content: "" !important; }
+                  @bottom-left { content: "" !important; }
+                  @bottom-center { content: "" !important; }
+                  @bottom-right { content: "" !important; }
+                  @bottom-right-corner { content: "" !important; }
+                }
+                
+                html {
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  -webkit-print-color-adjust: exact;
+                  print-color-adjust: exact;
+                  height: 100% !important;
+                }
+                
+                body {
+                  margin: 0 !important;
+                  padding: 2cm 1cm !important;
+                  line-height: 1.3 !important;
+                  font-family: 'Times New Roman', Times, serif !important;
+                  font-size: 12pt !important;
+                  min-height: 100% !important;
+                }
+                
+                /* Contenedor principal con padding reducido */
+                .content {
+                  padding: 0.5cm 0.5cm !important;
+                  margin: 0 !important;
+                }
+                
+                /* Título del documento (dentro del contenido) */
+                h1 {
+                  margin: 0 0 1cm 0 !important;
+                  padding: 0.3cm 0 !important;
+                  page-break-after: avoid !important;
+                  break-after: avoid !important;
+                }
+                
+                /* Contenido principal - inicia desde el top */
+                .contenido {
+                  padding-top: 0 !important;
+                }
+                
+                /* Firma del psicólogo */
+                .firma {
+                  page-break-inside: avoid !important;
+                  break-inside: avoid !important;
+                }
+                
+                /* Espaciado entre elementos y control de saltos de página */
+                h2, h3, h4, h5, h6 {
+                  margin-top: 0.6em !important;
+                  margin-bottom: 0.2em !important;
+                  padding: 0.1em 0 !important;
+                  /* Evitar títulos huérfanos al final de página - REFORZADO */
+                  page-break-after: avoid !important;
+                  break-after: avoid !important;
+                  page-break-inside: avoid !important;
+                  break-inside: avoid !important;
+                  /* Mantener título con contenido */
+                  orphans: 4 !important;
+                  widows: 4 !important;
+                  /* Forzar que el siguiente elemento se mantenga junto */
+                  page-break-before: auto !important;
+                }
+                
+                p {
+                  margin-bottom: 0.3em !important;
+                  padding: 0.02em 0 !important;
+                  /* Control de viudas y huérfanos en párrafos */
+                  orphans: 2 !important;
+                  widows: 2 !important;
+                  /* Evitar saltos de página dentro de párrafos cortos */
+                  page-break-inside: avoid !important;
+                  break-inside: avoid !important;
+                }
+                
+                /* Regla especial: mantener títulos con su primer párrafo */
+                h2 + p, h3 + p, h4 + p, h5 + p, h6 + p {
+                  page-break-before: avoid !important;
+                  break-before: avoid !important;
+                  margin-top: 0 !important;
+                }
+                
+                /* Forzar espaciado en listas y control de saltos */
+                ul, ol {
+                  margin: 0.6em 0 !important;
+                  padding-left: 2.5em !important;
+                  /* Evitar que las listas se rompan mal */
+                  page-break-inside: avoid !important;
+                  break-inside: avoid !important;
+                }
+                
+                li {
+                  margin-bottom: 0.3em !important;
+                  padding: 0.05em 0 !important;
+                  /* Control de elementos de lista */
+                  orphans: 2 !important;
+                  widows: 2 !important;
+                }
+              }
+              
               body {
                 font-family: 'Times New Roman', Times, serif;
                 font-size: 12pt;
-                line-height: 1.8;
+                line-height: 1.6;
                 color: #000;
                 margin: 0;
                 padding: 0;
+                background: white;
               }
-              h1 { font-size: 20pt; font-weight: bold; margin: 0 0 2em 0; text-align: center; }
-              h2 { font-size: 16pt; font-weight: bold; margin: 2.5em 0 1em 0; border-bottom: 1px solid #ddd; padding-bottom: 0.5em; }
-              h3 { font-size: 14pt; font-weight: bold; margin: 2em 0 0.8em 0; }
-              h4 { font-size: 12pt; font-weight: bold; margin: 1.5em 0 0.5em 0; }
-              p { margin: 0 0 1.2em 0; text-align: justify; }
-              ul, ol { margin: 1em 0 1.5em 0; padding-left: 2em; }
-              li { margin: 0.5em 0; text-align: justify; }
-              table { width: 100%; border-collapse: collapse; margin: 1.5em 0; font-size: 11pt; }
-              th, td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; }
-              th { background-color: #f8f9fa; font-weight: bold; }
+              
+              h1 { 
+                font-size: 18pt; 
+                font-weight: bold; 
+                margin: 0 0 1.5em 0; 
+                text-align: center;
+                color: #2c3e50;
+              }
+              h2 { 
+                font-size: 14pt; 
+                font-weight: bold; 
+                margin: 2em 0 1em 0; 
+                border-bottom: 2px solid #3498db; 
+                padding-bottom: 0.3em;
+                color: #2c3e50;
+              }
+              h3 { 
+                font-size: 13pt; 
+                font-weight: bold; 
+                margin: 1.5em 0 0.8em 0;
+                color: #34495e;
+              }
+              h4 { 
+                font-size: 12pt; 
+                font-weight: bold; 
+                margin: 1.2em 0 0.5em 0;
+                color: #34495e;
+              }
+              
+              p { 
+                margin: 0 0 1em 0; 
+                text-align: justify; 
+              }
+              
+              ul, ol { 
+                margin: 1em 0 1.5em 0; 
+                padding-left: 2em; 
+              }
+              li { 
+                margin: 0.3em 0; 
+                text-align: justify; 
+              }
+              
+              table { 
+                width: 100%; 
+                border-collapse: collapse; 
+                margin: 1.5em 0; 
+                font-size: 11pt; 
+              }
+              th, td { 
+                border: 1px solid #bdc3c7; 
+                padding: 8px 12px; 
+                text-align: left; 
+              }
+              th { 
+                background-color: #ecf0f1; 
+                font-weight: bold;
+                color: #2c3e50;
+              }
+              
+              strong { font-weight: bold; }
+              em { font-style: italic; }
             </style>
           </head>
           <body>
-            ${cleanedContent}
+            <div class="content">
+              <div class="contenido" style="text-align: justify; color: #000;">
+                ${cleanedContent}
+              </div>
+              
+              <!-- Firma simple -->
+              <div class="firma" style="margin-top: 1cm; text-align: left; font-size: 11pt; color: #000;">
+                <div style="margin-bottom: 0.5cm; border-top: 1px solid #666; width: 200px;"></div>
+                <div style="font-weight: bold;">Dr. Nicolás Bagattini</div>
+              </div>
+            </div>
           </body>
         </html>
       `;
@@ -398,20 +550,104 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
         iframeDoc.write(pdfHTML);
         iframeDoc.close();
 
-        // Esperar a que se cargue y luego imprimir
+        // Configurar y ejecutar impresión
         iframe.onload = () => {
           setTimeout(() => {
-            iframe.contentWindow?.print();
-            // Limpiar después de un tiempo
-            setTimeout(() => {
-              document.body.removeChild(iframe);
-            }, 1000);
-          }, 100);
+            const iframeWindow = iframe.contentWindow;
+            if (iframeWindow) {
+              // Configurar título vacío
+              iframeWindow.document.title = ' ';
+              
+              // Forzar estilos de márgenes adicionales via JavaScript
+              const additionalCSS = `
+                <style>
+                  @page { 
+                    margin: 2.5cm 1.5cm !important;
+                    @top-left-corner { content: "" !important; }
+                    @top-left { content: "" !important; }
+                    @top-center { content: "" !important; }
+                    @top-right { content: "" !important; }
+                    @top-right-corner { content: "" !important; }
+                    @bottom-left-corner { content: "" !important; }
+                    @bottom-left { content: "" !important; }
+                    @bottom-center { content: "" !important; }
+                    @bottom-right { content: "" !important; }
+                    @bottom-right-corner { content: "" !important; }
+                  }
+                  body { 
+                    margin: 0 !important; 
+                    padding: 2cm 1cm !important; 
+                    box-sizing: border-box !important;
+                  }
+                  .content { 
+                    padding: 0.5cm 0.5cm !important; 
+                    margin: 0 !important;
+                  }
+                  /* Control de saltos de página - REFORZADO */
+                  h1 {
+                    page-break-after: avoid !important;
+                    break-after: avoid !important;
+                    margin: 0 0 1cm 0 !important;
+                    padding: 0.3cm 0 !important;
+                  }
+                  h2, h3, h4, h5, h6 {
+                    page-break-after: avoid !important;
+                    break-after: avoid !important;
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
+                    orphans: 4 !important;
+                    widows: 4 !important;
+                    margin-top: 0.6em !important;
+                    margin-bottom: 0.2em !important;
+                  }
+                  /* Mantener títulos con su contenido */
+                  h2 + p, h3 + p, h4 + p, h5 + p, h6 + p {
+                    page-break-before: avoid !important;
+                    break-before: avoid !important;
+                    margin-top: 0 !important;
+                  }
+                  p {
+                    orphans: 2 !important;
+                    widows: 2 !important;
+                    page-break-inside: avoid !important;
+                    margin-bottom: 0.3em !important;
+                  }
+                  ul, ol {
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
+                  }
+                </style>
+              `;
+              
+              // Inyectar CSS adicional
+              const head = iframeWindow.document.head;
+              if (head) {
+                head.insertAdjacentHTML('beforeend', additionalCSS);
+              }
+              
+              // Ejecutar impresión directamente sin toast
+              iframeWindow.print();
+              
+              // Limpiar iframe después de imprimir
+              setTimeout(() => {
+                if (document.body.contains(iframe)) {
+                  document.body.removeChild(iframe);
+                }
+              }, 2000);
+            }
+          }, 500);
         };
       }
     } catch (error) {
       console.error('Error generating PDF:', error);
       addToast('error', 'Error al generar PDF');
+    }
+  };
+
+  // Función wrapper para descargar PDF del informe seleccionado
+  const handleDownloadSelectedPDF = () => {
+    if (selectedInforme) {
+      handleDownloadPDF(selectedInforme);
     }
   };
 
@@ -679,7 +915,7 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
           onSave={handleSaveInforme}
           onFinalize={handleFinalizeInforme}
           onCancel={handleCancelEdit}
-          onDownloadPDF={handleDownloadPDF}
+          onDownloadPDF={handleDownloadSelectedPDF}
           isLoading={isLoadingInforme}
           isSaving={isUpdating}
         />
@@ -697,7 +933,7 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
                 {/* 1. Descargar PDF */}
                 <Button
                   variant="outline"
-                  onClick={handleDownloadPDF}
+                  onClick={handleDownloadSelectedPDF}
                   className="text-blue-600 hover:text-blue-800"
                 >
                   <DocumentArrowDownIcon className="h-4 w-4 mr-2" />
@@ -732,7 +968,7 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
               {/* 1. Descargar PDF */}
               <Button
                 variant="outline"
-                onClick={handleDownloadPDF}
+                onClick={handleDownloadSelectedPDF}
                 className="text-blue-600 hover:text-blue-800"
               >
                 <DocumentArrowDownIcon className="h-4 w-4 mr-2" />
