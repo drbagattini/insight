@@ -371,7 +371,8 @@ export default function PatientEvolutionPage() {
         </div>
       )}
       <div className="p-4 sm:p-6 lg:p-8">
-        <h1 className="text-2xl font-semibold">Evolución de {patientName || 'Paciente'}</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">{patientName || 'Paciente'}</h1>
+        <p className="text-lg text-gray-600">Información del paciente</p>
 
             {/* Entrevista Inicial */}
             <div className="mt-8">

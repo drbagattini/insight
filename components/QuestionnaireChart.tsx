@@ -3,426 +3,828 @@
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend } from "chart.js";
 import { Line, Bar } from "react-chartjs-2";
 import React from "react";
+import questionnairesMeta, { QuestionnaireCode } from "@/src/data/questionnairesMeta";
+
 
 // Register the pieces we may need. Doing this once here avoids duplicate registration warnings.
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend);
 
+// Allow a flexible, nested structure for detailed scores.
+// This is intentionally 'any' to support various questionnaire formats without
+// breaking the component when a new scoring structure is introduced.
 export interface EvolutionPoint {
   puntuacion: number;
   creado_en: string; // ISO date
-  /** Resultado detallado opcional para cuestionarios multidimensionales (por ejemplo, OPD-CA2-SQ) */
-  score_detallado?: Record<string, any>;
+  score_detallado?: any;
 }
 
 export interface QuestionnaireChartProps {
   data: EvolutionPoint[];
-  meta: {
-    chartType?: "line" | "bar" | string;
-    nombre?: string;
-    scoring?: {
-      rango?: readonly [number, number];
-      puntosDeCorte?: readonly { readonly umbral: number; readonly label?: string }[];
-    };
-  };
+  codigo: QuestionnaireCode; // Use questionnaire code to get metadata
   /** Optional override for height (in Tailwind / CSS units) */
   className?: string;
+  /** Optional override for the chart title (e.g., to include a date range) */
+  titleOverride?: string;
 }
 
 /**
- * Generic chart component that renders questionnaire evolution based on meta.chartType.
- * Currently supports "line" (default) and "bar".
+ * Generic chart component that renders questionnaire evolution based on questionnairesMeta[codigo].chartType.
+ * Currently supports "line" (default), "bar", and "bar-multidim" (for multi-dimensional questionnaires like OPD-CA2-SQ).
  */
-const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, meta, className }) => {
+const LABELS = {
+  total: 'Estructura (total)',
+  control: '1. Control (total)',
+  identity: '2. Identidad (total)',
+  interpersonality: '3. Interpersonalidad (total)',
+  attachment: '4. Apego (total)',
+  // Subdimensiones Control
+  ctr_impulse: '1.1 Control de impulsos',
+  ctr_affect: '1.2 Tolerancia afectiva',
+  ctr_consc: '1.3 Formación de conciencia',
+  ctr_selfworth: '1.4 Autovaloración',
+  // Subdimensiones Identity
+  id_coherence: '2.1 Coherencia',
+  id_selfexp: '2.2 Percepción del sí mismo',
+  id_sodiff: '2.3 Diferenciación self-objeto',
+  id_objectexp: '2.4 Percepción del objeto',
+  id_belong: '2.5 Pertenencia',
+  // Subdimensiones Interpersonality
+  int_fantasies: '3.1 Fantasías',
+  int_emotcontact: '3.2 Contacto emocional',
+  int_reciprocity: '3.3 Reciprocidad',
+  int_affectexp: '3.4 Percepción de afectos',
+  int_empathy: '3.5 Empatía',
+  int_ability_detach: '3.6 Capacidad para separarse',
+  // Subdimensiones Attachment
+  att_representation: '4.1 Acceso a representaciones de apego',
+  att_internalbasis: '4.2 Base segura interna',
+  att_capacity_alone: '4.3 Capacidad para estar solo',
+  att_use_relations: '4.4 Uso de relaciones de apego',
+} as const;
+
+// Plugin for T-score range 40-60 (only for OPD-CA2-SQ)
+const midBandPlugin = {
+  id: 'midBand',
+  beforeDatasetsDraw(chart: any) {
+    const { ctx, chartArea: { top, bottom, left, right }, scales } = chart;
+    const isHorizontal = chart.options.indexAxis === 'y';
+    const valueScale = isHorizontal ? scales.x : scales.y;
+
+    ctx.save();
+
+    // The band for T-Scores between 40 and 60 is considered the "healthy average" range.
+    const bandStartPixel = valueScale.getPixelForValue(60);
+    const bandEndPixel = valueScale.getPixelForValue(40);
+
+    ctx.fillStyle = 'rgba(128, 128, 128, 0.25)'; // Optimal visibility grey band for T-score 40-60 range
+
+    if (isHorizontal) {
+      // For horizontal bar chart, the band is a vertical rectangle.
+      ctx.fillRect(bandEndPixel, top, bandStartPixel - bandEndPixel, bottom - top);
+    } else {
+      // For vertical line/bar chart, the band is a horizontal rectangle.
+      ctx.fillRect(left, bandStartPixel, right - left, bandEndPixel - bandStartPixel);
+    }
+
+    ctx.restore();
+  }
+};
+
+// Plugin for PHQ-9 with subtle, professional color bands and zones legend
+const phq9ThresholdPlugin = {
+  id: 'phq9Thresholds',
+  beforeDatasetsDraw(chart: any) {
+    const { ctx, chartArea: { top, bottom, left, right }, scales } = chart;
+    const yScale = scales.y;
+
+    ctx.save();
+
+    // Bandas de color con degradado suave, más saturación y presencia visual
+    const bands = [
+      { min: 0, max: 4.99, color: 'rgba(34, 197, 94, 0.20)' }, // verde más vibrante - ninguno/mínimo
+      { min: 5, max: 9.99, color: 'rgba(163, 230, 53, 0.20)' }, // verde-lima vibrante - leve
+      { min: 10, max: 14.99, color: 'rgba(251, 191, 36, 0.22)' }, // amarillo-naranja vibrante - moderado
+      { min: 15, max: 19.99, color: 'rgba(251, 113, 133, 0.22)' }, // rosa-rojo vibrante - severo
+      { min: 20, max: 27, color: 'rgba(220, 38, 127, 0.24)' } // rojo intenso vibrante - muy severo
+    ];
+
+    bands.forEach(({ min, max, color }) => {
+      const minY = yScale.getPixelForValue(max);
+      const maxY = yScale.getPixelForValue(min);
+      
+      ctx.fillStyle = color;
+      ctx.fillRect(left, minY, right - left, maxY - minY);
+    });
+
+    // Líneas de referencia discretas (todas punteadas)
+    const thresholds = [
+      { value: 5, color: 'rgba(156, 163, 175, 0.4)', dash: [4, 4], width: 1 }, // Gris sutil
+      { value: 10, color: 'rgba(156, 163, 175, 0.6)', dash: [3, 3], width: 1.2 }, // Gris medio
+      { value: 15, color: 'rgba(107, 114, 128, 0.7)', dash: [2, 2], width: 1.5 }, // Gris más visible
+      { value: 20, color: 'rgba(107, 114, 128, 0.8)', dash: [2, 2], width: 1.5 } // Nueva línea para grave
+    ];
+
+    thresholds.forEach(({ value, color, dash, width }) => {
+      const y = yScale.getPixelForValue(value);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.setLineDash(dash);
+      ctx.beginPath();
+      ctx.moveTo(left, y);
+      ctx.lineTo(right, y);
+      ctx.stroke();
+    });
+
+    ctx.restore();
+  },
+  
+  // Dibujar etiquetas de zonas dentro de las bandas
+  afterDraw(chart: any) {
+    const { ctx, chartArea } = chart;
+    
+    ctx.save();
+    ctx.font = '10px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    
+    // Definir las zonas con sus posiciones Y
+    const zones = [
+      { text: 'Muy Severo', yStart: 20, yEnd: 27 },
+      { text: 'Severo', yStart: 15, yEnd: 19 },
+      { text: 'Moderada', yStart: 10, yEnd: 14 },
+      { text: 'Leve', yStart: 5, yEnd: 9 },
+      { text: 'Mínima', yStart: 0, yEnd: 4 }
+    ];
+    
+    // Color negro para todos los textos
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    
+    zones.forEach(zone => {
+      // Calcular posición Y en el canvas
+      const yStartPixel = chartArea.top + ((27 - zone.yEnd) / 27) * (chartArea.bottom - chartArea.top);
+      const yEndPixel = chartArea.top + ((27 - zone.yStart) / 27) * (chartArea.bottom - chartArea.top);
+      const yCenter = (yStartPixel + yEndPixel) / 2;
+      
+      // Solo dibujar si la zona es visible y tiene altura suficiente
+      if (yEndPixel - yStartPixel > 20) {
+        ctx.fillText(zone.text, chartArea.right - 10, yCenter);
+      }
+    });
+    
+    ctx.restore();
+  }
+
+};
+
+// Plugin for GAD-7 with subtle, professional color bands and zones legend
+const gad7ThresholdPlugin = {
+  id: 'gad7Thresholds',
+  beforeDatasetsDraw(chart: any) {
+    const { ctx, chartArea: { top, bottom, left, right }, scales } = chart;
+    const yScale = scales.y;
+
+    ctx.save();
+
+    // Bandas de color con degradado suave, misma lógica que PHQ-9 pero para GAD-7
+    const bands = [
+      { min: 0, max: 4.99, color: 'rgba(34, 197, 94, 0.20)' }, // verde más vibrante - ninguno/mínimo
+      { min: 5, max: 9.99, color: 'rgba(163, 230, 53, 0.20)' }, // verde-lima vibrante - leve
+      { min: 10, max: 14.99, color: 'rgba(251, 191, 36, 0.22)' }, // amarillo-naranja vibrante - moderado
+      { min: 15, max: 21, color: 'rgba(220, 38, 127, 0.24)' } // rojo intenso vibrante - severo
+    ];
+
+    bands.forEach(({ min, max, color }) => {
+      const minY = yScale.getPixelForValue(max);
+      const maxY = yScale.getPixelForValue(min);
+      
+      ctx.fillStyle = color;
+      ctx.fillRect(left, minY, right - left, maxY - minY);
+    });
+
+    // Líneas de referencia discretas (todas punteadas)
+    const thresholds = [
+      { value: 5, color: 'rgba(156, 163, 175, 0.4)', dash: [4, 4], width: 1 }, // Gris sutil
+      { value: 10, color: 'rgba(156, 163, 175, 0.6)', dash: [3, 3], width: 1.2 }, // Gris medio
+      { value: 15, color: 'rgba(107, 114, 128, 0.7)', dash: [2, 2], width: 1.5 } // Gris más visible
+    ];
+
+    thresholds.forEach(({ value, color, dash, width }) => {
+      const y = yScale.getPixelForValue(value);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.setLineDash(dash);
+      ctx.beginPath();
+      ctx.moveTo(left, y);
+      ctx.lineTo(right, y);
+      ctx.stroke();
+    });
+
+    ctx.restore();
+  },
+  
+  // Dibujar etiquetas de zonas dentro de las bandas
+  afterDraw(chart: any) {
+    const { ctx, chartArea } = chart;
+    
+    ctx.save();
+    ctx.font = '10px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    
+    // Definir las zonas con sus posiciones Y para GAD-7
+    const zones = [
+      { text: 'Severa', yStart: 15, yEnd: 21 },
+      { text: 'Moderada', yStart: 10, yEnd: 14 },
+      { text: 'Leve', yStart: 5, yEnd: 9 },
+      { text: 'Mínima', yStart: 0, yEnd: 4 }
+    ];
+    
+    // Color negro para todos los textos
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    
+    zones.forEach(zone => {
+      // Calcular posición Y en el canvas (escala 0-21 para GAD-7)
+      const yStartPixel = chartArea.top + ((21 - zone.yEnd) / 21) * (chartArea.bottom - chartArea.top);
+      const yEndPixel = chartArea.top + ((21 - zone.yStart) / 21) * (chartArea.bottom - chartArea.top);
+      const yCenter = (yStartPixel + yEndPixel) / 2;
+      
+      // Solo dibujar si la zona es visible y tiene altura suficiente
+      if (yEndPixel - yStartPixel > 20) {
+        ctx.fillText(zone.text, chartArea.right - 10, yCenter);
+      }
+    });
+    
+    ctx.restore();
+  }
+
+};
+
+// Plugin for WHO-5 threshold lines (13, 25, 50, 75)
+const who5ThresholdPlugin = {
+  id: 'who5Thresholds',
+  beforeDatasetsDraw(chart: any) {
+    const { ctx, chartArea: { top, bottom, left, right }, scales } = chart;
+    const yScale = scales.y;
+
+    ctx.save();
+
+    // Threshold lines: 25, 50, 75 (subtle), 13 (prominent)
+    const thresholds = [
+      { value: 75, style: 'subtle' },
+      { value: 50, style: 'subtle' },
+      { value: 25, style: 'subtle' },
+      { value: 13, style: 'prominent' } // Risk threshold
+    ];
+
+    thresholds.forEach(({ value, style }) => {
+      const y = yScale.getPixelForValue(value);
+      
+      if (style === 'prominent') {
+        // Visible line for risk threshold (13)
+        ctx.strokeStyle = 'rgba(220, 38, 38, 0.5)'; // More visible red
+        ctx.lineWidth = 1;
+        ctx.setLineDash([]);
+      } else {
+        // Visible dashed lines for other thresholds
+        ctx.strokeStyle = 'rgba(107, 114, 128, 0.4)'; // More visible gray
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 5]);
+      }
+      
+      ctx.beginPath();
+      ctx.moveTo(left, y);
+      ctx.lineTo(right, y);
+      ctx.stroke();
+    });
+
+    ctx.restore();
+  }
+};
+
+export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, codigo, className, titleOverride }) => {
   if (!data || data.length === 0) {
     return <div className="text-center text-gray-500 py-8">Sin datos suficientes para mostrar el gráfico.</div>;
   }
 
-    // --- Manejo de cuestionarios multidimensionales (p.ej. OPD-CA2-SQ) ---
-    const latest = data[data.length - 1] as any;
-    console.log('DATA RECIBIDA:', data);
-    console.log('LATEST ITEM:', latest);
-    
-    if (latest?.score_detallado) { 
-      const { score_detallado } = latest;
-      console.log('SCORE DETALLADO:', score_detallado);
-      const sub = score_detallado.subDimensions || {};
-      console.log('SUBDIMENSIONS:', sub);
+  const meta = questionnairesMeta[codigo];
+  if (!meta) {
+    return <div className="text-center text-red-500 py-8">Cuestionario {codigo} no encontrado en metadatos.</div>;
+  }
 
-    // Orden clínico de visualización exacto para OPD-CA2-SQ
-    // 1. Estructura total
-    // 2-5. Las 4 dimensiones principales
-    // 6-24. Las 19 subdimensiones en orden clínico
+  if (meta.chartType === 'bar-multidim') {
+    // Elegir el último punto con puntajes válidos
+    const findLatestValid = () => {
+      for (let i = data.length - 1; i >= 0; i--) {
+        const d = data[i];
+        if (!d || !d.score_detallado) continue;
+        const sd = d.score_detallado;
+        // Revisa al menos que TOTAL sea número válido o cualquier subdimension
+        if (sd && (typeof sd.total === 'number' || (sd.total && typeof sd.total.tScore === 'number'))) {
+          return d;
+        }
+        if (sd.subDimensions) {
+          const anyValid = Object.values(sd.subDimensions).some((v: any) => typeof v === 'number' || (v && typeof v.tScore === 'number'));
+          if (anyValid) return d;
+        }
+      }
+      return null;
+    };
+
+    const latestData = findLatestValid();
+    if (!latestData) {
+      return <div className="text-center text-red-500 py-8">No se encontraron puntajes válidos para {meta.title}.</div>;
+    }
+
+    const { score_detallado } = latestData;
+
     const orderedKeys = [
-      // Total - debe ir primero
-      'total', 
-
-      // 1. Control (total) y sus subdimensiones
-      'control',
-      'ctr_impulse', 
-      'ctr_affect', 
-      'ctr_consc', 
-      'ctr_selfworth',
-
-      // 2. Identidad (total) y sus subdimensiones
-      'identity',
-      'id_coherence', 
-      'id_selfexp', 
-      'id_sodiff', 
-      'id_objectexp', 
-      'id_belong',
-
-      // 3. Interpersonalidad (total) y sus subdimensiones
-      'interpersonality',
-      'int_fantasies', 
-      'int_emotcontact', 
-      'int_reciprocity', 
-      'int_affectexp', 
-      'int_empathy', 
-      'int_ability_detach',
-
-      // 4. Apego (total) y sus subdimensiones
-      'attachment',
-      'att_representation', 
-      'att_internalbasis', 
-      'att_capacity_alone', 
-      'att_use_relations',
+      'total',
+      'control', 'ctr_impulse', 'ctr_affect', 'ctr_consc', 'ctr_selfworth',
+      'identity', 'id_coherence', 'id_selfexp', 'id_sodiff', 'id_objectexp', 'id_belong',
+      'interpersonality', 'int_fantasies', 'int_emotcontact', 'int_reciprocity', 'int_affectexp', 'int_empathy', 'int_ability_detach',
+      'attachment', 'att_representation', 'att_internalbasis', 'att_capacity_alone', 'att_use_relations'
     ];
 
-    // Etiquetas clínicas oficiales
-    const LABELS: Record<string, string> = {
-      // Total
-      OPD_total_t: 'Estructura (total)',
-      total: 'Estructura (total)',
-
-      // Control
-      OPD_control_t: '1. Control (total)',
-      control: '1. Control (total)',
-      OPD_CTR_Impulse_t: '1.1 Control de impulsos',
-      ctr_impulse: '1.1 Control de impulsos',
-      OPD_CTR_Affect_t: '1.2 Tolerancia afectiva',
-      ctr_affect: '1.2 Tolerancia afectiva',
-      OPD_CTR_Consc_t: '1.3 Formación de conciencia',
-      ctr_consc: '1.3 Formación de conciencia',
-      OPD_CTR_Selfworth_t: '1.4 Autovaloración',
-      ctr_selfworth: '1.4 Autovaloración',
-
-      // Identidad
-      OPD_Identity_t: '2. Identidad (total)',
-      identity: '2. Identidad (total)',
-      OPD_Id_Coherence_t: '2.1 Coherencia',
-      id_coherence: '2.1 Coherencia',
-      OPD_Id_Selfexp_t: '2.2 Percepción del sí mismo',
-      id_selfexp: '2.2 Percepción del sí mismo',
-      OPD_Id_SODiff_t: '2.3 Diferenciación self-objeto',
-      id_sodiff: '2.3 Diferenciación self-objeto',
-      OPD_Id_Objectexp_t: '2.4 Percepción del objeto',
-      id_objectexp: '2.4 Percepción del objeto',
-      OPD_Id_Belong_t: '2.5 Pertenencia',
-      id_belong: '2.5 Pertenencia',
-
-      // Interpersonalidad
-      OPD_Interpersonality_t: '3. Interpersonalidad (total)',
-      interpersonality: '3. Interpersonalidad (total)',
-      OPD_Int_Fantasies_t: '3.1 Fantasías',
-      int_fantasies: '3.1 Fantasías',
-      OPD_Int_emotContact_t: '3.2 Contacto emocional',
-      int_emotcontact: '3.2 Contacto emocional',
-      OPD_Int_Reciprocity_t: '3.3 Reciprocidad',
-      int_reciprocity: '3.3 Reciprocidad',
-      OPD_Int_Affectexp_t: '3.4 Percepción de afectos',
-      int_affectexp: '3.4 Percepción de afectos',
-      OPD_Int_Empathy_t: '3.5 Empatía',
-      int_empathy: '3.5 Empatía',
-      OPD_Int_Ability_detach_t: '3.6 Capacidad para separarse',
-      int_ability_detach: '3.6 Capacidad para separarse',
-
-      // Apego
-      OPD_Attachment_t: '4. Apego (total)',
-      attachment: '4. Apego (total)',
-      OPD_Att_Representation_t: '4.1 Acceso a representaciones de apego',
-      att_representation: '4.1 Acceso a representaciones de apego',
-      OPD_Att_internalBasis_t: '4.2 Base segura interna',
-      att_internalbasis: '4.2 Base segura interna',
-      OPD_Att_Capacity_Alone_t: '4.3 Capacidad para estar solo',
-      att_capacity_alone: '4.3 Capacidad para estar solo',
-      OPD_Att_Use_relations_t: '4.4 Uso de relaciones de apego',
-      att_use_relations: '4.4 Uso de relaciones de apego',
-    };
-
-    // Mapa bidireccional para buscar claves en ambas direcciones
-    const altKeyMap: Record<string, string> = {
-      // OPD -> original
-      'OPD_total_t': 'total',
-      'OPD_control_t': 'control',
-      'OPD_Identity_t': 'identity',
-      'OPD_Interpersonality_t': 'interpersonality',
-      'OPD_Attachment_t': 'attachment',
-      'OPD_CTR_Impulse_t': 'ctr_impulse',
-      'OPD_CTR_Affect_t': 'ctr_affect',
-      'OPD_CTR_Consc_t': 'ctr_consc',
-      'OPD_CTR_Selfworth_t': 'ctr_selfworth',
-      'OPD_Id_Coherence_t': 'id_coherence',
-      'OPD_Id_Selfexp_t': 'id_selfexp',
-      'OPD_Id_SODiff_t': 'id_sodiff',
-      'OPD_Id_Objectexp_t': 'id_objectexp',
-      'OPD_Id_Belong_t': 'id_belong',
-      'OPD_Int_Fantasies_t': 'int_fantasies',
-      'OPD_Int_emotContact_t': 'int_emotcontact',
-      'OPD_Int_Reciprocity_t': 'int_reciprocity',
-      'OPD_Int_Affectexp_t': 'int_affectexp',
-      'OPD_Int_Empathy_t': 'int_empathy',
-      'OPD_Int_Ability_detach_t': 'int_ability_detach',
-      'OPD_Att_Representation_t': 'att_representation',
-      'OPD_Att_internalBasis_t': 'att_internalbasis',
-      'OPD_Att_Capacity_Alone_t': 'att_capacity_alone',
-      'OPD_Att_Use_relations_t': 'att_use_relations',
-      // original -> OPD
-      'total': 'OPD_total_t',
-      'control': 'OPD_control_t',
-      'identity': 'OPD_Identity_t',
-      'interpersonality': 'OPD_Interpersonality_t',
-      'attachment': 'OPD_Attachment_t',
-      'ctr_impulse': 'OPD_CTR_Impulse_t',
-      'ctr_affect': 'OPD_CTR_Affect_t',
-      'ctr_consc': 'OPD_CTR_Consc_t',
-      'ctr_selfworth': 'OPD_CTR_Selfworth_t',
-      'id_coherence': 'OPD_Id_Coherence_t',
-      'id_selfexp': 'OPD_Id_Selfexp_t',
-      'id_sodiff': 'OPD_Id_SODiff_t',
-      'id_objectexp': 'OPD_Id_Objectexp_t',
-      'id_belong': 'OPD_Id_Belong_t',
-      'int_fantasies': 'OPD_Int_Fantasies_t',
-      'int_emotcontact': 'OPD_Int_emotContact_t',
-      'int_reciprocity': 'OPD_Int_Reciprocity_t',
-      'int_affectexp': 'OPD_Int_Affectexp_t',
-      'int_empathy': 'OPD_Int_Empathy_t',
-      'int_ability_detach': 'OPD_Int_Ability_detach_t',
-      'att_representation': 'OPD_Att_Representation_t',
-      'att_internalbasis': 'OPD_Att_internalBasis_t',
-      'att_capacity_alone': 'OPD_Att_Capacity_Alone_t',
-      'att_use_relations': 'OPD_Att_Use_relations_t',
-    };
-
-    // Paleta de colores clínicos oficiales exacta
-    const baseColors: Record<string, string> = {
-      total: 'rgb(0, 0, 0)',       // Negro para estructura total
-      control: 'rgb(0, 75, 150)',  // Azul para dimensión Control
-      identity: 'rgb(0, 150, 75)', // Verde para dimensión Identidad
-      interpersonality: 'rgb(180, 75, 0)',  // Naranja-marrón para Interpersonalidad
-      attachment: 'rgb(180, 120, 0)',       // Dorado para dimensión Apego
-    };
-
-    const bgColors: string[] = [];
-    const values: number[] = [];
-    const displayLabels: string[] = [];
-
-    // Recorremos las claves en el orden clínico
-    orderedKeys.forEach((k) => {
-      let val;
-      
-      // La estrategia de búsqueda depende de si es dimensión principal o subdimensión
-      const isMainDimension = ['total', 'control', 'identity', 'interpersonality', 'attachment'].includes(k);
-      
-      // Buscar el valor en la ubicación correcta
-      if (isMainDimension) {
-        // Para dimensiones principales y total, buscamos directamente en score_detallado
-        val = score_detallado[k];
-        } else {
-        // Para subdimensiones, buscamos en subDimensions
-        val = sub[k];
+    // Helper to obtain numeric T-score from diverse shapes
+    const extractScore = (key: string): number | null => {
+      // 1) Subdimension key in nested subDimensions object
+      if (score_detallado.subDimensions && key in score_detallado.subDimensions) {
+        const v = score_detallado.subDimensions[key];
+        if (typeof v === 'number') return v;
+        if (v && typeof v === 'object' && 'tScore' in v) return v.tScore as number;
       }
-      
-      console.log(`Key: ${k}, Value: ${val}, Label: ${LABELS[k]}`);
-
-
-      if (val !== null && val !== undefined) {
-        values.push(val as number);
-        // Siempre usar la etiqueta clínica del mapeo LABELS
-        displayLabels.push(LABELS[k] || k);
-
-        // Determina a qué dimensión pertenece para aplicar color
-        const dim = (() => {
-          if (k === 'total') return 'total';
-          if (k === 'control' || k.startsWith('ctr_')) return 'control';
-          if (k === 'identity' || k.startsWith('id_')) return 'identity';
-          if (k === 'interpersonality' || k.startsWith('int_')) return 'interpersonality';
-          if (k === 'attachment' || k.startsWith('att_')) return 'attachment';
-          return 'total'; // fallback
-        })();
-
-        // Determina si es dimensión principal para ajustar la opacidad
-        const isMain = ['total', 'control', 'identity', 'interpersonality', 'attachment'].includes(k);
-        
-        // Usa diferentes niveles de opacidad para distinguir claramente los niveles:
-        // - Total: opacidad máxima
-        // - Dimensiones principales: opacidad alta
-        // - Subdimensiones: opacidad media
-        let alpha = 0.45; // subdimensiones
-        if (k === 'total') {
-          alpha = 1.0; // total con opacidad completa
-        } else if (isMain) {
-          alpha = 0.85; // dimensiones principales
-        }
-        const rgb = baseColors[dim];
-        bgColors.push(rgb.replace('rgb', 'rgba').replace(')', `, ${alpha})`));
+      // 2) Main dimension or total directly on root
+      if (key in score_detallado) {
+        const v = (score_detallado as any)[key];
+        if (typeof v === 'number') return v;
+        if (v && typeof v === 'object' && 'tScore' in v) return v.tScore as number;
       }
+      // 3) Main dimension inside dimensions object
+      if (score_detallado.dimensions && key in score_detallado.dimensions) {
+        const v = score_detallado.dimensions[key];
+        if (typeof v === 'number') return v;
+        if (v && typeof v === 'object' && 'tScore' in v) return v.tScore as number;
+      }
+      return null;
+    };
+
+    const validKeys = orderedKeys.filter(k => extractScore(k) !== null);
+
+    const chartLabels = validKeys.map(k => LABELS[k as keyof typeof LABELS] || k);
+    const chartValues = validKeys.map(k => extractScore(k) as number);
+
+    const baseColors = {
+      total: 'rgb(107, 114, 128)',
+      control: 'rgb(59, 130, 246)',
+      identity: 'rgb(16, 185, 129)',
+      interpersonality: 'rgb(245, 158, 11)',
+      attachment: 'rgb(239, 68, 68)',
+    };
+
+    const getBaseKey = (k: string): string => {
+      if (k.startsWith('ctr_')) return 'control';
+      if (k.startsWith('id_')) return 'identity';
+      if (k.startsWith('int_')) return 'interpersonality';
+      if (k.startsWith('att_')) return 'attachment';
+      return k;
+    };
+
+    const bgColors = validKeys.map(k => {
+      const baseKey = getBaseKey(k);
+      const color = (baseColors as any)[baseKey] || baseColors.total;
+      return k === baseKey || k === 'total' ? color : color.replace(')', ', 0.6)').replace('rgb', 'rgba');
     });
 
-    const barData: {
-      labels: string[];
-      datasets: Array<{
-        label: string;
-        data: number[];
-        backgroundColor: string[];
-        borderColor: string[];
-        borderWidth: number;
-      }>;
-    } = {
-      labels: displayLabels,
-      datasets: [
-        {
-          label: 'T-Score',
-          data: values,
-          backgroundColor: bgColors,
-          borderColor: bgColors.map(c => c.replace(/, [\d.]+\)$/, ', 1)')),
-          borderWidth: 1,
-        },
-      ],
+    const multidimData = {
+      labels: chartLabels,
+      datasets: [{
+        label: 'T-Score',
+        data: chartValues,
+        backgroundColor: bgColors,
+        borderColor: bgColors.map(color => color.replace('0.6)', '1)').replace('rgba', 'rgb').replace(', 1)', ')')),
+        borderWidth: 1.5,
+        barPercentage: 0.75,
+        categoryPercentage: 0.85,
+      }],
     };
 
-    // Plugin para banda saludable 40-60
-    const midBandPlugin = {
-      id: 'midBand',
-      beforeDatasetsDraw(chart: ChartJS<'bar'>) {
-        const { ctx, chartArea: { top, bottom, left, right }, scales: { y } } = chart;
-        ctx.save();
-        const yStart = y.getPixelForValue(60);
-        const yEnd = y.getPixelForValue(40);
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
-        ctx.fillRect(left, yStart, right - left, yEnd - yStart);
-        ctx.restore();
-      },
-    };
-
-    const barOptions = {
+    const multidimOptions = {
       responsive: true,
       maintainAspectRatio: false,
+      layout: {
+        padding: {
+          top: 20,
+          right: 20,
+          bottom: 20,
+          left: 20
+        }
+      },
+      // Vertical bar chart (categorías en eje X, valores T-score en eje Y)
       scales: {
-        y: { 
-          beginAtZero: false, 
-          min: 20, 
-          max: 80, 
-          title: { display: true, text: 'T-Score' },
-          grid: {
-            color: (ctx: any) => {
-              // Resaltar la línea del valor 40 y 60 (banda saludable)
-              if (ctx.tick.value === 40 || ctx.tick.value === 60) {
-                return 'rgba(0,0,0,0.2)';
-              }
-              return 'rgba(0,0,0,0.1)';
-            }
-          }
+        x: {
+          ticks: {
+            autoSkip: false,
+            maxRotation: 45,
+            minRotation: 30,
+            font: (ctx: any) => {
+              const label = ctx.tick.label as string;
+              const isMain = ['Estructura (total)', '1. Control (total)', '2. Identidad (total)', '3. Interpersonalidad (total)', '4. Apego (total)'].includes(label);
+              return { weight: isMain ? 'bold' : 'normal' };
+            },
+          },
+          grid: { 
+            display: true,
+            drawOnChartArea: false,
+            drawTicks: true,
+            color: 'rgba(0,0,0,0.1)'
+          },
         },
-        x: { 
-          ticks: { 
-            autoSkip: false, 
-            maxRotation: 65, 
-            minRotation: 40, 
-            font: { size: 9 } 
-          }, 
-          grid: { display: false } 
+        y: {
+          beginAtZero: false,
+          min: 20,
+          max: 80,
+          title: { 
+            display: true, 
+            text: 'T-Score',
+            font: { size: 13, weight: 'bold' }
+          },
+          grid: {
+            color: 'rgba(0,0,0,0.1)'
+          }
         },
       },
       plugins: {
         legend: { display: false },
-        title: { 
-          display: true, 
-          font: { size: 14, weight: 'bold' },
-          text: `Perfil Estructural Adolescente – ${latest.fecha ? new Date(latest.fecha).toLocaleDateString() : 'Última evaluación'}` 
+        title: {
+          display: true,
+          text: titleOverride ?? meta.title ?? 'Perfil de Estructura Psíquica',
+          font: { size: 16, weight: 'bold' as const },
+          padding: { top: 10, bottom: 20 },
         },
         tooltip: {
           callbacks: {
             title: (ctx: any) => ctx[0].label,
             label: (ctx: any) => `T-Score: ${ctx.parsed.y}`,
             afterLabel: (ctx: any) => {
-              const score = ctx.parsed.y;
-              if (score >= 60) return 'Nivel clínico';
-              if (score <= 40) return 'Nivel vulnerable';
-              return 'Rango saludable';
+              const key = validKeys[ctx.dataIndex];
+              const description = (meta.scoring as any)?.dimensionDescriptions?.[key];
+              return description || '';
             }
           },
         },
       },
-    } as const;
+    };
 
     return (
-      <div className={`relative w-full ${className ?? 'h-[800px]'}`}>
-        <Bar data={barData} options={barOptions} plugins={[midBandPlugin]} />
+      <div className={`relative w-full ${className ?? "h-[32rem]"} overflow-x-auto`}>
+        <Bar data={multidimData} options={multidimOptions as any} plugins={[midBandPlugin]} />
       </div>
     );
   }
 
-  // ---- Gráficos genéricos (no multidimensionales) ----
-  const labels = data.map((d) => new Date(d.creado_en).toLocaleDateString());
+  // Multi-line chart for BR-WAI (total + subscales)
+  if (meta.chartType === 'line-multi' && codigo === 'BR-WAI') {
+    // Filter valid entries with score_detallado
+    const validEntries = data.filter(d => {
+      const dateField = d.creado_en || (d as any).fecha;
+      const date = new Date(dateField);
+      const hasValidDate = !isNaN(date.getTime());
+      const hasScoreDetallado = d.score_detallado && 
+        typeof d.score_detallado.total === 'number' &&
+        typeof d.score_detallado.vinculo === 'number' &&
+        typeof d.score_detallado.tareasObjetivos === 'number';
+      return hasValidDate && hasScoreDetallado;
+    });
 
-  // Base dataset for the questionnaire scores
+    if (validEntries.length === 0) {
+      return <div className="text-center text-gray-500 py-8">Sin datos suficientes para mostrar el gráfico.</div>;
+    }
+
+    const labels = validEntries.map((d) => {
+      const dateField = d.creado_en || (d as any).fecha;
+      const date = new Date(dateField);
+      return date.toLocaleDateString();
+    });
+
+    const datasets = [
+      {
+        label: 'Total',
+        data: validEntries.map(d => d.score_detallado.total),
+        borderColor: 'rgb(59, 130, 246)', // blue
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        fill: false,
+        tension: 0.3,
+        borderWidth: 3,
+      },
+      {
+        label: 'Vínculo',
+        data: validEntries.map(d => d.score_detallado.vinculo),
+        borderColor: 'rgb(16, 185, 129)', // green
+        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+        fill: false,
+        tension: 0.3,
+        borderWidth: 2,
+      },
+      {
+        label: 'Tareas-Objetivos',
+        data: validEntries.map(d => d.score_detallado.tareasObjetivos),
+        borderColor: 'rgb(245, 158, 11)', // amber
+        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+        fill: false,
+        tension: 0.3,
+        borderWidth: 2,
+      }
+    ];
+
+    const multiLineData = {
+      labels,
+      datasets
+    };
+
+    // Plugin for BR-WAI threshold bands
+    const brWaiThresholdPlugin = {
+      id: 'brWaiThresholds',
+      beforeDatasetsDraw(chart: any) {
+        const { ctx, chartArea: { top, bottom, left, right }, scales } = chart;
+        const yScale = scales.y;
+
+        ctx.save();
+
+        // Banda de riesgo (≤48): rojo claro
+        const riskThreshold = yScale.getPixelForValue(48);
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.1)'; // red-500 with low opacity
+        ctx.fillRect(left, riskThreshold, right - left, bottom - riskThreshold);
+
+        // Banda moderada (49-59): amarillo claro
+        const moderateStart = yScale.getPixelForValue(59);
+        const moderateEnd = yScale.getPixelForValue(49);
+        ctx.fillStyle = 'rgba(245, 158, 11, 0.1)'; // amber-500 with low opacity
+        ctx.fillRect(left, moderateStart, right - left, moderateEnd - moderateStart);
+
+        // Banda sólida (≥60): verde claro
+        const solidThreshold = yScale.getPixelForValue(60);
+        ctx.fillStyle = 'rgba(16, 185, 129, 0.1)'; // emerald-500 with low opacity
+        ctx.fillRect(left, top, right - left, solidThreshold - top);
+
+        // Líneas de threshold
+        const thresholds = [
+          { value: 48, color: 'rgba(239, 68, 68, 0.6)', label: 'Riesgo' },
+          { value: 60, color: 'rgba(16, 185, 129, 0.6)', label: 'Sólida' }
+        ];
+
+        thresholds.forEach(({ value, color }) => {
+          const y = yScale.getPixelForValue(value);
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 1;
+          ctx.setLineDash([5, 5]);
+          ctx.beginPath();
+          ctx.moveTo(left, y);
+          ctx.lineTo(right, y);
+          ctx.stroke();
+        });
+
+        ctx.restore();
+      }
+    };
+
+    const multiLineOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { 
+          position: "top" as const,
+          labels: {
+            usePointStyle: true,
+            pointStyle: 'line'
+          }
+        },
+        title: { 
+          display: true, 
+          text: titleOverride || `Evolución - ${meta.title}`
+        },
+        tooltip: {
+          mode: 'index' as const,
+          intersect: false,
+          callbacks: {
+            afterLabel: (context: any) => {
+              const value = context.parsed.y;
+              let interpretation = '';
+              if (context.datasetIndex === 0) { // Total
+                if (value <= 48) interpretation = ' (Alianza frágil)';
+                else if (value <= 59) interpretation = ' (Alianza moderada)';
+                else interpretation = ' (Alianza sólida)';
+              } else { // Subescalas
+                if (value <= 24) interpretation = ' (Frágil)';
+                else if (value <= 29) interpretation = ' (Aceptable)';
+                else interpretation = ' (Sólida)';
+              }
+              return interpretation;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          display: true,
+          title: {
+            display: true,
+            text: 'Fecha'
+          }
+        },
+        y: {
+          display: true,
+          title: {
+            display: true,
+            text: 'Puntuación'
+          },
+          min: 0, // Empezar en 0 para mejor visualización
+          max: 80, // Máximo teórico BR-WAI
+          ticks: {
+            stepSize: 8
+          }
+        }
+      },
+      interaction: {
+        mode: 'index' as const,
+        intersect: false,
+      }
+    };
+
+    return (
+      <div className={`relative w-full ${className ?? "h-96"}`}>
+        <Line data={multiLineData} options={multiLineOptions as any} plugins={[brWaiThresholdPlugin]} />
+      </div>
+    );
+  }
+
+  // Default chart rendering for line and simple bar charts  
+  // Filter out entries with invalid dates for cleaner chart
+  const validEntries = data.filter(d => {
+    // Handle different data field mappings
+    const dateField = d.creado_en || (d as any).fecha;
+    const scoreField = d.puntuacion || (d as any).score_total;
+    
+    const date = new Date(dateField);
+    const isValid = !isNaN(date.getTime()) && scoreField != null;
+    return isValid;
+  });
+  
+  const labels = validEntries.map((d) => {
+    const dateField = d.creado_en || (d as any).fecha;
+    const date = new Date(dateField);
+    return date.toLocaleDateString();
+  });
+
   const primaryDataset = {
-    label: meta.nombre || "Puntuación",
-    data: data.map((d) => d.puntuacion),
-    borderColor: "rgb(59, 130, 246)",
-    backgroundColor: "rgba(59, 130, 246,0.5)",
+    label: codigo === 'WHO-5' ? "Puntuación" : 
+           codigo === 'PHQ-9' ? "Puntuación PHQ-9" :
+           codigo === 'GAD-7' ? "Puntuación GAD-7" :
+           ((meta as any).title || (meta as any).nombre || "Puntuación"),
+    data: validEntries.map((d) => d.puntuacion || (d as any).score_total),
+    borderColor: codigo === 'PHQ-9' ? "rgb(99, 102, 241)" : codigo === 'GAD-7' ? "rgb(168, 85, 247)" : "rgb(59, 130, 246)", // Indigo para PHQ-9, púrpura para GAD-7
+    backgroundColor: codigo === 'PHQ-9' ? "rgba(99, 102, 241, 0.1)" : codigo === 'GAD-7' ? "rgba(168, 85, 247, 0.1)" : "rgba(59, 130, 246, 0.5)",
+    pointBackgroundColor: codigo === 'PHQ-9' ? "rgb(99, 102, 241)" : codigo === 'GAD-7' ? "rgb(168, 85, 247)" : "rgb(59, 130, 246)",
+    pointBorderColor: codigo === 'PHQ-9' ? "rgb(255, 255, 255)" : codigo === 'GAD-7' ? "rgb(255, 255, 255)" : "rgb(59, 130, 246)",
+    pointBorderWidth: codigo === 'PHQ-9' ? 2 : codigo === 'GAD-7' ? 2 : 1,
+    pointRadius: codigo === 'PHQ-9' ? 5 : codigo === 'GAD-7' ? 5 : 3,
+    pointHoverRadius: codigo === 'PHQ-9' ? 7 : codigo === 'GAD-7' ? 7 : 5,
     fill: false,
     tension: 0.3,
-  } as const;
-
-  // Threshold datasets (e.g., puntosDeCorte) rendered as horizontal dashed lines
-  const thresholdDatasets = (meta.scoring?.puntosDeCorte || []).map((p) => ({
-    label: p.label ?? `Umbral ${p.umbral}`,
-    data: labels.map(() => p.umbral),
-    borderColor: "red",
-    borderWidth: 1,
-    borderDash: [5, 5],
-    pointRadius: 0,
-    fill: false,
-    order: 0 as const,
-  }));
-
-  const commonOptions = {
-    maintainAspectRatio: false,
-    scales: {
-      y: {
-        beginAtZero: true,
-        max: meta.scoring?.rango ? meta.scoring.rango[1] : undefined,
-      },
-    },
-    plugins: {
-      legend: {
-        labels: {
-          // Hide empty labels (mostly for threshold datasets without explicit label)
-          filter: (item: any) => item.text !== "",
-        },
-      },
-    },
-  } as const;
-
-  const datasets = [primaryDataset, ...thresholdDatasets];
+    borderWidth: codigo === 'PHQ-9' ? 2.5 : codigo === 'GAD-7' ? 2.5 : 2,
+  };
 
   const chartData = {
     labels,
-    datasets,
-  } as const;
+    datasets: [primaryDataset],
+  };
 
-  const type = (meta.chartType ?? "line").toLowerCase();
+  // Función para obtener interpretación clínica PHQ-9 completa
+  const getPhq9Interpretation = (score: number): { severity: string, recommendation: string } => {
+    if (score <= 4) {
+      return {
+        severity: 'Ninguno/Mínimo',
+        recommendation: 'Ninguna acción requerida'
+      };
+    }
+    if (score <= 9) {
+      return {
+        severity: 'Leve',
+        recommendation: 'Repita PHQ-9 en el seguimiento'
+      };
+    }
+    if (score <= 14) {
+      return {
+        severity: 'Moderado',
+        recommendation: 'Elaborar un plan de tratamiento, considerar asesoramiento, seguimiento o medicamentos recetados'
+      };
+    }
+    if (score <= 19) {
+      return {
+        severity: 'Severo',
+        recommendation: 'Recetar medicamentos recetados y asesoramiento'
+      };
+    }
+    return {
+      severity: 'Muy Severo',
+      recommendation: 'Recetar medicamentos recetados. Si las respuestas al tratamiento son deficientes, derive inmediatamente al paciente a un especialista en salud mental'
+    };
+  };
+
+  // Función para obtener interpretación clínica GAD-7 completa
+  const getGad7Interpretation = (score: number): { severity: string, recommendation: string } => {
+    if (score <= 4) {
+      return {
+        severity: 'Ninguna-Mínima',
+        recommendation: 'Sin intervención formal necesaria'
+      };
+    }
+    if (score <= 9) {
+      return {
+        severity: 'Leve',
+        recommendation: 'Repetir GAD-7 en próximo control'
+      };
+    }
+    if (score <= 14) {
+      return {
+        severity: 'Moderada',
+        recommendation: 'Plan de tratamiento; considerar TCC ± fármacos'
+      };
+    }
+    return {
+      severity: 'Severa',
+      recommendation: 'Tratamiento activo; derivar si respuesta insuficiente'
+    };
+  };
+
+  const commonOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+
+    plugins: {
+      legend: (codigo === 'PHQ-9' || codigo === 'GAD-7') ? {
+        position: "top" as const,
+        plugins: {
+          afterDraw: function(chart: any) {
+            // Esta función se ejecuta después de dibujar la leyenda principal
+            // pero necesitamos manejar la leyenda de zonas fuera del canvas
+          }
+        }
+      } : { position: "top" as const },
+      title: { 
+        display: true, 
+        text: titleOverride || (codigo === 'WHO-5' ? 'Evolución del Bienestar' : 
+                                codigo === 'PHQ-9' ? 'Evolución - PHQ-9' : 
+                                codigo === 'GAD-7' ? 'Evolución - GAD-7' : 
+                                ((meta as any).title || (meta as any).nombre)) 
+      },
+      tooltip: codigo === 'PHQ-9' ? {
+        callbacks: {
+          afterLabel: function(context: any) {
+            const score = context.parsed.y;
+            const interpretation = getPhq9Interpretation(score);
+            return [
+              `Severidad: ${interpretation.severity}`,
+              `Recomendación: ${interpretation.recommendation}`
+            ];
+          }
+        }
+      } : codigo === 'GAD-7' ? {
+        callbacks: {
+          afterLabel: function(context: any) {
+            const score = context.parsed.y;
+            const interpretation = getGad7Interpretation(score);
+            return [
+              `Severidad: ${interpretation.severity}`,
+              `Recomendación: ${interpretation.recommendation}`
+            ];
+          }
+        }
+      } : undefined,
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        min: 0, // Siempre empezar en 0 para mejor visualización
+        max: meta.scoring?.rango ? meta.scoring.rango[1] : undefined,
+      },
+    },
+  };
 
   return (
     <div className={`relative w-full ${className ?? "h-96"}`}>
-      {type === "bar" ? (
-        <Bar data={chartData} options={commonOptions} />
-      ) : (
-        <Line data={chartData} options={commonOptions} />
-      )}
+      <div className="w-full h-full">
+        <Line data={chartData} options={commonOptions} plugins={
+          codigo === 'WHO-5' ? [who5ThresholdPlugin] : 
+          codigo === 'PHQ-9' ? [phq9ThresholdPlugin] : 
+          codigo === 'GAD-7' ? [gad7ThresholdPlugin] : 
+          [midBandPlugin]
+        } />
+      </div>
+      
+
     </div>
   );
 };
 
 export default QuestionnaireChart;
+

@@ -39,7 +39,7 @@ export default function Header() {
       <div className="flex items-center justify-between h-16 px-4">
         <div className="flex items-center space-x-6">
           {!hideTitle && (
-            <h1 className="text-lg font-semibold text-gray-900">{headerTitle}</h1>
+            <h1 className="text-base font-medium text-gray-700">{headerTitle}</h1>
           )}
         </div>
 

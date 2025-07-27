@@ -9,7 +9,8 @@ import { CheckIcon, ChevronUpDownIcon } from '@heroicons/react/20/solid';
 import { PatientResponsesSection } from '@/components/patient/PatientResponsesSection';
 import { PatientIntakeTab } from '@/components/patient/PatientIntakeTab';
 import { PatientDetails } from '@/components/patient/PatientDetails';
-import QuestionnaireChart from '@/src/components/QuestionnaireChart';
+import { EvolutionTab } from '@/components/patient/EvolutionTab';
+import QuestionnaireChart from '@/components/QuestionnaireChart';
 import questionnairesMeta from '@/src/data/questionnairesMeta';
 import InformesTab from '@/components/informes/InformesTab';
 
@@ -527,7 +528,7 @@ function computeNextDate(start: string, frequency: string): string {
         <Tab.Group selectedIndex={selectedTabIndex} onChange={setSelectedTabIndex}>
           <div className="mb-8">
             <Tab.List className="flex bg-gray-50 rounded-xl p-1.5 shadow-sm border border-gray-200">
-              {['Entrevista inicial', 'Cuestionarios psicométricos', 'Informes'].map((category, index) => (
+              {['Entrevista inicial', 'Evolución Clínica', 'Cuestionarios psicométricos', 'Informes'].map((category, index) => (
                 <Tab
                   key={category}
                   className={({ selected }) =>
@@ -559,6 +560,9 @@ function computeNextDate(start: string, frequency: string): string {
           <Tab.Panels>
             <Tab.Panel className="focus:outline-none">
               <PatientIntakeTab />
+            </Tab.Panel>
+            <Tab.Panel className="focus:outline-none">
+              <EvolutionTab patientId={patientId} />
             </Tab.Panel>
             <Tab.Panel className="rounded-xl bg-white border border-gray-200 shadow-sm min-h-[600px] overflow-hidden focus:outline-none">
               <div className="bg-gradient-to-r from-emerald-50 to-teal-50 px-6 py-4 border-b border-gray-100">
