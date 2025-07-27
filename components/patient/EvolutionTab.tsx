@@ -2,10 +2,11 @@
 
 import { useState, useCallback, memo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, Calendar, AlertCircle, BarChart3, Search } from 'lucide-react';
+import { Plus, Calendar, AlertCircle, Search } from 'lucide-react';
 import { EvolutionEditor } from './EvolutionEditorAdvanced';
 import { EvolutionList } from './EvolutionList';
 import { EvolutionStats } from './EvolutionStats';
+import { EvolutionSynthesis } from './EvolutionSynthesis';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -18,13 +19,15 @@ import {
 
 interface EvolutionTabProps {
   patientId: string;
+  patientName?: string;
 }
 
-export const EvolutionTab = memo(function EvolutionTab({ patientId }: EvolutionTabProps) {
+export const EvolutionTab = memo(function EvolutionTab({ patientId, patientName }: EvolutionTabProps) {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editingEntry, setEditingEntry] = useState<any>(null);
   const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; entryId: string | null }>({ isOpen: false, entryId: null });
+
   
   // Hook personalizado para manejar entradas con optimizaciones
   const {
@@ -49,6 +52,15 @@ export const EvolutionTab = memo(function EvolutionTab({ patientId }: EvolutionT
     content: string;
     metadata?: any;
     isDraft?: boolean;
+    // Campos estructurados opcionales
+    session_duration_minutes?: number;
+    mood_scale?: number;
+    anxiety_scale?: number;
+    energy_scale?: number;
+    progress_rating?: number;
+    session_type?: string;
+    primary_focus?: string;
+    risk_level?: string;
   }) => {
     setIsSaving(true);
     try {
@@ -139,14 +151,15 @@ export const EvolutionTab = memo(function EvolutionTab({ patientId }: EvolutionT
 
       {/* Filtros */}
       {!isEditorOpen && (
-        <div className="bg-white border border-gray-200 rounded-lg px-4 py-3 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6 flex-wrap">
+        <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 mb-4">
+          <div className="flex items-center justify-between gap-4">
+            {/* Filtros izquierda */}
+            <div className="flex items-center gap-4 flex-wrap">
               {/* Filtro por tipo */}
               <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-600">Tipo:</label>
+                <label className="text-sm text-gray-600 font-medium">Tipo:</label>
                 <Select value={filters.type} onValueChange={(value: EntryType | 'all') => updateFilters({ type: value })}>
-                  <SelectTrigger className="w-36 h-8">
+                  <SelectTrigger className="w-32 h-9 text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -162,24 +175,23 @@ export const EvolutionTab = memo(function EvolutionTab({ patientId }: EvolutionT
 
               {/* Filtro por fecha desde */}
               <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-gray-500" />
-                <label className="text-sm text-gray-600">Desde:</label>
+                <label className="text-sm text-gray-600 font-medium">Desde:</label>
                 <Input
                   type="date"
                   value={filters.dateFrom}
                   onChange={(e) => updateFilters({ dateFrom: e.target.value })}
-                  className="w-36 h-8"
+                  className="w-36 h-9 text-sm"
                 />
               </div>
 
               {/* Filtro por fecha hasta */}
               <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-600">Hasta:</label>
+                <label className="text-sm text-gray-600 font-medium">Hasta:</label>
                 <Input
                   type="date"
                   value={filters.dateTo}
                   onChange={(e) => updateFilters({ dateTo: e.target.value })}
-                  className="w-36 h-8"
+                  className="w-36 h-9 text-sm"
                 />
               </div>
 
@@ -189,22 +201,36 @@ export const EvolutionTab = memo(function EvolutionTab({ patientId }: EvolutionT
                   variant="outline"
                   size="sm"
                   onClick={clearFilters}
-                  className="h-8 px-3 text-xs"
+                  className="h-9 px-3 text-sm"
                 >
                   Limpiar filtros
                 </Button>
               )}
             </div>
 
-            {/* Búsqueda por texto */}
-            <div className="flex items-center gap-2">
-              <Search className="h-4 w-4 text-gray-500" />
-              <Input
-                type="text"
-                placeholder="Buscar en contenido..."
-                value={filters.search || ''}
-                onChange={(e) => updateFilters({ search: e.target.value })}
-                className="w-48 h-8 text-sm"
+            {/* Búsqueda y Síntesis derecha */}
+            <div className="flex items-center gap-3 flex-shrink-0">
+              {/* Búsqueda */}
+              <div className="flex items-center gap-2">
+                <Search className="h-4 w-4 text-gray-500" />
+                <Input
+                  type="text"
+                  placeholder="Buscar..."
+                  value={filters.search || ''}
+                  onChange={(e) => updateFilters({ search: e.target.value })}
+                  className="w-48 h-9 text-sm"
+                />
+              </div>
+
+              {/* Síntesis IA */}
+              <EvolutionSynthesis
+                patientId={patientId}
+                patientName={patientName}
+                evolutions={entries}
+                onSynthesisCreated={(synthesis) => {
+                  // Refrescar lista de evoluciones
+                  loadEntries();
+                }}
               />
             </div>
           </div>
@@ -220,6 +246,8 @@ export const EvolutionTab = memo(function EvolutionTab({ patientId }: EvolutionT
           isLoading={isLoading}
         />
       )}
+
+
 
       {/* Modal de confirmación de borrado */}
       <ConfirmDialog

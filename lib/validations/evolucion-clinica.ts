@@ -3,7 +3,7 @@ import { EntryType, ManualEntryType } from '@/types/evolucion-clinica';
 
 // Validación para crear nueva entrada
 export const createEvolutionEntrySchema = z.object({
-  entry_type: z.enum(['clinica', 'sesion'] as const),
+  entry_type: z.enum(['clinica', 'sesion', 'supervision', 'paciente', 'sintesis_ia'] as const),
   content: z.string()
     .min(1, 'El contenido no puede estar vacío')
     .max(5000, 'El contenido no puede exceder 5000 caracteres')

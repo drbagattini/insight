@@ -69,15 +69,15 @@ export async function POST(
   context: { params: { patientId: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-
     const { patientId } = context.params;
     const body = await request.json();
 
 
+
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
 
     // Validar entrada con Zod
     let validatedData;
@@ -104,6 +104,8 @@ export async function POST(
     const { entry_type, content, tags, metadata } = validatedData;
     const author_id = body.author_id || session.user.id;
     const is_draft = body.isDraft || false;
+
+
 
     // Crear nueva entrada
     const { data: newEntry, error } = await (supabaseAdmin as any)

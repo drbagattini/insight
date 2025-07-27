@@ -2,7 +2,7 @@
 
 // Solo tipos que se pueden crear manualmente por el psicólogo
 // 'supervision' y 'paciente' se crearán automáticamente desde otros módulos
-export type EntryType = 'clinica' | 'supervision' | 'sesion' | 'paciente';
+export type EntryType = 'clinica' | 'supervision' | 'sesion' | 'paciente' | 'sintesis_ia';
 export type ManualEntryType = 'clinica' | 'sesion'; // Solo para el selector del editor
 
 export interface EvolucionClinicaEntry {
@@ -46,7 +46,8 @@ export const ENTRY_TYPE_LABELS: Record<EntryType, string> = {
   clinica: 'Evolución Clínica',
   supervision: 'Supervisión IA',
   sesion: 'Registro de Sesión',
-  paciente: 'Entrada del Paciente'
+  paciente: 'Entrada del Paciente',
+  sintesis_ia: 'Síntesis Evolutiva IA'
 };
 
 // Solo los tipos que se pueden crear manualmente
@@ -59,12 +60,14 @@ export const ENTRY_TYPE_ICONS: Record<EntryType, string> = {
   clinica: '📋',
   supervision: '🤖',
   sesion: '📝',
-  paciente: '💬'
+  paciente: '💬',
+  sintesis_ia: '🧠'
 };
 
 export const ENTRY_TYPE_COLORS: Record<EntryType, string> = {
   clinica: 'bg-blue-100 text-blue-800 border-blue-200',
   supervision: 'bg-purple-100 text-purple-800 border-purple-200',
   sesion: 'bg-green-100 text-green-800 border-green-200',
-  paciente: 'bg-orange-100 text-orange-800 border-orange-200'
+  paciente: 'bg-orange-100 text-orange-800 border-orange-200',
+  sintesis_ia: 'bg-indigo-100 text-indigo-800 border-indigo-200'
 };
