@@ -52,88 +52,24 @@ interface GeminiResponse {
   }[];
 }
 
-const SUPERVISOR_SYSTEM_PROMPT = `# Prompt: Supervisor Clínico Interactivo
+const SUPERVISOR_SYSTEM_PROMPT = `Eres un supervisor clínico experimentado y conversacional. Tienes acceso completo a todos los datos del paciente.
 
-## 1. ROL Y OBJETIVO PRINCIPAL
-Eres un Supervisor Clínico Interactivo. Tu persona es la de un psicólogo senior, empático y reflexivo. Tu objetivo principal no es extraer información, sino actuar como un "sparring" intelectual para tu colega (el usuario). Le ayudarás a profundizar en su propio entendimiento del caso, a conectar ideas y a descubrir nuevos insights a través de un diálogo socrático y colaborativo.
+ESTILO DE COMUNICACIÓN:
+- Responde de forma natural y conversacional, como un colega experimentado
+- Sé directo pero cálido, práctico pero reflexivo
+- Proporciona respuestas completas y detalladas cuando sea necesario
+- Usa ejemplos concretos y sugerencias específicas
+- Si analizas cuestionarios, interpreta los puntajes y su significado clínico
 
-## 2. PRINCIPIOS DE INTERACCIÓN (EL ESTILO CONVERSACIONAL)
-Para lograr un diálogo fluido y natural, tu comportamiento debe seguir estrictamente estos principios:
+REGLAS:
+- NUNCA repitas saludos en medio de conversaciones
+- NUNCA preguntes "qué necesitas ver primero" o "por dónde empezamos"
+- Responde directamente la pregunta que te hacen
+- Usa toda la información disponible del paciente para dar contexto
 
-**Tono de Colega**: Utiliza un lenguaje cercano, colaborativo y empático. Evita la jerga excesiva y habla como si estuvieras tomando un café con un colega para discutir un caso. Usa frases como "¿Qué te parece si exploramos...?" o "Eso que mencionas es interesante, ¿cómo lo conectas con...?".
+Saludo inicial SOLO para el primer mensaje: "Hola, he revisado el caso. ¿Qué te interesa explorar?"
 
-**Brevedad y Ritmo Humano**: Tus intervenciones deben ser cortas y al punto (una o dos frases como máximo). Esto es crucial para mantener un ritmo de chat conversacional y evitar monólogos.
-
-**La Regla de la Pregunta Abierta**: Cada una de tus respuestas DEBE terminar con una pregunta abierta que invite a la reflexión. Nunca termines con una afirmación. Las preguntas deben ser genuinamente curiosas y no un simple interrogatorio.
-Ejemplos de buenas preguntas: "¿Y qué te resuena de esa idea?", "¿Qué emoción crees que subyace a ese comportamiento?", "¿Hay algo en su historia que creas que nos da una pista sobre eso?", "¿Cómo crees que se siente él/ella en esa dinámica?".
-
-**Pausa Reflexiva**: Tómate un momento para pensar antes de responder. Tu objetivo es la profundidad, no la velocidad.
-
-## 3. CONTEXTO Y BASE DE CONOCIMIENTO
-Este es un punto crítico. Tienes dos fuentes de información:
-
-**Datos Preexistentes del Paciente**: Antes de iniciar la conversación, tienes acceso completo al perfil del paciente a través de los siguientes datos estructurados. Tu primera tarea es analizar silenciosamente esta información para tener un panorama completo del caso. No preguntes por datos que ya están disponibles en el perfil (ej. "cuál es su edad").
-
-**La Conversación Actual**: El diálogo que mantienes con el terapeuta es tu segunda fuente de información. Debes integrar sus reflexiones y comentarios para enriquecer la comprensión del caso.
-
-## 4. EJES DE EXPLORACIÓN (LA GUÍA ESTRUCTURAL)
-Tu conversación se estructurará en torno a los siguientes ejes de exploración. No se trata de un cuestionario rígido que debas leer, sino de una guía interna para asegurar que la supervisión sea completa. Tu habilidad reside en transitar fluidamente entre estos temas a través de preguntas naturales.
-
-**Eje 1: ¿Qué le Sucede al Paciente?**
-- Exploración de síntomas, diagnósticos y su impacto en la vida del paciente.
-- Evaluación del nivel de funcionamiento mental e interpersonal.
-- Análisis de relaciones interpersonales, especialmente en vínculos cercanos e íntimos.
-- Exploración de conflictos y fantasías inconscientes.
-- Evaluación de las defensas del paciente.
-- Consideración del funcionamiento mental en términos de identidad, regulación afectiva, simbolización y vínculos con objetos internos y externos.
-
-**Eje 2: ¿Por Qué Sucede lo que Sucede?**
-- Indagación en la etiología, antecedentes y experiencias traumáticas.
-- Análisis de patrones repetitivos en comportamiento.
-- Evaluación de la influencia de factores culturales y sociales.
-- Exploración de la historia familiar.
-
-**Eje 3: ¿Qué está Planeando el Psicólogo como Tratamiento?**
-- Discusión del plan terapéutico propuesto.
-
-**Eje 4: Evolución del Paciente según el Psicólogo**
-- Evaluación de la percepción del psicólogo sobre la evolución del paciente.
-
-**Eje 5: Exploración de Datos Específicos (Reactivo)**
-- Si el terapeuta pregunta directamente sobre un cuestionario (ej. "¿Qué te llama la atención del PHQ-9?") o una respuesta específica, tu rol es actuar como un segundo par de ojos.
-- Analiza el dato en cuestión y responde con una observación seguida de una pregunta abierta. Por ejemplo: "Veo que en el ítem 9 puntúa 'casi todos los días'. Es un dato consistente con su relato, pero la fluctuación en el puntaje total es llamativa. ¿Qué hipótesis te surge al ver esa aparente contradicción?".
-- Utiliza tu acceso a los datos para conectar la respuesta del cuestionario con otros datos relevantes (de la entrevista, de otros cuestionarios, etc.) y fomentar la triangulación.
-
-## 5. GENERACIÓN DEL RESUMEN CUALITATIVO
-Cuando el terapeuta haga clic en el botón de finalización, tu tarea final es redactar un único párrafo de resumen cualitativo en prosa.
-
-**Instrucción Clave**: Este resumen debe integrar la información inicial del perfil del paciente CON los nuevos insights y reflexiones surgidas durante vuestra conversación.
-
-**Ejemplo de Estilo y Estructura**: Durante la supervisión, se exploró la conexión entre la dinámica de evitación de vínculos del paciente y su historia de humillación en la adolescencia. Se discutió cómo su actual apatía podría funcionar como una defensa contra la herida narcisista, una hipótesis que surgió al triangular su relato sobre 'sentirse un sapo de otro pozo' con los bajos puntajes en la regulación de la autoestima del OPD-CA2-SQ. El terapeuta concluyó que el principal desafío será abordar la vergüenza subyacente para poder construir una alianza terapéutica más sólida, como lo indica la fragilidad reportada en el BR-WAI.
-
-RECUERDA: Mantén siempre el rol de colega supervisor, no de terapeuta directo.
-
-## HERRAMIENTAS DISPONIBLES
-Tienes acceso a las siguientes herramientas para buscar datos específicos del paciente cuando sea clínicamente relevante:
-
-1. **buscarCuestionario**: Para obtener resultados específicos de un cuestionario
-2. **buscarHistoriaClinica**: Para buscar información específica en la historia clínica
-3. **buscarDatosBasicos**: Para obtener información demográfica y básica del paciente
-4. **buscarEntrevistaInicial**: Para obtener datos estructurados completos de la entrevista inicial (26 campos organizados)
-5. **buscarEvoluciones**: Para revisar evoluciones clínicas por tipo
-6. **buscarInformes**: Para consultar informes de síntesis generados
-
-**IMPORTANTE: SIEMPRE usa estas herramientas cuando el psicólogo mencione un cuestionario específico o pregunte por datos concretos.**
-
-Ejemplos de cuándo DEBES usar las herramientas:
-- "¿Qué puntaje tiene en el PHQ-9?" → usar buscarCuestionario("PHQ-9")
-- "Qué te llama la atención del OPD-CA2-SQ?" → usar buscarCuestionario("OPD-CA2-SQ")
-- "Cómo está en el WHO-5?" → usar buscarCuestionario("WHO-5")
-- "¿Menciona algo sobre ansiedad?" → usar buscarHistoriaClinica("ansiedad")
-- "¿Cuál es su edad y motivo de consulta?" → usar buscarDatosBasicos()
-- "¿Cómo es su situación familiar?" → usar buscarEntrevistaInicial()
-
-**NUNCA respondas "no tengo acceso" o "no puedo ver" - SIEMPRE usa las herramientas disponibles para obtener la información solicitada.**`;
+Tienes acceso completo a: entrevista inicial, cuestionarios psicológicos, evoluciones clínicas e informes.`;
 
 export async function POST(
   request: NextRequest,
@@ -165,10 +101,14 @@ export async function POST(
       );
     }
 
-    // Funciones auxiliares para buscar datos específicos
-    const buscarDatosEspecificos = async (tipo: string, parametros: any) => {
-      try {
-        const baseUrl = request.url.replace(`/api/patients/${patientId}/supervision/chat`, '');
+    // CARGAR TODOS LOS DATOS DEL PACIENTE SIEMPRE (como debería ser)
+    let fullPatientContext = '';
+    const messageText = message.toLowerCase();
+    
+    try {
+      const baseUrl = request.url.replace(`/api/patients/${patientId}/supervision/chat`, '');
+      
+      // Cargar datos básicos del paciente
         const dataResponse = await fetch(`${baseUrl}/api/informes/datos/${patientId}`, {
           headers: {
             'Authorization': request.headers.get('Authorization') || '',
@@ -176,222 +116,78 @@ export async function POST(
           }
         });
 
-        if (!dataResponse.ok) {
-          return { error: 'No se pudieron obtener los datos del paciente' };
-        }
-
-        const patientData = await dataResponse.json();
-
-        switch (tipo) {
-          case 'buscarCuestionario':
-            const nombreCuestionario = parametros.nombre.toLowerCase();
-            const cuestionario = patientData.questionnaires?.find((q: any) => 
-              q.questionnaire_name.toLowerCase().includes(nombreCuestionario)
-            );
-            if (cuestionario) {
-              return {
-                nombre: cuestionario.questionnaire_name,
-                puntaje: cuestionario.total_score,
-                fecha: cuestionario.created_at,
-                respuestas: cuestionario.responses || []
-              };
-            }
-            return { error: `No se encontró el cuestionario ${parametros.nombre}` };
-
-          case 'buscarHistoriaClinica':
-            const termino = parametros.termino.toLowerCase();
-            const historia = patientData.intake?.reason_for_consultation + ' ' + 
-                           (patientData.intake?.current_symptoms || '') + ' ' +
-                           (patientData.intake?.history || '');
-            const menciones = historia.toLowerCase().includes(termino);
-            return {
-              encontrado: menciones,
-              contexto: menciones ? historia.substring(0, 500) + '...' : 'No se encontraron menciones',
-              termino: parametros.termino
-            };
-
-          case 'buscarDatosBasicos':
-            return {
-              nombre: patientData.patient?.name || 'No especificado',
-              edad: patientData.patient?.age || 'No especificada',
-              genero: patientData.patient?.gender || 'No especificado',
-              motivoConsulta: patientData.intake?.reason_for_consultation || 'No especificado',
-              diagnostico: patientData.intake?.diagnosis || 'No especificado'
-            };
-
-          case 'buscarEntrevistaInicial':
-            const intakeData = patientData.intake?.datos || {};
-            return {
-              sociodemograficos: {
-                edad: intakeData.edad,
-                sexo: intakeData.sexo,
-                estadoCivil: intakeData.estadoCivil,
-                ocupacion: intakeData.ocupacion
-              },
-              nucleoFamiliar: {
-                grupoFamiliar: intakeData.grupoFamiliar,
-                conviveCon: intakeData.conviveCon
-              },
-              formulacionInicial: {
-                presentacion: intakeData.presentacion,
-                diagnosticoTexto: intakeData.diagnosticoTexto,
-                diagnosticoCodigo: intakeData.diagnosticoCodigo,
-                nivelPersonalidad: intakeData.nivelPersonalidad,
-                etiologia: intakeData.etiologia
-              },
-              evaluacionActual: {
-                malestarPaciente: intakeData.malestarPaciente,
-                gravedadTerapeuta: intakeData.gravedadTerapeuta,
-                gaf: intakeData.gaf,
-                apoyoSocial: intakeData.apoyoSocial
-              },
-              antecedentes: {
-                duracionTratPrevio: intakeData.duracionTratPrevio,
-                medicacionPrev: intakeData.medicacionPrev,
-                antecedentesSM: intakeData.antecedentesSM,
-                biologicos: intakeData.biologicos
-              },
-              planTerapeutico: {
-                estrategia: intakeData.estrategia,
-                posicionTerap: intakeData.posicionTerap
+        if (dataResponse.ok) {
+          const patientData = await dataResponse.json();
+          
+          // Crear contexto compacto solo con datos relevantes
+          const compactData: any = {
+            patient: { name: patientData.patient?.name, age: patientData.patient?.age },
+            intake: patientData.intake?.datos || {},
+            questionnaires: patientData.questionnaires?.map((q: any) => ({
+              codigo: q.codigo,
+              puntuacion: q.puntuacion,
+              fecha: q.fecha
+            })) || []
+          };
+          
+          // Cargar evoluciones clínicas SIEMPRE (como parte del contexto completo)
+          try {
+            const evolutionsResponse = await fetch(`${baseUrl}/api/patients/${patientId}/evolutions/history`, {
+              headers: {
+                'Authorization': request.headers.get('Authorization') || '',
+                'Cookie': request.headers.get('Cookie') || ''
               }
-            };
-
-          case 'buscarEvoluciones':
-            // Buscar evoluciones clínicas
-            try {
-              const evolutionsResponse = await fetch(`${baseUrl}/api/patients/${patientId}/evolutions/history?tipo=${parametros.tipo || 'intake'}`, {
-                headers: {
-                  'Authorization': request.headers.get('Authorization') || '',
-                  'Cookie': request.headers.get('Cookie') || ''
-                }
-              });
-              
-              if (evolutionsResponse.ok) {
-                const evolutions = await evolutionsResponse.json();
-                return {
-                  tipo: parametros.tipo || 'intake',
-                  total: evolutions.length,
-                  evoluciones: evolutions.slice(0, 5).map((ev: any) => ({
-                    fecha: ev.created_at,
-                    version: ev.version,
-                    estado: ev.estado,
-                    contenido: ev.contenido?.substring(0, 300) + '...' // Resumen
-                  }))
-                };
-              }
-              return { error: 'No se pudieron obtener las evoluciones' };
-            } catch {
-              return { error: 'Error al buscar evoluciones' };
-            }
-
-          case 'buscarInformes':
-            // Buscar informes de síntesis
-            try {
-              const informesResponse = await fetch(`${baseUrl}/api/informes/paciente/${patientId}`, {
-                headers: {
-                  'Authorization': request.headers.get('Authorization') || '',
-                  'Cookie': request.headers.get('Cookie') || ''
-                }
-              });
-              
-              if (informesResponse.ok) {
-                const informes = await informesResponse.json();
-                return {
-                  total: informes.length,
-                  informes: informes.slice(0, 3).map((inf: any) => ({
-                    id: inf.id,
-                    titulo: inf.titulo,
-                    fecha: inf.created_at,
-                    resumen: inf.contenido?.substring(0, 200) + '...' // Resumen
-                  }))
-                };
-              }
-              return { error: 'No se pudieron obtener los informes' };
-            } catch {
-              return { error: 'Error al buscar informes' };
-            }
-
-          default:
-            return { error: 'Tipo de búsqueda no reconocido' };
-        }
-      } catch (error) {
-        return { error: 'Error al buscar datos específicos' };
-      }
-    };
-
-    // Estrategia: Datos bajo demanda - solo cargar cuando sea necesario
-    // Verificar si necesitamos datos del paciente basado en el mensaje
-    const needsPatientData = message.toLowerCase().includes('paciente') || 
-                           message.toLowerCase().includes('caso') ||
-                           message.toLowerCase().includes('cuestionario') ||
-                           message.toLowerCase().includes('datos') ||
-                           conversationHistory.length === 0; // Primera interacción
-    
-    let patientContext = '';
-    let specificData = '';
-    
-    try {
-      const baseUrl = request.url.replace(`/api/patients/${patientId}/supervision/chat`, '');
-      const dataResponse = await fetch(`${baseUrl}/api/informes/datos/${patientId}`, {
-        headers: {
-          'Authorization': request.headers.get('Authorization') || '',
-          'Cookie': request.headers.get('Cookie') || ''
-        }
-      });
-
-      if (dataResponse.ok) {
-        const patientData = await dataResponse.json();
-        
-        // Datos básicos siempre disponibles
-        const patientSummary = {
-          nombre: patientData.patient?.name || 'No especificado',
-          edad: patientData.patient?.age || 'No especificada',
-          motivoConsulta: patientData.intake?.reason_for_consultation || 'No especificado',
-          diagnostico: patientData.intake?.diagnosis || 'No especificado'
-        };
-        
-        patientContext = `\n\nDATOS BÁSICOS DEL PACIENTE:\n${JSON.stringify(patientSummary, null, 2)}`;
-        
-        // Detectar si se mencionan cuestionarios específicos y pre-cargar datos
-        const messageLower = message.toLowerCase();
-        const commonQuestionnaires = ['who-5', 'who5', 'phq-9', 'phq9', 'gad-7', 'gad7', 'opd', 'beck', 'hamilton'];
-        
-        console.log('[DEBUG] Message:', message);
-        console.log('[DEBUG] Available questionnaires:', patientData.questionnaires?.map((q: any) => q.questionnaire_name));
-        
-        for (const questionnaire of commonQuestionnaires) {
-          if (messageLower.includes(questionnaire)) {
-            console.log(`[DEBUG] Detected questionnaire mention: ${questionnaire}`);
+            });
             
-            // Pre-cargar datos del cuestionario
-            const questionnaireData = patientData.questionnaires?.find((q: any) => 
-              q.questionnaire_name?.toLowerCase().includes(questionnaire.replace('-', '')) ||
-              q.questionnaire_name?.toLowerCase().includes(questionnaire)
+            if (evolutionsResponse.ok) {
+              const evolutions = await evolutionsResponse.json();
+              compactData.evolutions = evolutions.slice(0, 3).map((e: any) => ({
+                tipo: e.tipo,
+                contenido: e.contenido?.substring(0, 300) + (e.contenido?.length > 300 ? '...' : ''),
+                fecha: e.created_at,
+                version: e.version
+              }));
+              console.log('[DEBUG] Loaded', evolutions.length, 'evolutions (showing first 3 compacted)');
+            }
+          } catch (evolutionError) {
+            console.error('[ERROR] Loading evolutions:', evolutionError);
+            compactData.evolutions = [];
+          }
+          
+          fullPatientContext = `\n\n### Datos del Paciente:\n\`\`\`json\n${JSON.stringify(compactData, null, 2)}\n\`\`\``;
+          
+          console.log('[DEBUG] Compact patient data loaded:', fullPatientContext.length, 'characters');
+          console.log('[DEBUG] Patient name:', patientData.patient?.name);
+          console.log('[DEBUG] Questionnaires found:', patientData.questionnaires?.length || 0);
+          console.log('[DEBUG] Questionnaire codes:', patientData.questionnaires?.map((q: any) => q.codigo) || []);
+          
+          // Logging específico para OPD
+          if (messageText.includes('opd') || messageText.includes('operacionalizado') || messageText.includes('psicodinamico')) {
+            const opdData = patientData.questionnaires?.find((q: any) => 
+              q.codigo?.toLowerCase().includes('opd') ||
+              q.titulo?.toLowerCase().includes('opd') ||
+              q.codigo?.toLowerCase().includes('operacionalizado') ||
+              q.titulo?.toLowerCase().includes('operacionalizado') ||
+              q.codigo?.toLowerCase().includes('psicodinamico') ||
+              q.titulo?.toLowerCase().includes('psicodinamico')
             );
-            
-            if (questionnaireData) {
-              console.log(`[DEBUG] Found questionnaire data:`, questionnaireData.questionnaire_name);
-              specificData += `\n\nDATOS DEL CUESTIONARIO ${questionnaireData.questionnaire_name?.toUpperCase()}:\n`;
-              specificData += `Puntaje Total: ${questionnaireData.total_score || 'No calculado'}\n`;
-              specificData += `Fecha: ${questionnaireData.created_at || 'No especificada'}\n`;
-              if (questionnaireData.responses) {
-                specificData += `Respuestas: ${JSON.stringify(questionnaireData.responses, null, 2)}\n`;
-              }
+            console.log('[DEBUG] OPD questionnaire found:', !!opdData);
+            if (opdData) {
+              console.log('[DEBUG] OPD data:', JSON.stringify(opdData, null, 2));
             } else {
-              console.log(`[DEBUG] No questionnaire data found for: ${questionnaire}`);
+              console.log('[DEBUG] Available questionnaire codes:', patientData.questionnaires?.map((q: any) => q.codigo));
+              console.log('[DEBUG] Available questionnaire titles:', patientData.questionnaires?.map((q: any) => q.titulo));
             }
           }
+          
+        } else {
+          console.log('[ERROR] Could not load patient data:', dataResponse.status);
+          fullPatientContext = '\n\n[DATOS DEL PACIENTE: Error al cargar - código ' + dataResponse.status + ']';
         }
-        
-        if (specificData) {
-          console.log('[DEBUG] Specific data loaded:', specificData.length, 'characters');
-        }
+      } catch (error) {
+        console.error('[ERROR] Exception loading patient data:', error);
+        fullPatientContext = '\n\n[DATOS DEL PACIENTE: Error de conexión]';
       }
-    } catch (error) {
-      console.log('[WARNING] Could not load patient data, continuing without it');
-      patientContext = '\n\n[DATOS DEL PACIENTE NO DISPONIBLES EN ESTE MOMENTO]';
-    }
 
     // Construir array de mensajes para el contexto
     const messages: ChatMessage[] = [];
@@ -401,7 +197,7 @@ export async function POST(
       role: 'system',
       content: `${SUPERVISOR_SYSTEM_PROMPT}
 
-${patientContext}${specificData}`
+${fullPatientContext}`
     });
 
     // Agregar historial de conversación
@@ -420,18 +216,15 @@ ${patientContext}${specificData}`
       content: message
     });
 
-    // Llamar a Gemini API usando la misma implementación que informes
-    // Construir el prompt completo incluyendo el sistema
+    // Construir prompt simple y directo
     const systemMessage = messages.find(msg => msg.role === 'system')?.content || SUPERVISOR_SYSTEM_PROMPT;
     const conversationMessages = messages.filter(msg => msg.role !== 'system');
     
+    // Formato simple: solo el prompt del sistema + la conversación natural
     const conversationText = [
-      `INSTRUCCIONES DEL SISTEMA:\n${systemMessage}`,
+      systemMessage,
       '',
-      'CONVERSACIÓN:',
-      ...conversationMessages.map(msg => 
-        `${msg.role === 'user' ? 'Terapeuta' : 'Supervisor'}: ${msg.content}`
-      )
+      ...conversationMessages.map(msg => msg.content)
     ].join('\n\n');
 
     console.log('[DEBUG] Conversation text length:', conversationText.length);
@@ -451,84 +244,11 @@ ${patientContext}${specificData}`
           text: finalText
         }]
       }],
-      tools: [{
-        functionDeclarations: [
-          {
-            name: 'buscarCuestionario',
-            description: 'Busca y obtiene los resultados de un cuestionario específico del paciente',
-            parameters: {
-              type: 'object',
-              properties: {
-                nombre: {
-                  type: 'string',
-                  description: 'Nombre del cuestionario a buscar (ej: PHQ-9, GAD-7, Beck, etc.)'
-                }
-              },
-              required: ['nombre']
-            }
-          },
-          {
-            name: 'buscarHistoriaClinica',
-            description: 'Busca información específica en la historia clínica del paciente',
-            parameters: {
-              type: 'object',
-              properties: {
-                termino: {
-                  type: 'string',
-                  description: 'Término o concepto a buscar en la historia clínica (ej: ansiedad, trauma, familia, etc.)'
-                }
-              },
-              required: ['termino']
-            }
-          },
-          {
-            name: 'buscarDatosBasicos',
-            description: 'Obtiene información demográfica y básica del paciente',
-            parameters: {
-              type: 'object',
-              properties: {},
-              required: []
-            }
-          },
-          {
-            name: 'buscarEntrevistaInicial',
-            description: 'Obtiene datos estructurados completos de la entrevista inicial (26 campos organizados por categorías)',
-            parameters: {
-              type: 'object',
-              properties: {},
-              required: []
-            }
-          },
-          {
-            name: 'buscarEvoluciones',
-            description: 'Busca evoluciones clínicas del paciente por tipo',
-            parameters: {
-              type: 'object',
-              properties: {
-                tipo: {
-                  type: 'string',
-                  description: 'Tipo de evolución a buscar (ej: intake, supervision, sesion, etc.)'
-                }
-              },
-              required: []
-            }
-          },
-          {
-            name: 'buscarInformes',
-            description: 'Obtiene informes de síntesis clínica generados para el paciente',
-            parameters: {
-              type: 'object',
-              properties: {},
-              required: []
-            }
-          }
-        ]
-      }],
       generationConfig: {
-        temperature: 0.7,
+        temperature: 0.4,  // Equilibrio entre consistencia y creatividad
         topK: 40,
-        topP: 0.9,
-        maxOutputTokens: 2048  // Aumentar para respuestas más completas
+        topP: 0.8,  // Más flexible
+        maxOutputTokens: 4096  // Respuestas completas como antes
       }
     };
 
@@ -585,84 +305,7 @@ ${patientContext}${specificData}`
     const candidate = geminiData.candidates[0];
     const parts = candidate.content.parts;
     
-    // Verificar si hay function calls
-    const functionCalls = parts.filter(part => 'functionCall' in part);
-    
-    if (functionCalls.length > 0) {
-      console.log('[DEBUG] Function calls detected:', functionCalls.length);
-      
-      // Procesar function calls
-      const functionResults = [];
-      for (const part of functionCalls) {
-        if ('functionCall' in part) {
-          const { name, args } = part.functionCall;
-          console.log(`[DEBUG] Executing function: ${name} with args:`, args);
-          
-          const result = await buscarDatosEspecificos(name, args);
-          functionResults.push({
-            function: name,
-            args,
-            result
-          });
-        }
-      }
-      
-      // Crear una segunda llamada con los resultados de las funciones
-      const functionResultsText = functionResults.map(fr => 
-        `RESULTADO DE ${fr.function.toUpperCase()}(${JSON.stringify(fr.args)}):\n${JSON.stringify(fr.result, null, 2)}`
-      ).join('\n\n');
-      
-      const followUpRequest: GeminiRequest = {
-        contents: [{
-          parts: [{
-            text: `${finalText}\n\n--- RESULTADOS DE FUNCIONES ---\n${functionResultsText}\n\nAhora responde como supervisor clínico usando esta información:`
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.9,
-          maxOutputTokens: 2048
-        }
-      };
-      
-      // Segunda llamada sin tools para obtener la respuesta final
-      const followUpResponse = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(followUpRequest)
-      });
-      
-      if (!followUpResponse.ok) {
-        throw new Error('Error en follow-up request');
-      }
-      
-      const followUpData: GeminiResponse = await followUpResponse.json();
-      const textParts = followUpData.candidates[0].content.parts.filter(part => 'text' in part);
-      
-      if (textParts.length === 0) {
-        throw new Error('No se obtuvo respuesta de texto después de function calls');
-      }
-      
-      const response = (textParts[0] as { text: string }).text;
-      console.log('[DEBUG] Final response after function calls:', response);
-      
-      if (!response || response.trim().length === 0) {
-        throw new Error('Respuesta vacía del modelo');
-      }
-      
-      return NextResponse.json({
-        response,
-        timestamp: new Date().toISOString(),
-        model: 'gemini-2.5-pro',
-        patientId,
-        functionCalls: functionResults
-      });
-    }
-    
-    // Respuesta normal sin function calls
+    // Procesar respuesta directa (sin function calls)
     const textParts = parts.filter(part => 'text' in part);
     if (textParts.length === 0) {
       throw new Error('No se encontró respuesta de texto');

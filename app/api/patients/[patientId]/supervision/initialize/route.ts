@@ -82,28 +82,6 @@ export async function POST(
 }
 
 function generateInitialMessage(patientData: any): string {
-  const patientName = patientData.patient?.name || 'el paciente';
-  const psychologistName = patientData.psychologist?.name || 'colega';
-  const hasIntake = !!patientData.intake;
-  const questionnaireCount = patientData.questionnaires?.length || 0;
-
-  // Mensaje inicial profesional y estructurado
-  let greeting = `Hola ${psychologistName},\n\nEstoy aquí para ayudarte a supervisar el caso de ${patientName}.`;
-  
-  // Información disponible
-  if (hasIntake && questionnaireCount > 0) {
-    greeting += ` Veo que cuentas con la entrevista inicial y ${questionnaireCount} cuestionario${questionnaireCount > 1 ? 's' : ''} completado${questionnaireCount > 1 ? 's' : ''}, lo cual nos proporciona una base sólida para la supervisión.`;
-  } else if (hasIntake) {
-    greeting += ` Tienes la entrevista inicial completada, lo cual nos da información valiosa para trabajar.`;
-  } else if (questionnaireCount > 0) {
-    greeting += ` Cuentas con ${questionnaireCount} cuestionario${questionnaireCount > 1 ? 's' : ''} completado${questionnaireCount > 1 ? 's' : ''} que podemos analizar juntos.`;
-  }
-
-  // Explicación del proceso
-  greeting += `\n\nPodemos explorar cualquier aspecto del caso que consideres relevante. Al final de nuestra conversación, podremos generar una síntesis de supervisión que quedará registrada en el área de evolución clínica.`;
-
-  // Pregunta inicial
-  greeting += `\n\n¿Por qué área te gustaría empezar?`;
-  
-  return greeting;
+  // Mensaje inicial simple y directo como definimos
+  return "Hola, he revisado el caso. ¿Qué te interesa explorar?";
 }
