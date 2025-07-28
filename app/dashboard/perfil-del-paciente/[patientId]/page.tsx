@@ -566,22 +566,25 @@ export default function PatientProfilePage() {
               <EvolutionTab patientId={patientId} />
             </Tab.Panel>
             <Tab.Panel className="rounded-xl bg-white border border-gray-200 border-t-4 border-t-black shadow-sm min-h-[600px] overflow-hidden focus:outline-none">
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-black">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-900">Evaluación Psicométrica</h3>
-                    <p className="text-sm text-gray-600 mt-1">Análisis y seguimiento de escalas aplicadas</p>
+              <div className="space-y-4 p-6">
+                {/* Header con botón principal */}
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-gray-900 p-4 mb-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-lg font-semibold text-gray-700">Evaluación Psicométrica</h2>
+                      <p className="text-gray-500 mt-0.5 text-sm">
+                        Análisis y seguimiento de escalas aplicadas
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => setShowScheduleModal(true)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                    >
+                      <Calendar className="w-4 h-4" />
+                      Programar Envío
+                    </Button>
                   </div>
-                  <Button
-                    onClick={() => setShowScheduleModal(true)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-                  >
-                    <Calendar className="w-4 h-4" />
-                    Programar Envío
-                  </Button>
                 </div>
-              </div>
-              <div className="p-6">
                 <div className="mb-6 w-fit">
                   <Listbox value={selectedQuestionnaire} onChange={setSelectedQuestionnaire}>
                     <div className="relative">
