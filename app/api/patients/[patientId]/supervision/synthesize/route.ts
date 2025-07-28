@@ -104,26 +104,83 @@ Basándote en toda esta información, redacta un párrafo de síntesis cualitati
       }
     ];
 
-    // Llamar a Gemini API
-    const result = await model.generateContent(fullContext);
-    const synthesisContent = result.response.text();
+    // Llamar a Gemini API con retry logic
+    let synthesisContent: string = '';
+    let retryCount = 0;
+    const maxRetries = 3;
+    let success = false;
+    
+    while (retryCount < maxRetries && !success) {
+      try {
+        console.log(`[SYNTHESIS] Attempting Gemini API call (attempt ${retryCount + 1}/${maxRetries})`);
+        const result = await model.generateContent(fullContext);
+        synthesisContent = result.response.text();
+        console.log('[SYNTHESIS] Gemini API call successful');
+        success = true;
+      } catch (geminiError: any) {
+        console.error(`[SYNTHESIS] Gemini API error (attempt ${retryCount + 1}):`, geminiError.message);
+        retryCount++;
+        
+        if (retryCount >= maxRetries) {
+          console.error('[SYNTHESIS] Max retries reached, failing');
+          return NextResponse.json(
+            { error: 'Servicio de IA temporalmente no disponible. Intenta nuevamente en unos minutos.' },
+            { status: 503 }
+          );
+        }
+        
+        // Wait before retry (exponential backoff)
+        const waitTime = Math.pow(2, retryCount) * 1000; // 2s, 4s, 8s
+        console.log(`[SYNTHESIS] Waiting ${waitTime}ms before retry`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+    }
+    
+    if (!success || !synthesisContent) {
+      return NextResponse.json(
+        { error: 'No se pudo generar la síntesis. Intenta nuevamente.' },
+        { status: 500 }
+      );
+    }
+
+    // Determinar la siguiente versión
+    const { data: maxVersionRow, error: maxVersionError } = await supabaseAdmin
+      .from('evoluciones_clinicas')
+      .select('version')
+      .eq('patient_id', patientId)
+      .eq('tipo', 'supervision')
+      .order('version', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (maxVersionError) {
+      console.error('Error getting max version:', maxVersionError);
+      return NextResponse.json(
+        { error: 'Error determinando versión' },
+        { status: 500 }
+      );
+    }
+
+    const nextVersion = (maxVersionRow?.version ?? 0) + 1;
 
     // Guardar la síntesis en la tabla de evolución clínica
     const { data: evolutionEntry, error: evolutionError } = await supabaseAdmin
-      .from('evolucion_clinica_entries')
+      .from('evoluciones_clinicas')
       .insert({
-        paciente_id: patientId,
-        author_id: session.user.id,
-        entry_type: 'supervision',
-        content: synthesisContent,
-        metadata: {
+        patient_id: patientId,
+        tipo: 'supervision',
+        version: nextVersion,
+        schema_version: 1,
+        status: 'final',
+        urgente: false,
+        data: {
+          synthesis: synthesisContent,
           conversation_length: conversationHistory.length,
           generated_at: new Date().toISOString(),
-          ai_model: 'deepseek-chat',
+          ai_model: 'gemini-1.5-flash',
           synthesis_type: 'supervision_chat'
         },
-        tags: ['supervision', 'ia', 'sintesis'],
-        is_draft: false
+        created_by: session.user.id
       })
       .select()
       .single();

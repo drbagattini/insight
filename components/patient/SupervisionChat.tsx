@@ -52,6 +52,7 @@ export function SupervisionChat({
   const {
     messages,
     isLoading,
+    isSynthesizing,
     error,
     isInitialized,
     initializeChat,
@@ -260,14 +261,24 @@ export function SupervisionChat({
 
             {/* Footer with Synthesis Button */}
             <div className="px-4 pb-4">
-              {messages.length > 2 && !isLoading && (
+              {messages.length > 2 && (
                 <Button
                   onClick={handleGenerateSynthesis}
-                  className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-sm"
+                  disabled={isSynthesizing || isLoading}
+                  className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-sm disabled:opacity-50"
                   size="sm"
                 >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Generar Síntesis de Supervisión
+                  {isSynthesizing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Generando Síntesis...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Generar Síntesis de Supervisión
+                    </>
+                  )}
                 </Button>
               )}
             </div>

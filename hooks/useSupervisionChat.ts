@@ -14,6 +14,7 @@ interface UseSupervisionChatProps {
 interface UseSupervisionChatReturn {
   messages: Message[];
   isLoading: boolean;
+  isSynthesizing: boolean;
   error: string | null;
   isInitialized: boolean;
   initializeChat: () => Promise<void>;
@@ -26,6 +27,7 @@ interface UseSupervisionChatReturn {
 export function useSupervisionChat({ patientId }: UseSupervisionChatProps): UseSupervisionChatReturn {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSynthesizing, setIsSynthesizing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -134,11 +136,11 @@ export function useSupervisionChat({ patientId }: UseSupervisionChatProps): UseS
 
   const generateSynthesis = useCallback(async () => {
     if (messages.length < 2) {
-      setError('Necesita al menos una conversación para generar la síntesis.');
+      setError('Se necesita al menos una conversación para generar síntesis');
       return;
     }
 
-    setIsLoading(true);
+    setIsSynthesizing(true);
     setError(null);
 
     try {
@@ -178,13 +180,14 @@ export function useSupervisionChat({ patientId }: UseSupervisionChatProps): UseS
       console.error('Error generating synthesis:', err);
       throw err;
     } finally {
-      setIsLoading(false);
+      setIsSynthesizing(false);
     }
   }, [patientId, messages]);
 
   return {
     messages,
     isLoading,
+    isSynthesizing,
     error,
     isInitialized,
     initializeChat,
