@@ -15,6 +15,7 @@ import QuestionnaireChart from '@/components/QuestionnaireChart';
 import questionnairesMeta from '@/src/data/questionnairesMeta';
 import InformesTab from '@/components/informes/InformesTab';
 import ScheduleQuestionnaireModal from '@/components/patient/ScheduleQuestionnaireModal';
+import { SupervisionChat } from '@/components/patient/SupervisionChat';
 
 export default function PatientProfilePage() {
   const params = useParams() as { patientId: string };
@@ -26,6 +27,7 @@ export default function PatientProfilePage() {
   const [patientName, setPatientName] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showSupervisionChat, setShowSupervisionChat] = useState(false);
 
   const availableDates = useMemo(() => {
     return [...new Set(evolutionData.map((item: any) => (item.fecha ?? item.creado_en).split('T')[0]))]
@@ -883,6 +885,14 @@ export default function PatientProfilePage() {
         onError={(error) => {
           setError(error);
         }}
+      />
+      
+      {/* Componente de Supervisión Clínica Interactiva */}
+      <SupervisionChat
+        patientId={patientId}
+        patientName={patientName}
+        isVisible={showSupervisionChat}
+        onToggle={() => setShowSupervisionChat(!showSupervisionChat)}
       />
     </>
   );
