@@ -565,7 +565,7 @@ export default function PatientProfilePage() {
             <Tab.Panel className="focus:outline-none">
               <EvolutionTab patientId={patientId} />
             </Tab.Panel>
-            <Tab.Panel className="rounded-xl bg-white border border-gray-200 border-t-4 border-t-black shadow-sm min-h-[600px] overflow-hidden focus:outline-none">
+            <Tab.Panel className="focus:outline-none">
               <div className="space-y-4 p-6">
                 {/* Header con botón principal */}
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-gray-900 p-4 mb-4">
