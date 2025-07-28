@@ -28,15 +28,40 @@ export async function DELETE(
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    // Verificar que la entrada existe y pertenece al usuario
-    const { data: entry, error: fetchError } = await (supabaseAdmin as any)
+    // Buscar la entrada en ambas tablas (evolucion_clinica y evoluciones_clinicas)
+    let entry = null;
+    let isSupervisionEntry = false;
+
+    // Primero buscar en evolucion_clinica (entradas manuales)
+    const { data: manualEntry, error: manualFetchError } = await (supabaseAdmin as any)
       .from('evolucion_clinica')
       .select('id, author_id, paciente_id')
       .eq('id', entryId)
       .eq('paciente_id', patientId)
       .single();
 
-    if (fetchError || !entry) {
+    if (manualEntry && !manualFetchError) {
+      entry = manualEntry;
+    } else {
+      // Si no se encuentra, buscar en evoluciones_clinicas (síntesis de supervisión)
+      const { data: supervisionEntry, error: supervisionFetchError } = await (supabaseAdmin as any)
+        .from('evoluciones_clinicas')
+        .select('id, created_by, patient_id')
+        .eq('id', entryId)
+        .eq('patient_id', patientId)
+        .single();
+
+      if (supervisionEntry && !supervisionFetchError) {
+        entry = {
+          id: supervisionEntry.id,
+          author_id: supervisionEntry.created_by,
+          paciente_id: supervisionEntry.patient_id
+        };
+        isSupervisionEntry = true;
+      }
+    }
+
+    if (!entry) {
       return NextResponse.json({ error: 'Entrada no encontrada' }, { status: 404 });
     }
 
@@ -54,9 +79,10 @@ export async function DELETE(
       }
     }
 
-    // Eliminar entrada
+    // Eliminar entrada de la tabla correspondiente
+    const tableName = isSupervisionEntry ? 'evoluciones_clinicas' : 'evolucion_clinica';
     const { error: deleteError } = await (supabaseAdmin as any)
-      .from('evolucion_clinica')
+      .from(tableName)
       .delete()
       .eq('id', entryId);
 
@@ -90,7 +116,7 @@ export async function PUT(
     const body = await request.json();
     const { entry_type, content, metadata, isDraft } = body;
 
-    // Verificar que la entrada existe y pertenece al usuario
+    // Verificar que la entrada existe y pertenece al usuario (solo entradas manuales son editables)
     const { data: entry, error: fetchError } = await (supabaseAdmin as any)
       .from('evolucion_clinica')
       .select('id, author_id, paciente_id')
@@ -99,7 +125,7 @@ export async function PUT(
       .single();
 
     if (fetchError || !entry) {
-      return NextResponse.json({ error: 'Entrada no encontrada' }, { status: 404 });
+      return NextResponse.json({ error: 'Entrada no encontrada o no editable' }, { status: 404 });
     }
 
     // Solo el autor puede editar
