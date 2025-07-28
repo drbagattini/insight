@@ -529,7 +529,7 @@ export default function PatientProfilePage() {
         <Tab.Group selectedIndex={selectedTabIndex} onChange={setSelectedTabIndex}>
           <div className="mb-8">
             <Tab.List className="flex bg-gray-50 rounded-xl p-1.5 shadow-sm border border-gray-200">
-              {['Entrevista inicial', 'Evolución Clínica', 'Cuestionarios psicométricos', 'Informes'].map((category, index) => (
+              {['Entrevista inicial', 'Evolución Clínica', 'Evaluación Psicométrica', 'Informes'].map((category, index) => (
                 <Tab
                   key={category}
                   className={({ selected }) =>
@@ -671,97 +671,6 @@ export default function PatientProfilePage() {
                   <PatientResponsesSection patientId={patientId} />
                 </div>
 
-                {/* Programar nuevo envío */}
-                <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 mb-6 mt-6">
-                <h3 className="text-lg font-semibold mb-4">Programar nuevo envío</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                  <div>
-                    <label className="block font-medium mb-1">Cuestionario</label>
-                    {loadingQuestionnaires ? (
-                      <p>Cargando cuestionarios...</p>
-                    ) : (
-                      <select
-                        value={newCuestionarioId}
-                        onChange={e => setNewCuestionarioId(e.target.value)}
-                        className="w-full px-2 py-1 border rounded"
-                        data-testid="questionnaire-select"
-                      >
-                        {questionnaires.map(q => (
-                          <option key={q.id} value={q.id}>
-                            {q.nombre}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block font-medium mb-1">Canal</label>
-                    <select
-                      value={newCanal}
-                      onChange={e => setNewCanal(e.target.value)}
-                      className="w-full px-2 py-1 border rounded"
-                    >
-                      <option value="email">Email</option>
-                      <option value="whatsapp">WhatsApp</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block font-medium mb-1">Frecuencia</label>
-                    <select
-                      data-testid="frequency-select"
-                      value={newFrecuencia}
-                      onChange={e => setNewFrecuencia(e.target.value)}
-                      className="w-full px-2 py-1 border rounded"
-                    >
-                      <option value="unico">Envío único</option>
-                      <option value="semanal">🗓️ Semanal</option>
-                      <option value="quincenal">📋 Quincenal</option>
-                      <option value="mensual">📅 Mensual</option>
-                      <option value="trimestral">📆 Trimestral</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block font-medium mb-1">Fecha de inicio</label>
-                    <input
-                      type="date"
-                      value={newProximoEnvio}
-                      onChange={e => setNewProximoEnvio(e.target.value)}
-                      className="w-full px-2 py-1 border rounded"
-                    />
-                  </div>
-                </div>
-                {showConfirmationModal && (
-                  <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-xs">
-                      <h3 className="font-semibold text-lg mb-2">Confirmación</h3>
-                      <p className="mb-4">¿Confirmás que se realice el primer envío ahora mismo?</p>
-                      <div className="flex justify-end space-x-2">
-                        <Button
-                          variant="default"
-                          type="button"
-                          data-testid="confirm-send-now-btn"
-                          onClick={async () => {
-                            console.log('[PatientProfilePage] Confirmar Envío Ahora clicked');
-                            setShowConfirmationModal(false);
-                            const scheduleToUse = pendingScheduleData ?? {
-                              pacienteId: patientId,
-                              cuestionarioId: newCuestionarioId || undefined,
-                              canal: newCanal,
-                              frecuencia: newFrecuencia,
-                              proximoEnvio: newProximoEnvio.split('T')[0],
-                            };
-                            await handleScheduleAndSendNow(scheduleToUse, scheduleToUse.proximoEnvio);
-                          }}
-                        >
-                          Confirmar Envío Ahora
-                        </Button>
-                        <Button variant="outline" onClick={() => setShowConfirmationModal(false)}>Cancelar</Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <Button onClick={initiateSchedulingProcess} disabled={!newProximoEnvio || showConfirmationModal}>Programar</Button>
-              </div>
 
               {/* Tabla de envíos programados - Moved into Tab.Panel */}
               <div className={`p-6 rounded-lg shadow ${highlight ? 'bg-yellow-100' : 'bg-white'} transition-colors duration-700 mt-6`}>
