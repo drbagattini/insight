@@ -250,8 +250,8 @@ export function EvolutionViewModal({
             </div>
           )}
 
-          {/* Metadata adicional (si hay más campos) */}
-          {entry.metadata && Object.keys(entry.metadata).filter(key => !['attachments', 'audioTranscriptions'].includes(key)).length > 0 && (
+          {/* Metadata adicional (si hay más campos) - Oculto para síntesis IA */}
+          {entry.entry_type !== 'sintesis_ia' && entry.metadata && Object.keys(entry.metadata).filter(key => !['attachments', 'audioTranscriptions'].includes(key)).length > 0 && (
             <div className="mt-6 pt-4 border-t border-gray-100">
               <h4 className="text-sm font-medium text-gray-700 mb-2">Información adicional:</h4>
               <div className="bg-gray-50 rounded-md p-3">

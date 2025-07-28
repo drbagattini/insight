@@ -160,18 +160,6 @@ export function EvolutionList({ entries, onEdit, onDelete, isLoading = false }: 
   return (
     <>
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="px-6 py-5 border-b border-gray-100">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xl font-semibold text-gray-900 flex items-center">
-              <DocumentTextIcon className="h-6 w-6 mr-3 text-blue-600" />
-              Evoluciones Clínicas
-            </h3>
-            <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-medium">
-              {entries.length} {entries.length === 1 ? 'registro' : 'registros'}
-            </span>
-          </div>
-        </div>
-        
         <div className="p-6">
           <div className="space-y-6">
             {entries.map((entry, index) => (

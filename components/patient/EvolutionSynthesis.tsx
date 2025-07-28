@@ -149,9 +149,9 @@ export function EvolutionSynthesis({
     <>
       <Button
         onClick={() => setIsOpen(true)}
-        variant="outline"
+        variant="default"
         size="sm"
-        className="flex items-center gap-1.5 h-9 px-2 text-xs"
+        className="flex items-center gap-1.5 h-9 px-3 text-xs bg-blue-500 hover:bg-blue-600 text-white border-blue-500 shadow-sm"
       >
         <Brain className="h-3.5 w-3.5" />
         Síntesis Evolutiva IA

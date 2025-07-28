@@ -900,15 +900,14 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
       {viewMode === 'list' && (
         <>
           {/* Header con botón de generar */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">
-                Informes Clínicos - {patientName}
-              </h2>
-              <p className="text-gray-600 mt-1">
-                Gestione los informes clínicos generados para este paciente
-              </p>
-            </div>
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-gray-900 p-4 mb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-700">Informes Clínicos</h2>
+                <p className="text-gray-500 mt-0.5 text-sm">
+                  Documentos generados para el paciente
+                </p>
+              </div>
             
             <Button
               onClick={handleGenerateNewReport}
@@ -916,7 +915,7 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
               className={`transition-all duration-200 ${
                 isGenerating || isCreating 
                   ? 'bg-blue-500 cursor-not-allowed' 
-                  : 'bg-blue-600 hover:bg-blue-700'
+                  : 'bg-blue-500 hover:bg-blue-600'
               } text-white`}
             >
               {isGenerating || isCreating ? (
@@ -938,6 +937,7 @@ export default function InformesTab({ patientId, patientName }: InformesTabProps
                 </>
               )}
             </Button>
+            </div>
           </div>
 
           {/* Lista de informes */}

@@ -114,28 +114,36 @@ export const EvolutionTab = memo(function EvolutionTab({ patientId, patientName 
   }, []);
 
   return (
-    <div className="space-y-6">
-      {/* Header con botón principal */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-800">Evolución Clínica</h2>
-          <p className="text-gray-600 mt-1 text-sm">
-            Registro cronológico de la evolución del paciente
-          </p>
-        </div>
+    <div className="space-y-4">
+      {/* Header con botones principales */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-gray-900 p-4 mb-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-700">Registro de Evoluciones</h2>
+            <p className="text-gray-500 mt-0.5 text-sm">
+              Historial cronológico del paciente
+            </p>
+          </div>
         
         {!isEditorOpen && (
-          <Button
-            onClick={() => {
-              setEditingEntry(null);
-              setIsEditorOpen(true);
-            }}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Registrar Nueva Evolución
-          </Button>
+          <div className="flex items-center gap-3">
+            <EvolutionSynthesis 
+              patientId={patientId} 
+              onSynthesisCreated={handleSaveEntry}
+            />
+            <Button
+              onClick={() => {
+                setEditingEntry(null);
+                setIsEditorOpen(true);
+              }}
+              className="bg-blue-500 hover:bg-blue-600 text-white"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Registrar Nueva Evolución
+            </Button>
+          </div>
         )}
+        </div>
       </div>
 
       {/* Editor (si está abierto) */}
@@ -151,10 +159,10 @@ export const EvolutionTab = memo(function EvolutionTab({ patientId, patientName 
 
       {/* Filtros */}
       {!isEditorOpen && (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 mb-4">
+        <div className="bg-gray-50/50 rounded-lg border border-gray-200/60 p-3">
           <div className="flex items-center justify-between gap-4">
             {/* Filtros izquierda */}
-            <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-3 flex-wrap">
               {/* Filtro por tipo */}
               <div className="flex items-center gap-2">
                 <label className="text-sm text-gray-600 font-medium">Tipo:</label>
@@ -208,29 +216,15 @@ export const EvolutionTab = memo(function EvolutionTab({ patientId, patientName 
               )}
             </div>
 
-            {/* Búsqueda y Síntesis derecha */}
-            <div className="flex items-center gap-3 flex-shrink-0">
-              {/* Búsqueda */}
-              <div className="flex items-center gap-2">
-                <Search className="h-4 w-4 text-gray-500" />
-                <Input
-                  type="text"
-                  placeholder="Buscar..."
-                  value={filters.search || ''}
-                  onChange={(e) => updateFilters({ search: e.target.value })}
-                  className="w-48 h-9 text-sm"
-                />
-              </div>
-
-              {/* Síntesis IA */}
-              <EvolutionSynthesis
-                patientId={patientId}
-                patientName={patientName}
-                evolutions={entries}
-                onSynthesisCreated={(synthesis) => {
-                  // Refrescar lista de evoluciones
-                  loadEntries();
-                }}
+            {/* Búsqueda derecha */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Search className="h-4 w-4 text-gray-500" />
+              <Input
+                type="text"
+                placeholder="Buscar..."
+                value={filters.search || ''}
+                onChange={(e) => updateFilters({ search: e.target.value })}
+                className="w-48 h-9 text-sm"
               />
             </div>
           </div>
