@@ -82,6 +82,6 @@ export async function POST(
 }
 
 function generateInitialMessage(patientData: any): string {
-  // Mensaje inicial simple y directo como definimos
-  return "Hola, he revisado el caso. ¿Qué te interesa explorar?";
+  // Mensaje inicial según el nuevo prompt del supervisor colaborativo
+  return "Hola, he leído toda la información acerca del paciente. ¿Qué te interesa explorar ahora?";
 }
