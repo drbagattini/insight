@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Pagination } from '@/app/components/ui/pagination';
+import { Pagination } from '@/components/ui/pagination';
 import { scores } from "@/src/scoring";
 import { useRouter, useParams } from "next/navigation";
 

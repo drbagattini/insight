@@ -4,7 +4,7 @@ import { useParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from 'react';
-import QuestionnaireChart from '@/src/components/QuestionnaireChart';
+import QuestionnaireChart from '@/components/QuestionnaireChart';
 import questionnairesMeta from '@/src/data/questionnairesMeta';
 import { PatientResponsesSection } from '@/components/patient/PatientResponsesSection';
 import { PatientDetails } from '@/components/patient/PatientDetails';

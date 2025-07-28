@@ -107,14 +107,7 @@ export default function InformesList({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border">
-      <div className="p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <DocumentTextIcon className="h-5 w-5 mr-2 text-blue-600" />
-          Historial de Informes ({informes.length})
-        </h3>
-        
-        <div className="space-y-4">
+    <div className="space-y-4">
           {informes.map((informe) => (
             <div
               key={informe.id}
@@ -219,8 +212,6 @@ export default function InformesList({
               </div>
             </div>
           ))}
-        </div>
-      </div>
     </div>
   );
 }

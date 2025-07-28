@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useState, useEffect, useMemo, Fragment } from 'react';
 import { Tab, Listbox, Transition } from '@headlessui/react';
 import { CheckIcon, ChevronUpDownIcon } from '@heroicons/react/20/solid';
+import { Calendar } from 'lucide-react';
 import { PatientResponsesSection } from '@/components/patient/PatientResponsesSection';
 import { PatientIntakeTab } from '@/components/patient/PatientIntakeTab';
 import { PatientDetails } from '@/components/patient/PatientDetails';
@@ -13,6 +14,7 @@ import { EvolutionTab } from '@/components/patient/EvolutionTab';
 import QuestionnaireChart from '@/components/QuestionnaireChart';
 import questionnairesMeta from '@/src/data/questionnairesMeta';
 import InformesTab from '@/components/informes/InformesTab';
+import ScheduleQuestionnaireModal from '@/components/patient/ScheduleQuestionnaireModal';
 
 export default function PatientProfilePage() {
   const params = useParams() as { patientId: string };
@@ -23,6 +25,7 @@ export default function PatientProfilePage() {
   const [evolutionData, setEvolutionData] = useState<any[]>([]);
   const [patientName, setPatientName] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
 
   const availableDates = useMemo(() => {
     return [...new Set(evolutionData.map((item: any) => (item.fecha ?? item.creado_en).split('T')[0]))]
@@ -492,17 +495,15 @@ export default function PatientProfilePage() {
   };
 
   // Computar próxima fecha según frecuencia
-function computeNextDate(start: string, frequency: string): string {
-  if (frequency === 'unico') return 'N/A'; // No hay próximo envío para 'unico'
-  const date = new Date(start);
-  if (frequency === 'semanal') date.setDate(date.getDate() + 7);
-  else if (frequency === 'quincenal') date.setDate(date.getDate() + 14);
-  else if (frequency === 'mensual') date.setMonth(date.getMonth() + 1);
-  else if (frequency === 'trimestral') date.setMonth(date.getMonth() + 3);
-  return date.toISOString();
-} 
-
-
+  const computeNextDate = (start: string, frequency: string): string => {
+    if (frequency === 'unico') return 'N/A'; // No hay próximo envío para 'unico'
+    const date = new Date(start);
+    if (frequency === 'semanal') date.setDate(date.getDate() + 7);
+    else if (frequency === 'quincenal') date.setDate(date.getDate() + 14);
+    else if (frequency === 'mensual') date.setMonth(date.getMonth() + 1);
+    else if (frequency === 'trimestral') date.setMonth(date.getMonth() + 3);
+    return date.toISOString();
+  };
 
   return (
     <>
@@ -565,9 +566,20 @@ function computeNextDate(start: string, frequency: string): string {
               <EvolutionTab patientId={patientId} />
             </Tab.Panel>
             <Tab.Panel className="rounded-xl bg-white border border-gray-200 shadow-sm min-h-[600px] overflow-hidden focus:outline-none">
-              <div className="bg-gradient-to-r from-emerald-50 to-teal-50 px-6 py-4 border-b border-gray-100">
-                <h3 className="text-xl font-semibold text-gray-900">Evolución Psicométrica</h3>
-                <p className="text-sm text-gray-600 mt-1">Análisis y seguimiento de cuestionarios aplicados al paciente</p>
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-black">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900">Evaluación Psicométrica</h3>
+                    <p className="text-sm text-gray-600 mt-1">Análisis y seguimiento de escalas aplicadas</p>
+                  </div>
+                  <Button
+                    onClick={() => setShowScheduleModal(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                  >
+                    <Calendar className="w-4 h-4" />
+                    Programar Envío
+                  </Button>
+                </div>
               </div>
               <div className="p-6">
                 <div className="mb-6 w-fit">
@@ -928,6 +940,18 @@ function computeNextDate(start: string, frequency: string): string {
         </div>
         );
       })()}
+      {/* Modal de programar envío de cuestionarios */}
+      <ScheduleQuestionnaireModal
+        isOpen={showScheduleModal}
+        onClose={() => setShowScheduleModal(false)}
+        patientId={patientId}
+        onSuccess={(message) => {
+          setNotification(message);
+        }}
+        onError={(error) => {
+          setError(error);
+        }}
+      />
     </>
   );
 }

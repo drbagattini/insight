@@ -58,97 +58,97 @@ const IntakeReadOnlyView: React.FC<IntakeReadOnlyViewProps> = ({ intakeData, onE
   return (
     <div className="space-y-4">
       {/* Header Section */}
-      <Card className="border-l-4 border-l-indigo-500 shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-indigo-50 to-white py-4">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
-            <div>
-              <CardTitle className="text-xl text-gray-900 mb-1">Entrevista Inicial Completada</CardTitle>
-              {fecha_fin && (
-                <div className="flex items-center space-x-2">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
-                    Finalizada
-                  </span>
-                  <span className="text-sm text-gray-600">
-                    {new Date(fecha_fin).toLocaleDateString('es-ES', {
-                      year: 'numeric',
-                      month: 'long', 
-                      day: 'numeric'
-                    })}
-                  </span>
-                </div>
-              )}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-gray-900 p-4 mb-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-700">Entrevista Inicial</h2>
+            <p className="text-gray-500 mt-0.5 text-sm">
+              Datos demográficos y antecedentes del paciente
+            </p>
+          {fecha_fin && (
+            <div className="flex items-center space-x-2 mt-2">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                Finalizada
+              </span>
+              <span className="text-sm text-gray-600">
+                {new Date(fecha_fin).toLocaleDateString('es-ES', {
+                  year: 'numeric',
+                  month: 'long', 
+                  day: 'numeric'
+                })}
+              </span>
             </div>
-            <Button 
-              onClick={onEdit} 
-              variant="outline" 
-              size="sm"
-              className="bg-white hover:bg-gray-50 border-gray-300 text-gray-700 font-medium"
-            >
-              Editar Entrevista
-            </Button>
+          )}
           </div>
-        </CardHeader>
-      </Card>
+          
+          <Button 
+            onClick={onEdit} 
+            className="bg-blue-500 hover:bg-blue-600 text-white"
+          >
+            Editar Entrevista
+          </Button>
+        </div>
+      </div>
 
       {/* Content Sections */}
       <div className="space-y-4">
-        {WIZARD_STEPS.map(step => {
-          const fieldsForStep = intakeFieldsDefinition.filter(field => {
-            const fieldValue = datos[field.key as keyof typeof datos];
-            return field.step === step.id && fieldValue !== null && fieldValue !== undefined && fieldValue !== '';
-          });
+            {WIZARD_STEPS.map(step => {
+              const fieldsForStep = intakeFieldsDefinition.filter(field => {
+                const fieldValue = datos[field.key as keyof typeof datos];
+                return field.step === step.id && fieldValue !== null && fieldValue !== undefined && fieldValue !== '';
+              });
 
-          if (fieldsForStep.length === 0) return null;
+              if (fieldsForStep.length === 0) return null;
 
-          const theme = getStepTheme(step.id);
+              const theme = getStepTheme(step.id);
 
-          return (
-            <Card key={step.id} className={`${theme.border} border-l-4 shadow-sm hover:shadow-md transition-shadow duration-200`}>
-              <CardHeader className={`${theme.bg} border-b border-gray-100 py-3`}>
-                <CardTitle className={`text-lg ${theme.text} font-semibold flex items-center space-x-2`}>
-                  <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full bg-white ${theme.text} text-sm font-bold border-2 ${theme.border}`}>
-                    {step.id}
-                  </span>
-                  <span>{step.name}</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-4">
-                  {fieldsForStep.map(field => {
-                    const value = datos[field.key as keyof typeof datos];
-                    const displayValue = formatDisplayValue(field.key as keyof typeof datos, value);
-                    const isLongText = displayValue.length > 100;
+              return (
+                <Card key={step.id} className={`${theme.border} border-l-4 shadow-sm hover:shadow-md transition-shadow duration-200`}>
+                  <CardHeader className={`${theme.bg} border-b border-gray-100 py-3`}>
+                    <CardTitle className={`text-lg ${theme.text} font-semibold flex items-center space-x-2`}>
+                      <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full bg-white ${theme.text} text-sm font-bold border-2 ${theme.border}`}>
+                        {step.id}
+                      </span>
+                      <span>{step.name}</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-4">
+                      {fieldsForStep.map(field => {
+                        const value = datos[field.key as keyof typeof datos];
+                        const displayValue = formatDisplayValue(field.key as keyof typeof datos, value);
+                        const isLongText = displayValue.length > 100;
 
-                    return (
-                      <div 
-                        key={field.key} 
-                        className={`${isLongText ? 'lg:col-span-2' : ''} bg-white rounded border border-gray-100 p-3 hover:border-gray-200 transition-colors`}
-                      >
-                        <div className="mb-1">
-                          <label className="text-sm font-medium text-gray-600 leading-tight">
-                            {field.label}
-                          </label>
-                        </div>
-                        
-                        {isLongText ? (
-                          <div className="prose prose-sm max-w-none">
-                            <div className="text-gray-800 leading-relaxed whitespace-pre-wrap border-l-2 border-gray-200 pl-3 py-2 bg-gray-50 rounded-r">
-                              {displayValue}
+                        return (
+                          <div 
+                            key={field.key} 
+                            className={`${isLongText ? 'lg:col-span-2' : ''} bg-white rounded border border-gray-100 p-3 hover:border-gray-200 transition-colors`}
+                          >
+                            <div className="mb-1">
+                              <label className="text-sm font-medium text-gray-600 leading-tight">
+                                {field.label}
+                              </label>
                             </div>
+                            
+                            {isLongText ? (
+                              <div className="prose prose-sm max-w-none">
+                                <div className="text-gray-800 leading-relaxed whitespace-pre-wrap border-l-2 border-gray-200 pl-3 py-2 bg-gray-50 rounded-r">
+                                  {displayValue}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="text-sm font-medium text-gray-800">
+                                {displayValue}
+                              </div>
+                            )}
                           </div>
-                        ) : (
-                          <div className="text-sm font-medium text-gray-800">
-                            {displayValue}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
       </div>
     </div>
   );

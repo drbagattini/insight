@@ -11,7 +11,7 @@ import axios from 'axios';
 import { formatISO } from 'date-fns';
 import { AppointmentModal, ModalAppointmentData } from './appointments/AppointmentModal';
 import { useAppointmentMutations } from '@/hooks/useAppointmentMutations'; // Use new modal
-import ConnectCalendarButton from '@/app/components/auth/ConnectCalendarButton';
+import ConnectCalendarButton from '@/components/auth/ConnectCalendarButton';
 
 interface AppointmentEvent {
   id: string;
