@@ -128,7 +128,8 @@ export const EvolutionTab = memo(function EvolutionTab({ patientId, patientName 
         {!isEditorOpen && (
           <div className="flex items-center gap-3">
             <EvolutionSynthesis 
-              patientId={patientId} 
+              patientId={patientId}
+              evolutions={entries}
               onSynthesisCreated={handleSaveEntry}
             />
             <Button

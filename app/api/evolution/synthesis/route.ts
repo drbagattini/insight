@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/lib/auth';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Configurar Gemini
+// Configurar Gemini Flash (más barato que Pro)
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 interface EvolutionEntry {
@@ -112,8 +112,16 @@ export async function POST(request: NextRequest) {
     const evolutionsJson = JSON.stringify(sortedEvolutions, null, 2);
     const fullPrompt = `${SYNTHESIS_PROMPT}\n\n${evolutionsJson}`;
 
-    // Configurar modelo Gemini
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+    // Configurar modelo Gemini 2.5 Flash (más barato que Pro)
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-2.0-flash-exp",
+      generationConfig: {
+        temperature: 0.2, // Más determinístico para análisis clínico
+        topK: 32,
+        topP: 0.9,
+        maxOutputTokens: 4000
+      }
+    });
 
     // Generar síntesis
     const result = await model.generateContent(fullPrompt);
@@ -125,9 +133,10 @@ export async function POST(request: NextRequest) {
     const outputTokens = Math.ceil(synthesis.length / 4); // Aproximación
     const totalTokens = inputTokens + outputTokens;
     
-    // Costo aproximado de Gemini 2.0 Flash Exp (precios de ejemplo)
-    const inputCost = (inputTokens / 1000000) * 0.075; // $0.075 per 1M input tokens
-    const outputCost = (outputTokens / 1000000) * 0.30; // $0.30 per 1M output tokens
+    // Costo de Gemini 2.0 Flash Exp (muy barato)
+    // Gemini Flash: $0.075 per 1M input tokens, $0.30 per 1M output tokens
+    const inputCost = (inputTokens / 1000000) * 0.075;
+    const outputCost = (outputTokens / 1000000) * 0.30;
     const totalCost = inputCost + outputCost;
 
     return NextResponse.json({
@@ -135,7 +144,8 @@ export async function POST(request: NextRequest) {
       tokensUsed: totalTokens,
       cost: totalCost,
       analyzedEntries: evolutions.length,
-      model: 'gemini-2.0-flash-exp'
+      model: 'gemini-2.0-flash-exp',
+      provider: 'google-gemini-flash'
     });
 
   } catch (error) {

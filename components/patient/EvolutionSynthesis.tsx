@@ -10,7 +10,7 @@ import { EvolucionClinicaEntry } from '@/types/evolucion-clinica';
 interface EvolutionSynthesisProps {
   patientId: string;
   patientName?: string;
-  evolutions: EvolucionClinicaEntry[];
+  evolutions?: EvolucionClinicaEntry[];
   onSynthesisCreated?: (synthesis: EvolucionClinicaEntry) => void;
 }
 
@@ -43,7 +43,7 @@ export function EvolutionSynthesis({
 
   // Filtrar evoluciones por rango de fechas
   const getFilteredEvolutions = () => {
-    if (!startDate || !endDate) return [];
+    if (!startDate || !endDate || !evolutions || evolutions.length === 0) return [];
     
     return evolutions.filter(evolution => {
       const evolutionDate = new Date(evolution.created_at).toISOString().split('T')[0];
@@ -170,6 +170,19 @@ export function EvolutionSynthesis({
             </p>
           )}
 
+          {/* Validación temprana para evoluciones */}
+          {!evolutions || evolutions.length === 0 ? (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 text-center">
+              <AlertCircle className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
+              <p className="text-sm text-yellow-800 font-medium mb-1">
+                No hay evoluciones disponibles
+              </p>
+              <p className="text-xs text-yellow-700">
+                Necesitas tener al menos una evolución clínica registrada para generar una síntesis.
+              </p>
+            </div>
+          ) : (
+            <>
           {/* Selector de fechas original */}
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -299,6 +312,8 @@ export function EvolutionSynthesis({
           </Button>
         </div>
       )}
+            </>
+          )}
         </div>
       </Modal>
     </>
