@@ -204,11 +204,11 @@ export default function PatientProfilePage() {
       }
     }
     console.log('[DEBUG] useEffect for scheduled sends - selectedTabIndex:', selectedTabIndex);
-    if (selectedTabIndex === 1) { // Only load if Cuestionarios tab is active
-      console.log('[DEBUG] Loading scheduled sends because tab index is 1');
+    if (selectedTabIndex === 2) { // Only load if Cuestionarios psicométricos tab is active (index 2)
+      console.log('[DEBUG] Loading scheduled sends because tab index is 2 (Cuestionarios psicométricos)');
       loadScheduled();
     } else {
-      console.log('[DEBUG] Not loading scheduled sends, tab index is not 1');
+      console.log('[DEBUG] Not loading scheduled sends, tab index is not 2');
     }
   }, [patientId, selectedTabIndex]);
 
@@ -227,7 +227,7 @@ export default function PatientProfilePage() {
         setLoadingQuestionnaires(false);
       }
     }
-    if (selectedTabIndex === 1) { // Only load if Cuestionarios tab is active
+    if (selectedTabIndex === 2) { // Only load if Cuestionarios psicométricos tab is active (index 2)
       loadQuestionnaires();
     }
   }, [selectedTabIndex]);
@@ -565,7 +565,7 @@ export default function PatientProfilePage() {
             <Tab.Panel className="focus:outline-none">
               <EvolutionTab patientId={patientId} />
             </Tab.Panel>
-            <Tab.Panel className="rounded-xl bg-white border border-gray-200 shadow-sm min-h-[600px] overflow-hidden focus:outline-none">
+            <Tab.Panel className="rounded-xl bg-white border border-gray-200 border-t-4 border-t-black shadow-sm min-h-[600px] overflow-hidden focus:outline-none">
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-black">
                 <div className="flex items-center justify-between">
                   <div>
@@ -947,6 +947,26 @@ export default function PatientProfilePage() {
         patientId={patientId}
         onSuccess={(message) => {
           setNotification(message);
+          // Refrescar envíos programados si estamos en la pestaña de cuestionarios
+          if (selectedTabIndex === 2) {
+            // Trigger refresh of scheduled sends
+            const refreshScheduledSends = async () => {
+              try {
+                const listRes = await fetch(`/api/envios_programados?pacienteId=${patientId}`);
+                const listData = await listRes.json();
+                if (listRes.ok) {
+                  const filteredSends = listData.filter((send: any) => {
+                    if (!send.activo) return false;
+                    return true;
+                  });
+                  setScheduledSends(filteredSends);
+                }
+              } catch (e) {
+                console.error('Error refreshing scheduled sends:', e);
+              }
+            };
+            refreshScheduledSends();
+          }
         }}
         onError={(error) => {
           setError(error);
