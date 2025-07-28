@@ -83,32 +83,27 @@ export async function POST(
 
 function generateInitialMessage(patientData: any): string {
   const patientName = patientData.patient?.name || 'el paciente';
+  const psychologistName = patientData.psychologist?.name || 'colega';
   const hasIntake = !!patientData.intake;
   const questionnaireCount = patientData.questionnaires?.length || 0;
-  const questionnaireTypes = patientData.summary?.questionnaire_types || [];
 
-  // Crear un saludo contextual basado en los datos disponibles
-  let greeting = `Hola colega! Me alegra que hayas decidido supervisar el caso de ${patientName}. `;
+  // Mensaje inicial profesional y estructurado
+  let greeting = `Hola ${psychologistName},\n\nEstoy aquí para ayudarte a supervisar el caso de ${patientName}.`;
   
+  // Información disponible
   if (hasIntake && questionnaireCount > 0) {
-    greeting += `Veo que tienes información bastante completa: la entrevista inicial y ${questionnaireCount} cuestionario${questionnaireCount > 1 ? 's' : ''} aplicado${questionnaireCount > 1 ? 's' : ''}.`;
+    greeting += ` Veo que cuentas con la entrevista inicial y ${questionnaireCount} cuestionario${questionnaireCount > 1 ? 's' : ''} completado${questionnaireCount > 1 ? 's' : ''}, lo cual nos proporciona una base sólida para la supervisión.`;
   } else if (hasIntake) {
-    greeting += `Tienes la entrevista inicial completada, lo cual nos da una base sólida para trabajar.`;
+    greeting += ` Tienes la entrevista inicial completada, lo cual nos da información valiosa para trabajar.`;
   } else if (questionnaireCount > 0) {
-    greeting += `Cuentas con ${questionnaireCount} cuestionario${questionnaireCount > 1 ? 's' : ''} completado${questionnaireCount > 1 ? 's' : ''}, que nos pueden dar insights valiosos.`;
-  } else {
-    greeting += `Aunque aún no veo mucha información estructurada, podemos trabajar con lo que tienes hasta ahora.`;
+    greeting += ` Cuentas con ${questionnaireCount} cuestionario${questionnaireCount > 1 ? 's' : ''} completado${questionnaireCount > 1 ? 's' : ''} que podemos analizar juntos.`;
   }
 
-  // Pregunta inicial abierta
-  const openingQuestions = [
-    `¿Qué es lo que más te llama la atención de este caso?`,
-    `¿Hay algo específico que te genera curiosidad o inquietud sobre ${patientName}?`,
-    `¿Qué aspecto del caso te gustaría explorar primero?`,
-    `¿Cuál dirías que es tu impresión general hasta ahora?`
-  ];
+  // Explicación del proceso
+  greeting += `\n\nPodemos explorar cualquier aspecto del caso que consideres relevante. Al final de nuestra conversación, podremos generar una síntesis de supervisión que quedará registrada en el área de evolución clínica.`;
 
-  const randomQuestion = openingQuestions[Math.floor(Math.random() * openingQuestions.length)];
+  // Pregunta inicial
+  greeting += `\n\n¿Por qué área te gustaría empezar?`;
   
-  return `${greeting}\n\n${randomQuestion}`;
+  return greeting;
 }

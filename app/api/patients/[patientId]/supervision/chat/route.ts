@@ -123,13 +123,17 @@ Tienes acceso a las siguientes herramientas para buscar datos específicos del p
 5. **buscarEvoluciones**: Para revisar evoluciones clínicas por tipo
 6. **buscarInformes**: Para consultar informes de síntesis generados
 
-Usa estas herramientas cuando el psicólogo haga preguntas específicas que requieran datos concretos. Por ejemplo:
-- "¿Qué puntaje tiene en el PHQ-9?" → usar buscarCuestionario
-- "¿Menciona algo sobre ansiedad en su historia?" → usar buscarHistoriaClinica
-- "¿Cuál es su edad y motivo de consulta?" → usar buscarDatosBasicos
-- "¿Cómo es su situación familiar y antecedentes?" → usar buscarEntrevistaInicial
-- "¿Cómo ha evolucionado en las últimas sesiones?" → usar buscarEvoluciones
-- "¿Qué informes se han generado?" → usar buscarInformes`;
+**IMPORTANTE: SIEMPRE usa estas herramientas cuando el psicólogo mencione un cuestionario específico o pregunte por datos concretos.**
+
+Ejemplos de cuándo DEBES usar las herramientas:
+- "¿Qué puntaje tiene en el PHQ-9?" → usar buscarCuestionario("PHQ-9")
+- "Qué te llama la atención del OPD-CA2-SQ?" → usar buscarCuestionario("OPD-CA2-SQ")
+- "Cómo está en el WHO-5?" → usar buscarCuestionario("WHO-5")
+- "¿Menciona algo sobre ansiedad?" → usar buscarHistoriaClinica("ansiedad")
+- "¿Cuál es su edad y motivo de consulta?" → usar buscarDatosBasicos()
+- "¿Cómo es su situación familiar?" → usar buscarEntrevistaInicial()
+
+**NUNCA respondas "no tengo acceso" o "no puedo ver" - SIEMPRE usa las herramientas disponibles para obtener la información solicitada.**`;
 
 export async function POST(
   request: NextRequest,
@@ -325,34 +329,68 @@ export async function POST(
                            conversationHistory.length === 0; // Primera interacción
     
     let patientContext = '';
+    let specificData = '';
     
-    if (needsPatientData) {
-      try {
-        const baseUrl = request.url.replace(`/api/patients/${patientId}/supervision/chat`, '');
-        const dataResponse = await fetch(`${baseUrl}/api/informes/datos/${patientId}`, {
-          headers: {
-            'Authorization': request.headers.get('Authorization') || '',
-            'Cookie': request.headers.get('Cookie') || ''
-          }
-        });
-
-        if (dataResponse.ok) {
-          const patientData = await dataResponse.json();
-          
-          // Resumen muy conciso - solo lo esencial
-          const patientSummary = {
-            nombre: patientData.patient?.name || 'No especificado',
-            edad: patientData.patient?.age || 'No especificada',
-            motivoConsulta: patientData.intake?.reason_for_consultation || 'No especificado',
-            diagnostico: patientData.intake?.diagnosis || 'No especificado'
-          };
-          
-          patientContext = `\n\nDATOS BÁSICOS DEL PACIENTE:\n${JSON.stringify(patientSummary, null, 2)}`;
+    try {
+      const baseUrl = request.url.replace(`/api/patients/${patientId}/supervision/chat`, '');
+      const dataResponse = await fetch(`${baseUrl}/api/informes/datos/${patientId}`, {
+        headers: {
+          'Authorization': request.headers.get('Authorization') || '',
+          'Cookie': request.headers.get('Cookie') || ''
         }
-      } catch (error) {
-        console.log('[WARNING] Could not load patient data, continuing without it');
-        patientContext = '\n\n[DATOS DEL PACIENTE NO DISPONIBLES EN ESTE MOMENTO]';
+      });
+
+      if (dataResponse.ok) {
+        const patientData = await dataResponse.json();
+        
+        // Datos básicos siempre disponibles
+        const patientSummary = {
+          nombre: patientData.patient?.name || 'No especificado',
+          edad: patientData.patient?.age || 'No especificada',
+          motivoConsulta: patientData.intake?.reason_for_consultation || 'No especificado',
+          diagnostico: patientData.intake?.diagnosis || 'No especificado'
+        };
+        
+        patientContext = `\n\nDATOS BÁSICOS DEL PACIENTE:\n${JSON.stringify(patientSummary, null, 2)}`;
+        
+        // Detectar si se mencionan cuestionarios específicos y pre-cargar datos
+        const messageLower = message.toLowerCase();
+        const commonQuestionnaires = ['who-5', 'who5', 'phq-9', 'phq9', 'gad-7', 'gad7', 'opd', 'beck', 'hamilton'];
+        
+        console.log('[DEBUG] Message:', message);
+        console.log('[DEBUG] Available questionnaires:', patientData.questionnaires?.map((q: any) => q.questionnaire_name));
+        
+        for (const questionnaire of commonQuestionnaires) {
+          if (messageLower.includes(questionnaire)) {
+            console.log(`[DEBUG] Detected questionnaire mention: ${questionnaire}`);
+            
+            // Pre-cargar datos del cuestionario
+            const questionnaireData = patientData.questionnaires?.find((q: any) => 
+              q.questionnaire_name?.toLowerCase().includes(questionnaire.replace('-', '')) ||
+              q.questionnaire_name?.toLowerCase().includes(questionnaire)
+            );
+            
+            if (questionnaireData) {
+              console.log(`[DEBUG] Found questionnaire data:`, questionnaireData.questionnaire_name);
+              specificData += `\n\nDATOS DEL CUESTIONARIO ${questionnaireData.questionnaire_name?.toUpperCase()}:\n`;
+              specificData += `Puntaje Total: ${questionnaireData.total_score || 'No calculado'}\n`;
+              specificData += `Fecha: ${questionnaireData.created_at || 'No especificada'}\n`;
+              if (questionnaireData.responses) {
+                specificData += `Respuestas: ${JSON.stringify(questionnaireData.responses, null, 2)}\n`;
+              }
+            } else {
+              console.log(`[DEBUG] No questionnaire data found for: ${questionnaire}`);
+            }
+          }
+        }
+        
+        if (specificData) {
+          console.log('[DEBUG] Specific data loaded:', specificData.length, 'characters');
+        }
       }
+    } catch (error) {
+      console.log('[WARNING] Could not load patient data, continuing without it');
+      patientContext = '\n\n[DATOS DEL PACIENTE NO DISPONIBLES EN ESTE MOMENTO]';
     }
 
     // Construir array de mensajes para el contexto
@@ -363,7 +401,7 @@ export async function POST(
       role: 'system',
       content: `${SUPERVISOR_SYSTEM_PROMPT}
 
-${patientContext}`
+${patientContext}${specificData}`
     });
 
     // Agregar historial de conversación
