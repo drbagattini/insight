@@ -39,14 +39,9 @@ export async function GET(request: NextRequest) {
           codigo: q.codigo,
           titulo: q.titulo,
           puntuacion: q.puntuacion,
-          puntuacion_total: q.puntuacion_total,
-          fecha: q.fecha,
-          responses: q.responses,
-          items: q.items,
-          dimensiones: q.dimensiones,
-          interpretacion: q.interpretacion,
-          percentiles: q.percentiles,
-          normas: q.normas,
+          fecha_completado: q.fecha_completado,
+          score_detallado: q.score_detallado,
+          respuestas: q.respuestas,
           metadata: q.metadata,
           raw_data_keys: Object.keys(q) // Para ver qué campos están disponibles
         };
@@ -83,22 +78,22 @@ export async function GET(request: NextRequest) {
         codigo: opdQuestionnaire.codigo,
         titulo: opdQuestionnaire.titulo,
         puntuacion: opdQuestionnaire.puntuacion,
-        has_responses: !!opdQuestionnaire.responses,
-        has_items: !!opdQuestionnaire.items,
-        has_dimensiones: !!opdQuestionnaire.dimensiones,
+        has_score_detallado: !!opdQuestionnaire.score_detallado,
+        has_respuestas: !!opdQuestionnaire.respuestas,
+        has_metadata: !!opdQuestionnaire.metadata,
         available_fields: Object.keys(opdQuestionnaire),
-        responses_sample: opdQuestionnaire.responses ? 
-          (Array.isArray(opdQuestionnaire.responses) ? 
-            opdQuestionnaire.responses.slice(0, 3) : 
-            "Not an array") : null,
-        items_sample: opdQuestionnaire.items ? 
-          (Array.isArray(opdQuestionnaire.items) ? 
-            opdQuestionnaire.items.slice(0, 3) : 
-            "Not an array") : null
+        score_detallado_sample: opdQuestionnaire.score_detallado ? 
+          (typeof opdQuestionnaire.score_detallado === 'object' ? 
+            Object.keys(opdQuestionnaire.score_detallado).slice(0, 5) : 
+            "Not an object") : null,
+        respuestas_sample: opdQuestionnaire.respuestas ? 
+          (typeof opdQuestionnaire.respuestas === 'object' ? 
+            Object.keys(opdQuestionnaire.respuestas).slice(0, 5) : 
+            "Not an object") : null
       } : null,
       processed_questionnaires: processedQuestionnaires,
       recommendation: opdQuestionnaire ? 
-        "✅ OPD encontrado - verificar si responses/items/dimensiones contienen datos útiles" :
+        "✅ OPD encontrado - verificar si score_detallado/respuestas contienen datos útiles" :
         "❌ OPD no encontrado - verificar códigos de cuestionarios disponibles"
     });
 

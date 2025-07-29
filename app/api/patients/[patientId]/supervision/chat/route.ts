@@ -187,28 +187,23 @@ export async function POST(
                                       // O si se menciona cualquier cuestionario específicamente
                                       messageText.includes(q.codigo?.toLowerCase() || '') ||
                                       messageText.includes(q.titulo?.toLowerCase() || '') ||
-                                      // Cuestionarios comunes
+                                      // Cuestionarios implementados en la plataforma
                                       messageText.includes('opd') || messageText.includes('operacionalizado') ||
                                       messageText.includes('psicodinamico') || messageText.includes('phq') ||
-                                      messageText.includes('who') || messageText.includes('beck') ||
-                                      messageText.includes('hamilton') || messageText.includes('gad') ||
+                                      messageText.includes('who') || messageText.includes('gad') ||
+                                      messageText.includes('br-wai') || messageText.includes('alianza') ||
                                       messageText.includes('ansiedad') || messageText.includes('depresi');
               
               if (needsDetailedData) {
-                // Incluir TODOS los datos disponibles para análisis completo
+                // Incluir TODOS los datos disponibles según la estructura real de la BD
                 return {
                   codigo: q.codigo,
                   titulo: q.titulo,
                   puntuacion: q.puntuacion,
-                  puntuacion_total: q.puntuacion_total,
-                  fecha: q.fecha,
-                  responses: q.responses, // Respuestas detalladas
-                  items: q.items, // Ítems del cuestionario
-                  dimensiones: q.dimensiones, // Dimensiones/subescalas
-                  interpretacion: q.interpretacion, // Interpretación clínica
-                  percentiles: q.percentiles, // Percentiles si están disponibles
-                  normas: q.normas, // Normas de referencia
-                  metadata: q.metadata // Metadatos adicionales
+                  fecha_completado: q.fecha_completado,
+                  score_detallado: q.score_detallado, // Estructura detallada con dimensiones/subescalas
+                  respuestas: q.respuestas, // Respuestas individuales a cada ítem
+                  metadata: q.metadata // Metadatos del cuestionario (descripción, referencias, etc.)
                 };
               } else {
                 // Para consultas generales, datos básicos pero incluyendo título
