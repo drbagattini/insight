@@ -15,7 +15,7 @@ import QuestionnaireChart from '@/components/QuestionnaireChart';
 import questionnairesMeta from '@/src/data/questionnairesMeta';
 import InformesTab from '@/components/informes/InformesTab';
 import ScheduleQuestionnaireModal from '@/components/patient/ScheduleQuestionnaireModal';
-import { SupervisionChat } from '@/components/patient/SupervisionChat';
+import { SupervisionChatStreaming } from '@/components/patient/SupervisionChatStreaming';
 
 export default function PatientProfilePage() {
   const params = useParams() as { patientId: string };
@@ -888,7 +888,7 @@ export default function PatientProfilePage() {
       />
       
       {/* Componente de Supervisión Clínica Interactiva */}
-      <SupervisionChat
+      <SupervisionChatStreaming
         patientId={patientId}
         patientName={patientName}
         isVisible={showSupervisionChat}

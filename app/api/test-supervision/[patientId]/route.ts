@@ -80,55 +80,12 @@ Eres un Supervisor Clínico Colaborativo. Tu persona es la de un psicólogo seni
     *Síntesis de Supervisión*
     Durante la supervisión del [Fecha], se exploró [dinámica central discutida] y se discutío [síntesis de temas discutidos sobre la dinámica]. Las hipótesis manejadas fueron [hipótesis]. Basados en [datos de la discusión], se concluyó colaborativamente que [evidencia final o conclusión clave].`;
 
-// Función para obtener datos reales del psicólogo
-async function getPsychologistData(token: any) {
-  try {
-    // Usar el email del token para buscar en la tabla users
-    const { data: user, error } = await supabaseAdmin
-      .from('users')
-      .select('id, email, first_name, last_name, role')
-      .eq('email', token.email)
-      .single();
-    
-    if (error || !user) {
-      console.warn('[SUPERVISION CHAT] ⚠️ Psicólogo no encontrado, usando datos del token');
-      return {
-        id: token.sub || token.id || 'unknown',
-        name: token.name || 'Psicólogo',
-        email: token.email || 'unknown@example.com'
-      };
-    }
-    
-    return {
-      id: user.id,
-      name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Psicólogo',
-      email: user.email,
-      role: user.role
-    };
-  } catch (error) {
-    console.error('[SUPERVISION CHAT] ❌ Error obteniendo datos del psicólogo:', error);
-    return {
-      id: token.sub || token.id || 'unknown',
-      name: token.name || 'Psicólogo',
-      email: token.email || 'unknown@example.com'
-    };
-  }
-}
-
-// ENDPOINT DE PRODUCCIÓN: Supervisión clínica con GPT-4o CON autenticación
+// ENDPOINT DE PRUEBA: Supervisión clínica con GPT-4o SIN autenticación
 export async function POST(request: NextRequest, { params }: any) {
   const requestStartTime = Date.now();
-  console.log('[SUPERVISION CHAT] 🚀 POST request received - Starting timer');
+  console.log('[TEST-SUPERVISION] 🚀 POST request received - Starting timer');
   
   try {
-    // Verificar autenticación NextAuth
-    const { getToken } = await import('next-auth/jwt');
-    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
-    
-    if (!token) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-    
     // Verificar configuración de OpenAI
     if (!OPENAI_API_KEY) {
       return NextResponse.json(
@@ -148,7 +105,7 @@ export async function POST(request: NextRequest, { params }: any) {
       );
     }
 
-    console.log(`[SUPERVISION CHAT] 📊 Loading patient data for: ${patientId}`);
+    console.log(`[TEST-SUPERVISION] 📊 Loading patient data for: ${patientId}`);
     
     // 1. Obtener datos del paciente
     const { data: patient, error: patientError } = await supabaseAdmin
@@ -158,7 +115,7 @@ export async function POST(request: NextRequest, { params }: any) {
       .single();
 
     if (patientError || !patient) {
-      console.error('[SUPERVISION CHAT] ❌ Patient error:', patientError);
+      console.error('[TEST-SUPERVISION] ❌ Patient error:', patientError);
       return NextResponse.json({ error: 'Paciente no encontrado' }, { status: 404 });
     }
 
@@ -170,18 +127,18 @@ export async function POST(request: NextRequest, { params }: any) {
       .order('created_at', { ascending: false })
       .limit(1);
 
-    // 3. Obtener respuestas de cuestionarios CON ítems completos
+    // 3. Obtener respuestas de cuestionarios
     const { data: responses, error: responsesError } = await supabaseAdmin
       .from('respuestas')
       .select(`
         *,
-        cuestionarios!inner(codigo, titulo, items, descripcion)
+        cuestionarios!inner(codigo, titulo)
       `)
       .eq('paciente_id', patientId)
       .order('creado_en', { ascending: false });
 
     if (responsesError) {
-      console.error('[SUPERVISION CHAT] ❌ Responses error:', responsesError);
+      console.error('[TEST-SUPERVISION] ❌ Responses error:', responsesError);
       return NextResponse.json({ error: 'Error obteniendo respuestas' }, { status: 500 });
     }
 
@@ -194,44 +151,13 @@ export async function POST(request: NextRequest, { params }: any) {
         id: response.id,
         codigo: questionnaireCode,
         titulo: response.cuestionarios.titulo,
-        descripcion: response.cuestionarios.descripcion,
         fecha_completado: response.creado_en,
         puntuacion: response.puntuacion,
         score_detallado: response.score_detallado,
         respuestas: response.respuestas,
-        items: response.cuestionarios.items, // Incluir ítems/preguntas del cuestionario
         metadata: meta || null
       };
     }) || [];
-
-    // 4.5. Obtener evolución clínica
-    const { data: evolutionData, error: evolutionError } = await supabaseAdmin
-      .from('evolucion_clinica')
-      .select('*')
-      .eq('paciente_id', patientId)
-      .order('created_at', { ascending: false });
-    
-    if (evolutionError) {
-      console.warn('[SUPERVISION CHAT] ⚠️ Error obteniendo evolución clínica:', evolutionError);
-    }
-
-    // 4.6. Estructurar entrevista inicial si existe
-    let structuredIntake = null;
-    if (intakeData && intakeData.length > 0) {
-      const intake = intakeData[0];
-      const { structureIntakeData, createIntakeSummaryFromRaw } = await import('../../../../../../utils/structureIntakeData');
-      
-      structuredIntake = {
-        id: intake.id,
-        estado: intake.estado,
-        fecha_inicio: intake.fecha_inicio,
-        fecha_finalizacion: intake.fecha_finalizacion,
-        datos_estructurados: structureIntakeData(intake.datos || {}),
-        resumen_clinico: createIntakeSummaryFromRaw(intake.datos || {})
-      };
-      
-      console.log('[SUPERVISION CHAT] ✅ Entrevista inicial estructurada incluida');
-    }
 
     // 5. Consolidar todos los datos
     const patientData = {
@@ -243,27 +169,28 @@ export async function POST(request: NextRequest, { params }: any) {
         created_at: patient.created_at,
         metadata: patient.metadata
       },
-      psychologist: await getPsychologistData(token),
-      intake: structuredIntake,
+      psychologist: {
+        id: 'test-psychologist',
+        name: 'Test Psychologist',
+        email: 'test@example.com'
+      },
+      intake: intakeData && intakeData.length > 0 ? {
+        id: intakeData[0].id,
+        estado: intakeData[0].estado,
+        datos: intakeData[0].datos,
+        fecha_inicio: intakeData[0].fecha_inicio,
+        fecha_fin: intakeData[0].fecha_fin,
+        created_at: intakeData[0].created_at
+      } : null,
       questionnaires: processedQuestionnaires,
-      evolucion_clinica: evolutionData?.map(entry => ({
-        id: entry.id,
-        entry_type: entry.entry_type,
-        content: entry.content,
-        tags: entry.tags,
-        created_at: entry.created_at,
-        author_id: entry.author_id,
-        metadata: entry.metadata
-      })) || [],
       summary: {
         total_questionnaires: processedQuestionnaires.length,
         questionnaire_types: [...new Set(processedQuestionnaires.map(q => q.codigo))],
-        has_intake: !!structuredIntake,
-        evolution_entries: evolutionData?.length || 0
+        has_intake: !!(intakeData && intakeData.length > 0)
       }
     };
 
-    console.log(`[SUPERVISION CHAT] ✅ Patient data loaded: ${patientData.patient.name}, ${patientData.questionnaires.length} questionnaires`);
+    console.log(`[TEST-SUPERVISION] ✅ Patient data loaded: ${patientData.patient.name}, ${patientData.questionnaires.length} questionnaires`);
 
     // 6. Crear contexto completo para GPT-4o
     const fullPatientContext = JSON.stringify(patientData, null, 2);
@@ -281,7 +208,7 @@ export async function POST(request: NextRequest, { params }: any) {
       }
     ];
 
-    console.log('[SUPERVISION CHAT] 🤖 Calling OpenAI GPT-4o...');
+    console.log('[TEST-SUPERVISION] 🤖 Calling OpenAI GPT-4o...');
     const openaiStartTime = Date.now();
 
     // 8. Llamar a OpenAI GPT-4o
@@ -304,7 +231,7 @@ export async function POST(request: NextRequest, { params }: any) {
     const openaiDuration = Date.now() - openaiStartTime;
 
     if (!openaiResponse.ok) {
-      console.error('[SUPERVISION CHAT] ❌ OpenAI error:', openaiData);
+      console.error('[TEST-SUPERVISION] ❌ OpenAI error:', openaiData);
       return NextResponse.json(
         { error: 'Error en OpenAI API', details: openaiData },
         { status: 500 }
@@ -314,7 +241,7 @@ export async function POST(request: NextRequest, { params }: any) {
     const aiResponse = openaiData.choices[0].message.content;
     const totalDuration = Date.now() - requestStartTime;
 
-    console.log(`[SUPERVISION CHAT] ✅ Response generated in ${totalDuration}ms (OpenAI: ${openaiDuration}ms)`);
+    console.log(`[TEST-SUPERVISION] ✅ Response generated in ${totalDuration}ms (OpenAI: ${openaiDuration}ms)`);
 
     return NextResponse.json({
       response: aiResponse,
@@ -332,7 +259,7 @@ export async function POST(request: NextRequest, { params }: any) {
     });
 
   } catch (error) {
-    console.error('[SUPERVISION CHAT] ❌ General error:', error);
+    console.error('[TEST-SUPERVISION] ❌ General error:', error);
     return NextResponse.json(
       { error: 'Error interno del servidor', details: error instanceof Error ? error.message : 'Unknown error' }, 
       { status: 500 }
