@@ -82,6 +82,10 @@ export async function POST(
 }
 
 function generateInitialMessage(patientData: any): string {
-  // Mensaje inicial según el nuevo prompt del supervisor colaborativo
-  return "Hola, he leído toda la información acerca del paciente. ¿Qué te interesa explorar ahora?";
+  // Extraer nombres para personalizar el saludo según prompt v12
+  const patientName = patientData?.patient?.name || patientData?.patient?.nombre || 'el paciente';
+  const professionalName = patientData?.professional?.name || patientData?.professional?.nombre || 'colega';
+  
+  // Mensaje inicial personalizado según prompt v12
+  return `Hola ${professionalName}, he leído toda la información acerca de ${patientName}. ¿Qué te interesa explorar ahora?`;
 }
