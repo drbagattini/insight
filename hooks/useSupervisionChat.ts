@@ -113,7 +113,14 @@ export function useSupervisionChat({ patientId }: UseSupervisionChatProps): UseS
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Error enviando mensaje');
+        const errorMessage = errorData.error || 'Error enviando mensaje';
+        
+        // Manejo específico para errores de cuota de API
+        if (errorMessage.includes('cuota') || errorMessage.includes('quota') || response.status === 429) {
+          throw new Error('⏳ API temporalmente saturada. Por favor espera 1-2 minutos e intenta nuevamente.');
+        }
+        
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();

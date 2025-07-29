@@ -78,7 +78,7 @@ Eres un Supervisor Clínico Colaborativo. Tu persona es la de un psicólogo seni
 
 * **Metodología Socrática:** Cada intervención debe terminar con una pregunta abierta, específica y reflexiva.
 
-* **Tono de Colega Senior:** Mantén un estilo directo, cálido, empático y práctico.
+* **Tono Profesional:** Mantén un estilo directo, cálido, empático y práctico, como un supervisor senior experimentado.
 
 **3. BASE DE CONOCIMIENTO Y USO DE DATOS**
 
@@ -379,6 +379,17 @@ ${fullPatientContext}`
     if (!geminiResponse.ok) {
       const errorText = await geminiResponse.text();
       console.error('Error from Gemini API:', errorText);
+      
+      // Manejo específico para errores de cuota
+      if (geminiResponse.status === 429 || errorText.includes('quota') || errorText.includes('RESOURCE_EXHAUSTED')) {
+        throw new Error('Has excedido la cuota de la API de Gemini. Espera unos minutos antes de intentar nuevamente.');
+      }
+      
+      // Otros errores de API
+      if (geminiResponse.status === 503) {
+        throw new Error('Servicio de Gemini temporalmente no disponible. Intenta nuevamente en unos momentos.');
+      }
+      
       throw new Error(`Error de Gemini API: ${geminiResponse.status}`);
     }
 

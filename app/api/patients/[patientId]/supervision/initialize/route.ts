@@ -84,7 +84,16 @@ export async function POST(
 function generateInitialMessage(patientData: any): string {
   // Extraer nombres para personalizar el saludo según prompt v12
   const patientName = patientData?.patient?.name || patientData?.patient?.nombre || 'el paciente';
-  const professionalName = patientData?.professional?.name || patientData?.professional?.nombre || 'colega';
+  
+  // Buscar nombre del profesional en diferentes ubicaciones posibles
+  const professionalName = 
+    patientData?.professional?.name || 
+    patientData?.professional?.nombre ||
+    patientData?.psychologist?.name ||
+    patientData?.psychologist?.nombre ||
+    (patientData?.psychologist?.first_name && patientData?.psychologist?.last_name ? 
+      `${patientData.psychologist.first_name} ${patientData.psychologist.last_name}`.trim() : null) ||
+    'Doctor/a'; // Fallback más profesional que 'colega'
   
   // Mensaje inicial personalizado según prompt v12
   return `Hola ${professionalName}, he leído toda la información acerca de ${patientName}. ¿Qué te interesa explorar ahora?`;
