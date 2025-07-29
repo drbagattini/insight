@@ -178,32 +178,43 @@ export async function POST(
             patient: { name: patientData.patient?.name, age: patientData.patient?.age },
             intake: patientData.intake?.datos || {},
             questionnaires: patientData.questionnaires?.map((q: any) => {
-              // Para cuestionarios específicos mencionados en el mensaje, incluir respuestas detalladas
-              const isSpecificQuestionnaire = messageText.includes('opd') || messageText.includes('operacionalizado') || 
-                                            messageText.includes('psicodinamico') || messageText.includes('phq') || 
-                                            messageText.includes('who') || messageText.includes('dimensiones') ||
-                                            messageText.includes('items') || messageText.includes('afirmaciones');
+              // Detectar si se solicitan datos detallados de cuestionarios
+              const needsDetailedData = messageText.includes('dimensiones') || messageText.includes('items') || 
+                                      messageText.includes('afirmaciones') || messageText.includes('respuestas') ||
+                                      messageText.includes('puntajes') || messageText.includes('especif') ||
+                                      messageText.includes('detall') || messageText.includes('nombra') ||
+                                      messageText.includes('cuáles') || messageText.includes('cuales') ||
+                                      // O si se menciona cualquier cuestionario específicamente
+                                      messageText.includes(q.codigo?.toLowerCase() || '') ||
+                                      messageText.includes(q.titulo?.toLowerCase() || '') ||
+                                      // Cuestionarios comunes
+                                      messageText.includes('opd') || messageText.includes('operacionalizado') ||
+                                      messageText.includes('psicodinamico') || messageText.includes('phq') ||
+                                      messageText.includes('who') || messageText.includes('beck') ||
+                                      messageText.includes('hamilton') || messageText.includes('gad') ||
+                                      messageText.includes('ansiedad') || messageText.includes('depresi');
               
-              if (isSpecificQuestionnaire && (q.codigo?.toLowerCase().includes('opd') || 
-                                            q.titulo?.toLowerCase().includes('opd') ||
-                                            q.codigo?.toLowerCase().includes('operacionalizado') ||
-                                            q.titulo?.toLowerCase().includes('operacionalizado') ||
-                                            q.codigo?.toLowerCase().includes('psicodinamico') ||
-                                            q.titulo?.toLowerCase().includes('psicodinamico') ||
-                                            q.codigo?.toLowerCase().includes('phq') ||
-                                            q.codigo?.toLowerCase().includes('who'))) {
+              if (needsDetailedData) {
+                // Incluir TODOS los datos disponibles para análisis completo
                 return {
                   codigo: q.codigo,
                   titulo: q.titulo,
                   puntuacion: q.puntuacion,
+                  puntuacion_total: q.puntuacion_total,
                   fecha: q.fecha,
-                  responses: q.responses, // Incluir respuestas detalladas
-                  items: q.items, // Incluir ítems si están disponibles
-                  dimensiones: q.dimensiones // Incluir dimensiones si están disponibles
+                  responses: q.responses, // Respuestas detalladas
+                  items: q.items, // Ítems del cuestionario
+                  dimensiones: q.dimensiones, // Dimensiones/subescalas
+                  interpretacion: q.interpretacion, // Interpretación clínica
+                  percentiles: q.percentiles, // Percentiles si están disponibles
+                  normas: q.normas, // Normas de referencia
+                  metadata: q.metadata // Metadatos adicionales
                 };
               } else {
+                // Para consultas generales, datos básicos pero incluyendo título
                 return {
                   codigo: q.codigo,
+                  titulo: q.titulo,
                   puntuacion: q.puntuacion,
                   fecha: q.fecha
                 };

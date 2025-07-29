@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('[TEST OPD ACCESS] Verificando acceso a datos detallados del OPD...');
+    console.log('[TEST QUESTIONNAIRE ACCESS] Verificando acceso a datos detallados de TODOS los cuestionarios...');
 
     const patientId = "1"; // ID de prueba
-    const messageText = "nombrame todas las dimensiones del opd-ca2-sq y referite a algunas de las afirmaciones específicas";
+    const messageText = "nombrame todas las dimensiones de los cuestionarios y referite a algunas de las afirmaciones específicas";
 
     // Simular la lógica del endpoint de chat
     const baseUrl = request.url.replace('/api/test-opd-access', '');
@@ -26,32 +26,34 @@ export async function GET(request: NextRequest) {
 
     const patientData = await dataResponse.json();
 
-    // Aplicar la misma lógica de filtrado que en el chat
-    const isSpecificQuestionnaire = messageText.includes('opd') || messageText.includes('operacionalizado') || 
-                                  messageText.includes('psicodinamico') || messageText.includes('phq') || 
-                                  messageText.includes('who') || messageText.includes('dimensiones') ||
-                                  messageText.includes('items') || messageText.includes('afirmaciones');
+    // Aplicar la misma lógica de filtrado que en el chat (NUEVA VERSIÓN)
+    const needsDetailedData = messageText.includes('dimensiones') || messageText.includes('items') || 
+                            messageText.includes('afirmaciones') || messageText.includes('respuestas') ||
+                            messageText.includes('puntajes') || messageText.includes('especif') ||
+                            messageText.includes('detall') || messageText.includes('nombra') ||
+                            messageText.includes('cuáles') || messageText.includes('cuales');
 
     const processedQuestionnaires = patientData.questionnaires?.map((q: any) => {
-      if (isSpecificQuestionnaire && (q.codigo?.toLowerCase().includes('opd') || 
-                                    q.titulo?.toLowerCase().includes('opd') ||
-                                    q.codigo?.toLowerCase().includes('operacionalizado') ||
-                                    q.titulo?.toLowerCase().includes('operacionalizado') ||
-                                    q.codigo?.toLowerCase().includes('psicodinamico') ||
-                                    q.titulo?.toLowerCase().includes('psicodinamico'))) {
+      if (needsDetailedData) {
         return {
           codigo: q.codigo,
           titulo: q.titulo,
           puntuacion: q.puntuacion,
+          puntuacion_total: q.puntuacion_total,
           fecha: q.fecha,
           responses: q.responses,
           items: q.items,
           dimensiones: q.dimensiones,
+          interpretacion: q.interpretacion,
+          percentiles: q.percentiles,
+          normas: q.normas,
+          metadata: q.metadata,
           raw_data_keys: Object.keys(q) // Para ver qué campos están disponibles
         };
       } else {
         return {
           codigo: q.codigo,
+          titulo: q.titulo,
           puntuacion: q.puntuacion,
           fecha: q.fecha
         };
@@ -73,7 +75,7 @@ export async function GET(request: NextRequest) {
       message: "🔍 TEST ACCESO A DATOS OPD",
       test_message: messageText,
       detection: {
-        is_specific_questionnaire: isSpecificQuestionnaire,
+        needs_detailed_data: needsDetailedData,
         opd_found: !!opdQuestionnaire,
         total_questionnaires: patientData.questionnaires?.length || 0
       },
