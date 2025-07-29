@@ -190,9 +190,10 @@ export async function POST(
                                       // Cuestionarios implementados en la plataforma
                                       messageText.includes('opd') || messageText.includes('operacionalizado') ||
                                       messageText.includes('psicodinamico') || messageText.includes('phq') ||
-                                      messageText.includes('who') || messageText.includes('gad') ||
-                                      messageText.includes('br-wai') || messageText.includes('alianza') ||
-                                      messageText.includes('ansiedad') || messageText.includes('depresi');
+                                      messageText.includes('who') || messageText.includes('bienestar') ||
+                                      messageText.includes('gad') || messageText.includes('br-wai') ||
+                                      messageText.includes('alianza') || messageText.includes('ansiedad') ||
+                                      messageText.includes('depresi');
               
               if (needsDetailedData) {
                 // Incluir TODOS los datos disponibles según la estructura real de la BD
