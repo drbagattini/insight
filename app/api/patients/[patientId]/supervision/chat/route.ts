@@ -177,11 +177,38 @@ export async function POST(
           const compactData: any = {
             patient: { name: patientData.patient?.name, age: patientData.patient?.age },
             intake: patientData.intake?.datos || {},
-            questionnaires: patientData.questionnaires?.map((q: any) => ({
-              codigo: q.codigo,
-              puntuacion: q.puntuacion,
-              fecha: q.fecha
-            })) || []
+            questionnaires: patientData.questionnaires?.map((q: any) => {
+              // Para cuestionarios específicos mencionados en el mensaje, incluir respuestas detalladas
+              const isSpecificQuestionnaire = messageText.includes('opd') || messageText.includes('operacionalizado') || 
+                                            messageText.includes('psicodinamico') || messageText.includes('phq') || 
+                                            messageText.includes('who') || messageText.includes('dimensiones') ||
+                                            messageText.includes('items') || messageText.includes('afirmaciones');
+              
+              if (isSpecificQuestionnaire && (q.codigo?.toLowerCase().includes('opd') || 
+                                            q.titulo?.toLowerCase().includes('opd') ||
+                                            q.codigo?.toLowerCase().includes('operacionalizado') ||
+                                            q.titulo?.toLowerCase().includes('operacionalizado') ||
+                                            q.codigo?.toLowerCase().includes('psicodinamico') ||
+                                            q.titulo?.toLowerCase().includes('psicodinamico') ||
+                                            q.codigo?.toLowerCase().includes('phq') ||
+                                            q.codigo?.toLowerCase().includes('who'))) {
+                return {
+                  codigo: q.codigo,
+                  titulo: q.titulo,
+                  puntuacion: q.puntuacion,
+                  fecha: q.fecha,
+                  responses: q.responses, // Incluir respuestas detalladas
+                  items: q.items, // Incluir ítems si están disponibles
+                  dimensiones: q.dimensiones // Incluir dimensiones si están disponibles
+                };
+              } else {
+                return {
+                  codigo: q.codigo,
+                  puntuacion: q.puntuacion,
+                  fecha: q.fecha
+                };
+              }
+            }) || []
           };
           
           // Cargar evoluciones clínicas SIEMPRE (como parte del contexto completo)
