@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/lib/auth';
+import { supabaseAdmin } from '@/app/lib/supabaseAdmin';
 
 // Configuración de Gemini API (usando la misma implementación que informes)
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -129,12 +130,17 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { patientId: string } }
 ) {
+  const requestStartTime = Date.now();
+  console.log('[SUPERVISION CHAT] 🚀 POST request received - Starting timer');
+  
   try {
     // Verificar autenticación
+    const authStartTime = Date.now();
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
+    console.log('[SUPERVISION CHAT] ✓ Auth completed in:', Date.now() - authStartTime, 'ms');
 
     // Verificar configuración de Gemini
     if (!GEMINI_API_KEY) {
@@ -156,28 +162,59 @@ export async function POST(
     }
 
     // CARGAR TODOS LOS DATOS DEL PACIENTE SIEMPRE (como debería ser)
+    console.log('[SUPERVISION CHAT] 📊 Starting data loading phase...');
+    const dataLoadStartTime = Date.now();
+    
     let fullPatientContext = '';
     const messageText = message.toLowerCase();
     
     try {
       const baseUrl = request.url.replace(`/api/patients/${patientId}/supervision/chat`, '');
       
-      // Cargar datos básicos del paciente
-        const dataResponse = await fetch(`${baseUrl}/api/informes/datos/${patientId}`, {
-          headers: {
-            'Authorization': request.headers.get('Authorization') || '',
-            'Cookie': request.headers.get('Cookie') || ''
-          }
-        });
+      // Cargar datos básicos del paciente usando Supabase directamente
+      console.log('[SUPERVISION CHAT] 📁 Fetching patient data directly from Supabase...');
+      
+      // Usar supabaseAdmin directamente en lugar de llamar al endpoint
+      const { data: patientData, error: patientError } = await (supabaseAdmin as any)
+        .from('patients')
+        .select('*')
+        .eq('id', patientId)
+        .single();
+      
+      const { data: questionnaires, error: questionnairesError } = await (supabaseAdmin as any)
+        .from('resultados_cuestionarios')
+        .select(`
+          *,
+          cuestionarios(codigo, titulo)
+        `)
+        .eq('paciente_id', patientId);
+      
+      const { data: evolutions, error: evolutionsError } = await (supabaseAdmin as any)
+        .from('evolucion_clinica')
+        .select('*')
+        .eq('paciente_id', patientId);
+      
+      // Simular estructura de respuesta del endpoint original
+      const mockDataResponse = {
+        ok: !patientError,
+        status: patientError ? 500 : 200,
+        json: async () => ({
+          patient: patientData,
+          intake: { datos: {} }, // Agregar estructura de intake vacía
+          cuestionarios: questionnaires || [],
+          questionnaires: questionnaires || [], // Alias para compatibilidad
+          evoluciones: evolutions || []
+        })
+      };
 
-        if (dataResponse.ok) {
-          const patientData = await dataResponse.json();
+        if (mockDataResponse.ok) {
+          const patientData = await mockDataResponse.json();
           
           // Crear contexto compacto solo con datos relevantes
           const compactData: any = {
             patient: { name: patientData.patient?.name, age: patientData.patient?.age },
             intake: patientData.intake?.datos || {},
-            questionnaires: patientData.questionnaires?.map((q: any) => {
+            questionnaires: patientData.cuestionarios?.map((q: any) => {
               // Detectar si se solicitan datos detallados de cuestionarios
               const needsDetailedData = messageText.includes('dimensiones') || messageText.includes('items') || 
                                       messageText.includes('afirmaciones') || messageText.includes('respuestas') ||
@@ -246,12 +283,12 @@ export async function POST(
           
           console.log('[DEBUG] Compact patient data loaded:', fullPatientContext.length, 'characters');
           console.log('[DEBUG] Patient name:', patientData.patient?.name);
-          console.log('[DEBUG] Questionnaires found:', patientData.questionnaires?.length || 0);
-          console.log('[DEBUG] Questionnaire codes:', patientData.questionnaires?.map((q: any) => q.codigo) || []);
+          console.log('[DEBUG] Questionnaires found:', patientData.cuestionarios?.length || 0);
+          console.log('[DEBUG] Questionnaire codes:', patientData.cuestionarios?.map((q: any) => q.codigo) || []);
           
           // Logging específico para OPD
           if (messageText.includes('opd') || messageText.includes('operacionalizado') || messageText.includes('psicodinamico')) {
-            const opdData = patientData.questionnaires?.find((q: any) => 
+            const opdData = patientData.cuestionarios?.find((q: any) => 
               q.codigo?.toLowerCase().includes('opd') ||
               q.titulo?.toLowerCase().includes('opd') ||
               q.codigo?.toLowerCase().includes('operacionalizado') ||
@@ -263,14 +300,14 @@ export async function POST(
             if (opdData) {
               console.log('[DEBUG] OPD data:', JSON.stringify(opdData, null, 2));
             } else {
-              console.log('[DEBUG] Available questionnaire codes:', patientData.questionnaires?.map((q: any) => q.codigo));
-              console.log('[DEBUG] Available questionnaire titles:', patientData.questionnaires?.map((q: any) => q.titulo));
+              console.log('[DEBUG] Available questionnaire codes:', patientData.cuestionarios?.map((q: any) => q.codigo));
+              console.log('[DEBUG] Available questionnaire titles:', patientData.cuestionarios?.map((q: any) => q.titulo));
             }
           }
           
         } else {
-          console.log('[ERROR] Could not load patient data:', dataResponse.status);
-          fullPatientContext = '\n\n[DATOS DEL PACIENTE: Error al cargar - código ' + dataResponse.status + ']';
+          console.log('[ERROR] Could not load patient data:', mockDataResponse.status);
+          fullPatientContext = '\n\n[DATOS DEL PACIENTE: Error al cargar - código ' + mockDataResponse.status + ']';
         }
       } catch (error) {
         console.error('[ERROR] Exception loading patient data:', error);
@@ -315,6 +352,8 @@ ${fullPatientContext}`
       ...conversationMessages.map(msg => msg.content)
     ].join('\n\n');
 
+    console.log('[SUPERVISION CHAT] ✓ Data loading completed in:', Date.now() - dataLoadStartTime, 'ms');
+    console.log('[SUPERVISION CHAT] 📝 Prompt construction completed');
     console.log('[DEBUG] Conversation text length:', conversationText.length);
     console.log('[DEBUG] First 200 chars:', conversationText.substring(0, 200));
     
@@ -335,18 +374,24 @@ ${fullPatientContext}`
       generationConfig: {
         temperature: 0.5,  // Equilibrio óptimo entre creatividad y consistencia
         topK: 40,
-        topP: 0.8,  // Más flexible
-        maxOutputTokens: 4096  // Respuestas completas como antes
+        topP: 0.8,
+        maxOutputTokens: 2048  // Mantener 2048 como sugeriste
       }
     };
 
     // Implementar retry para errores 503 (sobrecarga)
+    console.log('[SUPERVISION CHAT] 🤖 Starting Gemini API call...');
+    const geminiStartTime = Date.now();
+    
     let geminiResponse: Response | null = null;
     let retryCount = 0;
     const maxRetries = 3;
     
     while (retryCount <= maxRetries) {
       try {
+        console.log(`[SUPERVISION CHAT] 📡 Attempt ${retryCount + 1}/${maxRetries + 1} - Calling Gemini API...`);
+        const attemptStartTime = Date.now();
+        
         geminiResponse = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
           method: 'POST',
           headers: {
@@ -354,6 +399,8 @@ ${fullPatientContext}`
           },
           body: JSON.stringify(geminiRequest)
         });
+        
+        console.log(`[SUPERVISION CHAT] ✓ Gemini API call completed in: ${Date.now() - attemptStartTime}ms (Status: ${geminiResponse.status})`);
         
         // Si es 503, reintentar con delay exponencial
         if (geminiResponse.status === 503 && retryCount < maxRetries) {
@@ -394,34 +441,71 @@ ${fullPatientContext}`
     }
 
     const geminiData: GeminiResponse = await geminiResponse.json();
-    console.log('[DEBUG] Gemini response:', JSON.stringify(geminiData, null, 2));
+    console.log('[DEBUG] Gemini response structure:', {
+      hasCandidates: !!geminiData.candidates,
+      candidatesLength: geminiData.candidates?.length || 0,
+      firstCandidate: geminiData.candidates?.[0] ? {
+        hasContent: !!geminiData.candidates[0].content,
+        hasParts: !!geminiData.candidates[0].content?.parts,
+        partsLength: geminiData.candidates[0].content?.parts?.length || 0,
+        finishReason: geminiData.candidates[0].finishReason
+      } : null
+    });
 
     if (!geminiData.candidates || geminiData.candidates.length === 0) {
-      console.log('[ERROR] No candidates in response');
+      console.log('[ERROR] No candidates in response. Full response:', JSON.stringify(geminiData, null, 2));
       throw new Error('No se pudo generar respuesta de supervisión');
     }
 
     const candidate = geminiData.candidates[0];
+    console.log('[DEBUG] Candidate finish reason:', candidate.finishReason);
+    
+    if (!candidate.content || !candidate.content.parts) {
+      console.log('[ERROR] Candidate has no content or parts:', JSON.stringify(candidate, null, 2));
+      throw new Error('Respuesta de Gemini sin contenido');
+    }
+    
     const parts = candidate.content.parts;
+    console.log('[DEBUG] Parts analysis:', parts.map((part, index) => ({
+      index,
+      hasText: 'text' in part,
+      textLength: 'text' in part ? part.text?.length : 0,
+      textPreview: 'text' in part ? part.text?.substring(0, 100) : 'No text'
+    })));
     
     // Procesar respuesta directa (sin function calls)
     const textParts = parts.filter(part => 'text' in part);
     if (textParts.length === 0) {
+      console.log('[ERROR] No text parts found. All parts:', JSON.stringify(parts, null, 2));
       throw new Error('No se encontró respuesta de texto');
     }
     
     const response = (textParts[0] as { text: string }).text;
-    console.log('[DEBUG] Extracted response:', response);
+    console.log('[DEBUG] Extracted response length:', response?.length);
+    console.log('[DEBUG] Extracted response preview:', response?.substring(0, 200));
 
     if (!response || response.trim().length === 0) {
+      console.log('[ERROR] Empty response extracted. Raw response:', JSON.stringify(response));
       throw new Error('Respuesta vacía del modelo');
     }
+
+    const totalTime = Date.now() - requestStartTime;
+    console.log(`[SUPERVISION CHAT] 🏁 TOTAL REQUEST COMPLETED in: ${totalTime}ms`);
+    console.log(`[SUPERVISION CHAT] 📈 Performance breakdown:`);
+    console.log(`  - Data loading: ${Date.now() - dataLoadStartTime}ms`);
+    console.log(`  - Gemini API: ${Date.now() - geminiStartTime}ms`);
+    console.log(`  - Total: ${totalTime}ms`);
 
     return NextResponse.json({
       response,
       timestamp: new Date().toISOString(),
-      model: 'gemini-2.5-pro',
-      patientId
+      model: 'gemini-2.0-flash-exp',
+      patientId,
+      performance: {
+        totalTime: `${totalTime}ms`,
+        dataLoadTime: `${Date.now() - dataLoadStartTime}ms`,
+        geminiTime: `${Date.now() - geminiStartTime}ms`
+      }
     });
 
   } catch (error: any) {

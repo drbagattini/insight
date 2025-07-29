@@ -5,6 +5,7 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  isFallback?: boolean;
 }
 
 interface UseSupervisionChatProps {
@@ -117,7 +118,7 @@ export function useSupervisionChat({ patientId }: UseSupervisionChatProps): UseS
         
         // Manejo específico para errores de cuota de API
         if (errorMessage.includes('cuota') || errorMessage.includes('quota') || response.status === 429) {
-          throw new Error('⏳ API temporalmente saturada. Por favor espera 1-2 minutos e intenta nuevamente.');
+          throw new Error('⏳ API temporalmente saturada. La cuota se restablece automáticamente. Intenta nuevamente en unos minutos.');
         }
         
         throw new Error(errorMessage);

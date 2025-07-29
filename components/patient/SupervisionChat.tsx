@@ -194,9 +194,17 @@ export function SupervisionChat({
                     "max-w-[280px] p-3 rounded-lg text-sm",
                     message.role === 'user'
                       ? "bg-blue-600 text-white"
-                      : "bg-gray-100 text-gray-900"
+                      : message.isFallback
+                        ? "bg-orange-50 text-orange-900 border border-orange-200"
+                        : "bg-gray-100 text-gray-900"
                   )}
                 >
+                  {message.isFallback && (
+                    <div className="flex items-center gap-2 mb-2 text-xs text-orange-600">
+                      <span className="w-2 h-2 bg-orange-400 rounded-full"></span>
+                      Modo simplificado (API saturada)
+                    </div>
+                  )}
                   <div className="whitespace-pre-wrap">{message.content}</div>
                   <div className={cn(
                     "text-xs mt-1 opacity-70",
