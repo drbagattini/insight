@@ -527,34 +527,37 @@ export default function PatientProfilePage() {
         </div>
       )}
       <div className="p-6 space-y-6">
-        <h1 className="text-2xl font-semibold mb-4">{patientName || 'Perfil del paciente'}</h1>
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">{patientName || 'Perfil del paciente'}</h1>
+          <p className="text-lg text-gray-600">Seguimiento clínico integral</p>
+        </div>
         <Tab.Group selectedIndex={selectedTabIndex} onChange={setSelectedTabIndex}>
           <div className="mb-8">
-            <Tab.List className="flex bg-gray-50 rounded-xl p-1.5 shadow-sm border border-gray-200">
+            <Tab.List className="flex bg-gray-100 rounded-xl p-2 shadow-sm border border-gray-200">
               {['Entrevista inicial', 'Evolución Clínica', 'Evaluación Psicométrica', 'Informes'].map((category, index) => (
                 <Tab
                   key={category}
                   className={({ selected }) =>
-                    `relative flex-1 px-6 py-3.5 text-sm font-semibold transition-all duration-300 focus:outline-none ` +
+                    `relative flex-1 px-6 py-4 text-sm font-semibold transition-all duration-300 focus:outline-none ` +
                     `rounded-lg whitespace-nowrap text-center ` +
                     `${selected 
-                      ? 'text-indigo-700 bg-white shadow-md ring-1 ring-indigo-100 transform scale-[1.02]' 
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                      ? 'text-blue-700 bg-white shadow-lg ring-1 ring-blue-100 transform scale-[1.02]' 
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'
                     }`
                   }
                 >
                   <span className="relative z-10 flex items-center justify-center space-x-2">
-                    <span className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                    <span className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
                       selectedTabIndex === index 
-                        ? 'bg-indigo-500 ring-2 ring-indigo-200' 
-                        : 'bg-gray-300'
+                        ? 'bg-blue-500 ring-2 ring-blue-200' 
+                        : 'bg-gray-400'
                     }`} />
                     <span>{category}</span>
                   </span>
                   
                   {/* Gradient overlay for active tab */}
                   {selectedTabIndex === index && (
-                    <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-indigo-50 to-blue-50 opacity-30" />
+                    <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 opacity-40" />
                   )}
                 </Tab>
               ))}

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Patient } from '@/types/patients';
 import { useQuery } from '@tanstack/react-query';
 import { QUERY_KEYS } from '@/lib/constants';
-import { FiSearch, FiUser, FiEdit2, FiTrash2, FiEye, FiMail, FiPhone, FiPlus } from 'react-icons/fi';
+import { FiSearch, FiUser, FiEdit2, FiTrash2, FiEye, FiMail, FiPhone } from 'react-icons/fi';
 
 interface PatientListProps {
   onEdit: (patient: Patient) => void;
@@ -10,6 +10,7 @@ interface PatientListProps {
   onViewEvolution: (patient: Patient) => void;
   onSendQuestionnaire: (patient: Patient) => void;
   hideTitle?: boolean;
+  searchTerm?: string;
 }
 
 // Función para generar color único basado en el nombre
@@ -36,9 +37,13 @@ export default function PatientList({
   onDelete, 
   onViewEvolution, 
   onSendQuestionnaire,
-  hideTitle = false 
+  hideTitle = false,
+  searchTerm: externalSearchTerm 
 }: PatientListProps) {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [internalSearchTerm, setInternalSearchTerm] = useState('');
+  
+  // Usar el término de búsqueda externo si está disponible, sino el interno
+  const searchTerm = externalSearchTerm || internalSearchTerm;
 
   const { 
     data: patients = [], 
@@ -85,39 +90,6 @@ export default function PatientList({
 
   return (
     <div className="space-y-6">
-      {/* Header elegante y simplificado */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-        {!hideTitle && (
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Pacientes</h1>
-            <p className="text-sm text-gray-600 mt-1">Gestiona la información de tus pacientes</p>
-          </div>
-        )}
-        <div className={hideTitle ? 'ml-auto' : ''}>
-          <button
-            onClick={() => onEdit({} as Patient)}
-            className="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 hover:shadow-md"
-          >
-            <FiPlus className="h-4 w-4 mr-2" />
-            Agregar Paciente
-          </button>
-        </div>
-      </div>
-
-      {/* Barra de búsqueda elegante */}
-      <div className="relative max-w-md">
-        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-          <FiSearch className="h-5 w-5 text-gray-400" />
-        </div>
-        <input
-          type="text"
-          placeholder="Buscar pacientes..."
-          className="block w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl shadow-sm bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-sm"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
-
       {/* Lista moderna y eficiente */}
       {filteredPatients.length === 0 ? (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
@@ -125,19 +97,8 @@ export default function PatientList({
             <FiUser className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-4 text-lg font-medium text-gray-900">No se encontraron pacientes</h3>
             <p className="mt-2 text-sm text-gray-500">
-              {searchTerm ? 'Intenta con otros términos de búsqueda' : 'Comienza agregando tu primer paciente'}
+              {searchTerm ? 'Intenta con otros términos de búsqueda' : 'Comienza agregando tu primer paciente desde el botón de arriba'}
             </p>
-            {!searchTerm && (
-              <div className="mt-6">
-                <button
-                  onClick={() => onEdit({} as Patient)}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  <FiPlus className="h-4 w-4 mr-2" />
-                  Agregar primer paciente
-                </button>
-              </div>
-            )}
           </div>
         </div>
       ) : (

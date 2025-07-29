@@ -4,12 +4,14 @@ interface InsightLogoProps {
   className?: string;
   withText?: boolean;
   textSize?: 'sm' | 'md' | 'lg';
+  href?: string;
 }
 
 export default function InsightLogo({ 
   className = '', 
   withText = true, 
-  textSize = 'md' 
+  textSize = 'md',
+  href = '/'
 }: InsightLogoProps) {
   const textSizeClasses = {
     sm: 'text-sm',
@@ -18,7 +20,7 @@ export default function InsightLogo({
   };
 
   return (
-    <Link href="/" className={`flex items-center space-x-2 ${className}`}>
+    <Link href={href} className={`flex items-center space-x-2 transition-opacity hover:opacity-80 ${className}`}>
         <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white font-bold">
           i
         </div>

@@ -78,33 +78,39 @@ export default function QuestionnairesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">Cuestionarios</h1>
-
-      {/* Search + Filter Bar */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="relative md:col-span-2">
-          <FiSearch className="absolute left-3 top-3 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Buscar cuestionarios..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
+    <div className="container mx-auto p-6 max-w-6xl">
+      {/* Título principal y controles */}
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
         <div>
-          <select
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
-            value={domainFilter}
-            onChange={(e) => setDomainFilter(e.target.value)}
-          >
-            {availableDomains.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </select>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">Biblioteca de cuestionarios</h1>
+          <p className="text-lg text-gray-600">Instrumentos de evaluación disponibles</p>
+        </div>
+        
+        {/* Controles de búsqueda y filtro */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1 max-w-md">
+            <FiSearch className="absolute left-3 top-3 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Buscar cuestionarios..."
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="w-full sm:w-auto min-w-[200px]">
+            <select
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+              value={domainFilter}
+              onChange={(e) => setDomainFilter(e.target.value)}
+            >
+              {availableDomains.map((d) => (
+                <option key={d} value={d}>
+                  {d === "Todos" ? "Filtro: Todos" : d}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 

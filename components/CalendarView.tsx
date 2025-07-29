@@ -85,12 +85,11 @@ export default function CalendarView() {
 
   return (
     <div className="w-full h-full flex flex-col bg-gray-50">
-      {/* Header con título */}
+      {/* Subtítulo descriptivo */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Agenda</h1>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-sm text-gray-600">
               Gestiona tus citas y sincroniza con Google Calendar
             </p>
           </div>

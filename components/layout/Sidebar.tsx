@@ -25,23 +25,29 @@ export default function Sidebar() {
 
   return (
     <div className="flex flex-col w-64 bg-white border-r">
-      <div className="flex items-center justify-center h-20 border-b px-4">
-        <InsightLogo textSize="lg" />
+      {/* Logo centrado con protagonismo */}
+      <div className="flex items-center justify-center h-16 border-b border-gray-100 px-4">
+        <InsightLogo textSize="lg" href="/resumen-asistencial" />
       </div>
-      <nav className="flex-1 p-4 space-y-2">
+      {/* Navegación alineada a la izquierda con espaciado refinado */}
+      <nav className="flex-1 px-5 pt-6 pb-4 space-y-1.5">
         {navigation.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = pathname === item.href || 
+            (pathname.startsWith('/dashboard/patients/') && item.href === '/dashboard/patients') ||
+            (pathname.startsWith('/resumen-asistencial') && item.href === '/resumen-asistencial');
           return (
             <Link
               key={item.name}
               href={item.href}
-              className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+              className={`flex items-center px-4 py-3.5 text-[15px] rounded-lg transition-all duration-200 ${
                 isActive
-                  ? 'bg-blue-50 text-blue-700 font-semibold'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  ? 'bg-blue-100 text-blue-700 font-semibold border-l-4 border-blue-600 shadow-sm'
+                  : 'text-gray-700 font-medium hover:bg-gray-50 hover:text-gray-900 hover:shadow-sm'
               }`}>
-                <item.icon className="w-5 h-5 mr-3" />
-                {item.name}
+                <item.icon className={`mr-3.5 transition-all duration-200 ${
+                  isActive ? 'w-[22px] h-[22px] text-blue-600' : 'w-5 h-5'
+                }`} />
+                <span className="select-none tracking-wide">{item.name}</span>
             </Link>
           );
         })}

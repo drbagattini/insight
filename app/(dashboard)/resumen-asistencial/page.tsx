@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Fragment } from 'react';
+import React, { useState, Fragment } from 'react';
 import { Scatter } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -31,10 +31,10 @@ import KpiCard from '@/components/dashboard/KpiCard';
 import PatientForm from '@/components/patients/PatientForm';
 import { NewPatient } from '@/types/patients';
 import { AppointmentModal, ModalAppointmentData } from '@/components/appointments/AppointmentModal';
-import HeaderActions from '@/components/dashboard/HeaderActions';
 import RiskPatientsDrawer from '@/components/dashboard/RiskPatientsDrawer';
 import PendingQuestionnairesModal from '@/components/dashboard/PendingQuestionnairesModal';
 import { useDashboardSummary } from '@/hooks/useDashboardSummary';
+
 import { Dialog, Transition } from '@headlessui/react';
 
 // Register Chart.js components
@@ -121,10 +121,35 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <HeaderActions 
-        onNewPatientClick={() => setShowPatientForm(true)}
-        onScheduleAppointmentClick={() => { setCurrentAppointmentData(null); setIsAppointmentModalOpen(true); }}
-      />
+      {/* Título principal y botones */}
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">Resumen asistencial</h1>
+          <p className="text-lg text-gray-600">Vista general de tu práctica clínica</p>
+        </div>
+        
+        {/* Botones de acción */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            onClick={() => setShowPatientForm(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Nuevo paciente
+          </button>
+          <button
+            onClick={() => { setCurrentAppointmentData(null); setIsAppointmentModalOpen(true); }}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a1 1 0 011-1h6a1 1 0 011 1v4h3a1 1 0 011 1v2a1 1 0 01-1 1h-3v3a1 1 0 01-1 1H9a1 1 0 01-1-1v-3H5a1 1 0 01-1-1V8a1 1 0 011-1h3z" />
+            </svg>
+            Programar cita
+          </button>
+        </div>
+      </div>
       {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <KpiCard

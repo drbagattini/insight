@@ -7,6 +7,9 @@ interface RiskPatient {
   name: string;
   score: number;
   date: string; // ISO string for date
+  questionnaire: string; // Código del cuestionario que generó la alerta
+  riskType: 'suicide' | 'general'; // Tipo de riesgo
+  item9?: number; // Para PHQ-9, valor del ítem 9 (ideación suicida)
 }
 
 export interface DashboardSummary {
