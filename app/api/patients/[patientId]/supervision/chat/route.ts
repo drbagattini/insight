@@ -276,7 +276,7 @@ ${fullPatientContext}`
         }]
       }],
       generationConfig: {
-        temperature: 0.4,  // Equilibrio entre consistencia y creatividad
+        temperature: 0.5,  // Mayor creatividad para insights más variados
         topK: 40,
         topP: 0.8,  // Más flexible
         maxOutputTokens: 4096  // Respuestas completas como antes
