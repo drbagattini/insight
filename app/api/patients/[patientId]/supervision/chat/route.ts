@@ -276,7 +276,7 @@ ${fullPatientContext}`
         }]
       }],
       generationConfig: {
-        temperature: 0.6,  // Alta creatividad manteniendo coherencia clínica
+        temperature: 0.5,  // Equilibrio óptimo entre creatividad y consistencia
         topK: 40,
         topP: 0.8,  // Más flexible
         maxOutputTokens: 4096  // Respuestas completas como antes
