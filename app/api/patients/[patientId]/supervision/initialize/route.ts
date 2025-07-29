@@ -95,6 +95,9 @@ function generateInitialMessage(patientData: any): string {
       `${patientData.psychologist.first_name} ${patientData.psychologist.last_name}`.trim() : null) ||
     'Doctor/a'; // Fallback más profesional que 'colega'
   
+  console.log(`[SUPERVISION INIT] 👨‍⚕️ Profesional identificado: ${professionalName}`);
+  console.log(`[SUPERVISION INIT] 👤 Paciente: ${patientName}`);
+  
   // Mensaje inicial personalizado según prompt v12
   return `Hola ${professionalName}, he leído toda la información acerca de ${patientName}. ¿Qué te interesa explorar ahora?`;
 }

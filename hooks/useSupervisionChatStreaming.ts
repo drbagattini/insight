@@ -57,11 +57,26 @@ export function useSupervisionChatStreaming({ patientId }: UseSupervisionChatPro
     setError(null);
 
     try {
-      // Mensaje inicial simple sin llamada a API
+      // Llamar al endpoint de inicialización para obtener el saludo personalizado
+      const response = await fetch(`/api/patients/${patientId}/supervision/initialize`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error inicializando chat de supervisión');
+      }
+
+      const data = await response.json();
+      
+      // Crear mensaje inicial con el saludo personalizado del endpoint
       const initialMessage: Message = {
         id: `init-${Date.now()}`,
         role: 'assistant',
-        content: '¡Hola! Soy tu asistente de supervisión clínica. He revisado toda la información disponible del paciente, incluyendo la entrevista inicial, cuestionarios y evolución clínica. ¿En qué aspecto te gustaría profundizar?',
+        content: data.initialMessage,
         timestamp: new Date()
       };
 

@@ -31,9 +31,9 @@ Eres un Supervisor Clínico Colaborativo. Tu persona es la de un psicólogo seni
 
 * **Directiva Prioritaria:** Tu objetivo principal es emular el ritmo y el lenguaje del **'Ejemplo Maestro'**. Este estilo conversacional, claro y enfocado, **tiene prioridad sobre la exhaustividad de tu análisis en una sola respuesta.**
 
-* **Metodología Socrática:** Cada intervención debe terminar con una pregunta abierta, específica y reflexiva.
+* **Metodología Socrática:** Cada intervención debe terminar con una pregunta abierta y reflexiva.
 
-* **Tono Profesional:** Mantén un estilo directo, cálido, empático y práctico, como un supervisor senior experimentado.
+* **Tono de Colega Senior:** Mantén un estilo directo, cálido, empático y práctico.
 
 **3. BASE DE CONOCIMIENTO Y USO DE DATOS**
 
@@ -77,7 +77,7 @@ Eres un Supervisor Clínico Colaborativo. Tu persona es la de un psicólogo seni
 * **Instrucción:** Al activarse el cierre, generarás un **único párrafo en prosa, denso y rico en contenido**, que se guardará como "Evolución Clínica" bajo la etiqueta "Supervisión".
 * **Contenido:** El párrafo debe integrar de manera fluida la información preexistente del paciente con los insights, hipótesis y conclusiones más importantes que surgieron durante la conversación colaborativa.
 * **Ejemplo de Estilo y Estructura:**
-    *Síntesis de Supervisión*
+    > *Durante la supervisión del [Fecha], la conversación se centró en [tema principal de la supervisión, ej: la contratransferencia del terapeuta, los factores que perpetúan el cuadro, etc.]. A lo largo del diálogo, emergió una nueva comprensión sobre [aspecto del paciente o del caso], formulándose la hipótesis de que [comportamiento o síntoma del paciente] podría estar funcionando como [función o defensa propuesta]. Esta idea se construyó al conectar [elemento A discutido, ej: la historia vincular del paciente] con [elemento B discutido, ej: su reacción en la sesión]. Como conclusión, se acordó que el próximo foco terapéutico será [acción o foco clínico a seguir], con el objetivo de [resultado esperado de esa acción].*
     Durante la supervisión del [Fecha], se exploró [dinámica central discutida] y se discutío [síntesis de temas discutidos sobre la dinámica]. Las hipótesis manejadas fueron [hipótesis]. Basados en [datos de la discusión], se concluyó colaborativamente que [evidencia final o conclusión clave].`;
 
 // Función para obtener datos reales del psicólogo
@@ -204,12 +204,51 @@ export async function POST(request: NextRequest, { params }: any) {
       };
     }) || [];
 
-    // 4.5. Obtener evolución clínica
+    // 4.5. Obtener evolución clínica COMPLETA (sin límites) - AMBAS TABLAS
+    // Consultar tabla evolucion_clinica (evoluciones manuales)
     const { data: evolutionData, error: evolutionError } = await supabaseAdmin
       .from('evolucion_clinica')
       .select('*')
       .eq('paciente_id', patientId)
       .order('created_at', { ascending: false });
+    
+    // Consultar tabla evoluciones_clinicas (síntesis de supervisión IA)
+    const { data: synthesisData, error: synthesisError } = await supabaseAdmin
+      .from('evoluciones_clinicas')
+      .select('*')
+      .eq('patient_id', patientId)
+      .eq('tipo', 'supervision')
+      .order('created_at', { ascending: false });
+    
+    console.log(`[SUPERVISION CHAT] 📋 Evoluciones manuales encontradas: ${evolutionData?.length || 0}`);
+    console.log(`[SUPERVISION CHAT] 🤖 Síntesis de supervisión encontradas: ${synthesisData?.length || 0}`);
+    
+    if (evolutionError) {
+      console.warn('[SUPERVISION CHAT] ⚠️ Error obteniendo evolución clínica:', evolutionError);
+    }
+    if (synthesisError) {
+      console.warn('[SUPERVISION CHAT] ⚠️ Error obteniendo síntesis de supervisión:', synthesisError);
+    }
+
+    // Combinar y ordenar todas las evoluciones por fecha
+    const allEvolutions = [
+      ...(evolutionData || []).map(item => ({
+        ...item,
+        source: 'manual',
+        content: item.content || item.nota || '',
+        created_at: item.created_at
+      })),
+      ...(synthesisData || []).map(item => ({
+        ...item,
+        source: 'ai_synthesis',
+        content: item.data?.synthesis || '',
+        created_at: item.created_at,
+        entry_type: 'supervision_synthesis',
+        version: item.version
+      }))
+    ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    
+    console.log(`[SUPERVISION CHAT] 📊 Total evoluciones combinadas: ${allEvolutions.length}`);
     
     if (evolutionError) {
       console.warn('[SUPERVISION CHAT] ⚠️ Error obteniendo evolución clínica:', evolutionError);
@@ -246,20 +285,24 @@ export async function POST(request: NextRequest, { params }: any) {
       psychologist: await getPsychologistData(token),
       intake: structuredIntake,
       questionnaires: processedQuestionnaires,
-      evolucion_clinica: evolutionData?.map(entry => ({
+      evolucion_clinica: allEvolutions?.map(entry => ({
         id: entry.id,
-        entry_type: entry.entry_type,
+        entry_type: entry.entry_type || (entry.source === 'ai_synthesis' ? 'supervision_synthesis' : 'manual'),
         content: entry.content,
         tags: entry.tags,
         created_at: entry.created_at,
-        author_id: entry.author_id,
-        metadata: entry.metadata
+        author_id: entry.author_id || entry.created_by,
+        metadata: entry.metadata,
+        source: entry.source, // 'manual' o 'ai_synthesis'
+        version: entry.version // Solo para síntesis IA
       })) || [],
       summary: {
         total_questionnaires: processedQuestionnaires.length,
         questionnaire_types: [...new Set(processedQuestionnaires.map(q => q.codigo))],
         has_intake: !!structuredIntake,
-        evolution_entries: evolutionData?.length || 0
+        evolution_entries: allEvolutions?.length || 0,
+        manual_entries: evolutionData?.length || 0,
+        ai_synthesis_entries: synthesisData?.length || 0
       }
     };
 

@@ -44,12 +44,51 @@ export async function GET(request: NextRequest, { params }: any) {
       console.error('Error fetching questionnaire responses:', responsesError);
     }
 
-    // 4. Obtener evolución clínica
+    // 4. Obtener evolución clínica COMPLETA - AMBAS TABLAS
+    // Consultar tabla evolucion_clinica (evoluciones manuales)
     const { data: evolutionData, error: evolutionError } = await supabase
       .from('evolucion_clinica')
       .select('*')
       .eq('paciente_id', patientId)
       .order('created_at', { ascending: false});
+    
+    // Consultar tabla evoluciones_clinicas (síntesis de supervisión IA)
+    const { data: synthesisData, error: synthesisError } = await supabase
+      .from('evoluciones_clinicas')
+      .select('*')
+      .eq('patient_id', patientId)
+      .eq('tipo', 'supervision')
+      .order('created_at', { ascending: false});
+    
+    console.log(`[PATIENT-DATA] 📋 Evoluciones manuales encontradas: ${evolutionData?.length || 0}`);
+    console.log(`[PATIENT-DATA] 🤖 Síntesis de supervisión encontradas: ${synthesisData?.length || 0}`);
+    
+    if (evolutionError) {
+      console.warn('[PATIENT-DATA] ⚠️ Error obteniendo evolución clínica:', evolutionError);
+    }
+    if (synthesisError) {
+      console.warn('[PATIENT-DATA] ⚠️ Error obteniendo síntesis de supervisión:', synthesisError);
+    }
+
+    // Combinar y ordenar todas las evoluciones por fecha
+    const allEvolutions = [
+      ...(evolutionData || []).map(item => ({
+        ...item,
+        source: 'manual',
+        content: item.content || item.nota || '',
+        created_at: item.created_at
+      })),
+      ...(synthesisData || []).map(item => ({
+        ...item,
+        source: 'ai_synthesis',
+        content: item.data?.synthesis || '',
+        created_at: item.created_at,
+        entry_type: 'supervision_synthesis',
+        version: item.version
+      }))
+    ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    
+    console.log(`[PATIENT-DATA] 📊 Total evoluciones combinadas: ${allEvolutions.length}`);
     
     if (evolutionError) {
       console.warn('[PATIENT-DATA] ⚠️ Error obteniendo evolución clínica:', evolutionError);
@@ -155,20 +194,24 @@ export async function GET(request: NextRequest, { params }: any) {
       },
       intake: structuredIntake,
       questionnaires: processedQuestionnaires,
-      evolucion_clinica: evolutionData?.map(entry => ({
+      evolucion_clinica: allEvolutions?.map(entry => ({
         id: entry.id,
-        entry_type: entry.entry_type,
+        entry_type: entry.entry_type || (entry.source === 'ai_synthesis' ? 'supervision_synthesis' : 'manual'),
         content: entry.content,
         tags: entry.tags,
         created_at: entry.created_at,
-        author_id: entry.author_id,
-        metadata: entry.metadata
+        author_id: entry.author_id || entry.created_by,
+        metadata: entry.metadata,
+        source: entry.source, // 'manual' o 'ai_synthesis'
+        version: entry.version // Solo para síntesis IA
       })) || [],
       summary: {
         total_questionnaires: processedQuestionnaires.length,
         questionnaire_types: [...new Set(processedQuestionnaires.map(q => q.codigo))],
         has_intake: !!(intakeData && intakeData.length > 0),
-        evolution_entries: evolutionData?.length || 0,
+        evolution_entries: allEvolutions?.length || 0,
+        manual_entries: evolutionData?.length || 0,
+        ai_synthesis_entries: synthesisData?.length || 0,
         date_range: {
           earliest: responses && responses.length > 0 
             ? responses[responses.length - 1].creado_en 
