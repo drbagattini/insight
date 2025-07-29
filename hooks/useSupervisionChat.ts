@@ -91,7 +91,8 @@ export function useSupervisionChat({ patientId }: UseSupervisionChatProps): UseS
       timestamp: new Date()
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    // NO agregar el mensaje del usuario inmediatamente
+    // Solo mostrar el estado de loading
     setIsLoading(true);
     setError(null);
 
@@ -124,7 +125,8 @@ export function useSupervisionChat({ patientId }: UseSupervisionChatProps): UseS
         timestamp: new Date()
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
+      // Agregar AMBOS mensajes juntos cuando la respuesta es exitosa
+      setMessages(prev => [...prev, userMessage, assistantMessage]);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
       setError(errorMessage);
