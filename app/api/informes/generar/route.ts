@@ -199,6 +199,66 @@ export async function POST(request: NextRequest) {
       generation_config: geminiRequest.generationConfig
     };
 
+    // Debitar créditos por el informe generado
+    try {
+      const debitResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/credits/debit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cookie': request.headers.get('cookie') || ''
+        },
+        body: JSON.stringify({
+          type: 'report',
+          quantity: 1,
+          description: `Informe clínico generado para paciente ${patientData.patient.name}`,
+          metadata: {
+            patient_id: pacienteId,
+            report_title: titulo,
+            tokens_used: generatedContent.length // Aproximación de tokens
+          }
+        })
+      });
+
+      if (!debitResponse.ok) {
+        const debitError = await debitResponse.json();
+        console.error('[ERROR] Failed to debit credits:', debitError);
+        
+        // Si no hay créditos suficientes, retornar error específico
+        if (debitResponse.status === 402) {
+          return NextResponse.json(
+            { 
+              error: 'Créditos insuficientes para generar el informe',
+              credits_needed: 8,
+              current_balance: debitError.current_balance || 0
+            },
+            { status: 402 }
+          );
+        }
+        
+        // Si se superó el límite de fair-use, retornar error específico
+        if (debitResponse.status === 429) {
+          return NextResponse.json(
+            {
+              error: debitError.error || 'Límite mensual de informes superado',
+              fair_use: debitError.fair_use
+            },
+            { status: 429 }
+          );
+        }
+      }
+      
+      // Verificar si hay advertencia de fair-use
+      const fairUseStatus = debitResponse.headers.get('X-Fair-Use-Status');
+      if (fairUseStatus === 'warn') {
+        const debitData = await debitResponse.json();
+        console.warn('[WARN] Fair-use warning for report generation:', debitData.fair_use_warning);
+      }
+      
+    } catch (debitError) {
+      console.error('[ERROR] Error debiting credits:', debitError);
+      // Continuar con la respuesta pero logear el error
+    }
+
     return NextResponse.json({
       contenido: generatedContent,
       titulo,

@@ -4,11 +4,12 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React from 'react';
 import {
+  CalendarIcon,
+  ChartBarIcon,
+  ClipboardDocumentListIcon,
+  CreditCardIcon,
   HomeIcon,
   UserGroupIcon,
-  ClipboardDocumentListIcon,
-  CalendarIcon,
-  ChartBarIcon
 } from '@heroicons/react/24/outline';
 import InsightLogo from '../common/InsightLogo';
 
@@ -18,6 +19,7 @@ const navigation = [
   { name: 'Pacientes', href: '/dashboard/patients', icon: UserGroupIcon },
   { name: 'Cuestionarios', href: '/dashboard/questionnaires', icon: ClipboardDocumentListIcon },
   { name: 'Reportes', href: '/dashboard/reports', icon: ChartBarIcon },
+  { name: 'Créditos', href: '/credits', icon: CreditCardIcon },
 ];
 
 export default function Sidebar() {
@@ -33,8 +35,9 @@ export default function Sidebar() {
       <nav className="flex-1 px-5 pt-6 pb-4 space-y-1.5">
         {navigation.map((item) => {
           const isActive = pathname === item.href || 
-            (pathname.startsWith('/dashboard/patients/') && item.href === '/dashboard/patients') ||
-            (pathname.startsWith('/resumen-asistencial') && item.href === '/resumen-asistencial');
+            (item.href !== '/resumen-asistencial' && pathname?.startsWith(item.href)) ||
+            (pathname?.startsWith('/dashboard/patients/') && item.href === '/dashboard/patients') ||
+            (pathname?.startsWith('/resumen-asistencial') && item.href === '/resumen-asistencial');
           return (
             <Link
               key={item.name}

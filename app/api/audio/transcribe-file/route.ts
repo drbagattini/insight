@@ -42,21 +42,92 @@ export async function POST(request: NextRequest) {
 
     // OPCIÓN 1: Usar OpenAI Whisper API (Recomendado)
     // Costo: ~$0.006 por minuto de audio
+    let transcriptionResult;
     try {
       const whisperResponse = await transcribeWithOpenAIWhisper(audioFile);
       if (whisperResponse && whisperResponse.success) {
-        return NextResponse.json(whisperResponse);
+        transcriptionResult = whisperResponse;
       }
     } catch (error) {
       console.log('OpenAI Whisper falló:', error instanceof Error ? error.message : error);
     }
 
-    // OPCIÓN 2: Whisper local no configurado, saltando...
-    console.log('Whisper local no configurado, usando transcripción simulada...');
+    // Si no hay resultado de Whisper, usar simulación
+    if (!transcriptionResult) {
+      // OPCIÓN 2: Whisper local no configurado, saltando...
+      console.log('Whisper local no configurado, usando transcripción simulada...');
+      
+      // OPCIÓN 3: Transcripción simulada (para desarrollo)
+      transcriptionResult = await simulateTranscription(audioFile);
+    }
 
-    // OPCIÓN 3: Transcripción simulada (para desarrollo)
-    const simulatedResponse = await simulateTranscription(audioFile);
-    return NextResponse.json(simulatedResponse);
+    // Debitar créditos por la transcripción
+    if (transcriptionResult && transcriptionResult.success) {
+      try {
+        const durationMinutes = Math.ceil(transcriptionResult.duration / 60);
+        const debitResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/credits/debit`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Cookie': request.headers.get('cookie') || ''
+          },
+          body: JSON.stringify({
+            type: 'transcription',
+            quantity: durationMinutes,
+            description: `Transcripción de audio: ${audioFile.name} (${durationMinutes} min)`,
+            metadata: {
+              file_name: audioFile.name,
+              file_size: audioFile.size,
+              duration_seconds: transcriptionResult.duration,
+              duration_minutes: durationMinutes,
+              method: transcriptionResult.method || 'whisper'
+            }
+          })
+        });
+
+        if (!debitResponse.ok) {
+          const debitError = await debitResponse.json();
+          console.error('[ERROR] Failed to debit credits for transcription:', debitError);
+          
+          // Si no hay créditos suficientes, retornar error específico
+          if (debitResponse.status === 402) {
+            return NextResponse.json(
+              { 
+                error: 'Créditos insuficientes para la transcripción',
+                credits_needed: durationMinutes,
+                duration_minutes: durationMinutes,
+                current_balance: debitError.current_balance || 0
+              },
+              { status: 402 }
+            );
+          }
+          
+          // Si se superó el límite de fair-use, retornar error específico
+          if (debitResponse.status === 429) {
+            return NextResponse.json(
+              {
+                error: debitError.error || 'Límite mensual de transcripciones superado',
+                fair_use: debitError.fair_use,
+                duration_minutes: durationMinutes
+              },
+              { status: 429 }
+            );
+          }
+        }
+        
+        // Verificar si hay advertencia de fair-use
+        const fairUseStatus = debitResponse.headers.get('X-Fair-Use-Status');
+        if (fairUseStatus === 'warn') {
+          const debitData = await debitResponse.json();
+          console.warn('[WARN] Fair-use warning for transcription:', debitData.fair_use_warning);
+        }
+      } catch (debitError) {
+        console.error('[ERROR] Error debiting credits for transcription:', debitError);
+        // Continuar con la respuesta pero logear el error
+      }
+    }
+
+    return NextResponse.json(transcriptionResult);
 
   } catch (error) {
     console.error('Error en transcripción:', error);
