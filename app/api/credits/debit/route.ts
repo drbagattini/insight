@@ -20,7 +20,7 @@ function monthStartISO(date = new Date()): string {
 
 // Schema de validación
 const debitSchema = z.object({
-  type: z.enum(['report', 'transcription', 'supervisor_chat']),
+  type: z.enum(['report', 'transcription', 'supervisor_chat', 'synthesis']),
   quantity: z.number().positive(),
   description: z.string().min(1),
   metadata: z.record(z.any()).optional()
@@ -35,6 +35,8 @@ function calculateCreditsNeeded(type: string, quantity: number): number {
       return Math.ceil(quantity * CREDIT_COSTS.WHISPER_PER_MINUTE);
     case 'supervisor_chat':
       return Math.ceil(quantity / 1000 * CREDIT_COSTS.CHAT_PER_1K_TOKENS);
+    case 'synthesis':
+      return CREDIT_COSTS.SYNTHESIS;
     default:
       throw new Error(`Tipo de operación no válido: ${type}`);
   }

@@ -4,7 +4,6 @@
 import { useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useRefreshCredits } from '@/hooks/useCredits';
-import { useRealtimeCredits } from '@/hooks/useRealtimeCredits';
 import CreditBalance from '@/components/credits/CreditBalance';
 import CreditPlans from '@/components/credits/CreditPlans';
 import CreditHistory from '@/components/credits/CreditHistory';
@@ -13,7 +12,6 @@ import { CheckCircle, XCircle, Clock } from 'lucide-react';
 export default function CreditsPage() {
   const searchParams = useSearchParams();
   const refreshCredits = useRefreshCredits();
-  const { isConnected } = useRealtimeCredits();
   const paymentStatus = searchParams?.get('payment');
 
   // Refrescar datos cuando se regresa de un pago

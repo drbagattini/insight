@@ -17,6 +17,12 @@ export function useRealtimeCredits() {
   const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
+    // Verificar que estamos en el cliente y EventSource está disponible
+    if (typeof window === 'undefined' || !window.EventSource) {
+      console.warn('[SSE] EventSource no disponible en este entorno');
+      return;
+    }
+
     // Crear conexión SSE
     const eventSource = new EventSource('/api/credits/sse');
     eventSourceRef.current = eventSource;
@@ -64,7 +70,8 @@ export function useRealtimeCredits() {
       
       // Reconectar después de 5 segundos
       setTimeout(() => {
-        if (eventSourceRef.current?.readyState === EventSource.CLOSED) {
+        if (typeof window !== 'undefined' && window.EventSource && 
+            eventSourceRef.current?.readyState === EventSource.CLOSED) {
           console.log('[SSE] Intentando reconectar...');
           eventSourceRef.current = new EventSource('/api/credits/sse');
         }
@@ -90,6 +97,7 @@ export function useRealtimeCredits() {
 
   return {
     disconnect,
-    isConnected: eventSourceRef.current?.readyState === EventSource.OPEN
+    isConnected: typeof window !== 'undefined' && window.EventSource ? 
+      eventSourceRef.current?.readyState === EventSource.OPEN : false
   };
 }

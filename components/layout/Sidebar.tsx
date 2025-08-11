@@ -18,7 +18,6 @@ const navigation = [
   { name: 'Agenda', href: '/dashboard/calendar', icon: CalendarIcon },
   { name: 'Pacientes', href: '/dashboard/patients', icon: UserGroupIcon },
   { name: 'Cuestionarios', href: '/dashboard/questionnaires', icon: ClipboardDocumentListIcon },
-  { name: 'Reportes', href: '/dashboard/reports', icon: ChartBarIcon },
   { name: 'Créditos', href: '/credits', icon: CreditCardIcon },
 ];
 

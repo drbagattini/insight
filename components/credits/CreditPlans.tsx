@@ -22,8 +22,10 @@ export default function CreditPlans() {
     }
   };
 
+
+
   return (
-    <div className="bg-white rounded-lg shadow-sm border">
+    <div id="credit-plans-section" className="bg-white rounded-lg shadow-sm border">
       {/* Header */}
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center space-x-3">
@@ -59,16 +61,12 @@ export default function CreditPlans() {
           {CREDIT_PLANS.map((plan) => (
             <div
               key={plan.id}
-              className={`relative rounded-lg border-2 p-6 ${
-                plan.popular
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200 bg-white'
-              }`}
+              className="relative rounded-lg border border-gray-200 p-6 bg-white hover:shadow-lg transition-shadow"
             >
               {/* Popular badge */}
               {plan.popular && (
                 <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                  <div className="flex items-center space-x-1 bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-medium">
+                  <div className="flex items-center space-x-1 bg-sky-500 text-white px-3 py-1 rounded-full text-xs font-medium">
                     <Star className="h-3 w-3" />
                     <span>Más popular</span>
                   </div>
@@ -126,12 +124,8 @@ export default function CreditPlans() {
               {/* Purchase button */}
               <Button
                 onClick={() => handlePurchase(plan.id)}
-                disabled={isLoading}
-                className={`w-full ${
-                  plan.popular
-                    ? 'bg-blue-600 hover:bg-blue-700'
-                    : 'bg-gray-900 hover:bg-gray-800'
-                }`}
+                disabled={isLoading && selectedPlan === plan.id}
+                className="w-full bg-gray-900 hover:bg-gray-800"
               >
                 {isLoading && selectedPlan === plan.id ? (
                   <>

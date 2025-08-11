@@ -19,7 +19,11 @@ const supabase = createClient(
 
 // Schema de validación
 const createPreferenceSchema = z.object({
-  plan_id: z.enum(['basic', 'intermediate', 'premium'])
+  plan_id: z.enum(['basic', 'intermediate', 'premium']).optional(),
+  purchase_type: z.enum(['plan', 'direct']).optional(),
+  amount_usd: z.number().min(1).max(100).optional(),
+  credits: z.number().min(1).optional(),
+  description: z.string().optional()
 });
 
 export async function POST(request: NextRequest) {
@@ -37,15 +41,45 @@ export async function POST(request: NextRequest) {
 
     // Validar datos de entrada
     const body = await request.json();
-    const { plan_id } = createPreferenceSchema.parse(body) as CreatePreferenceRequest;
+    console.log('[DEBUG] Request body:', body);
+    const { plan_id, purchase_type, amount_usd, credits, description } = createPreferenceSchema.parse(body);
+    console.log('[DEBUG] Parsed data:', { plan_id, purchase_type, amount_usd, credits, description });
 
-    // Obtener plan seleccionado
-    const selectedPlan = CREDIT_PLANS.find(plan => plan.id === plan_id);
-    if (!selectedPlan) {
-      return NextResponse.json(
-        { error: 'Plan no encontrado' },
-        { status: 404 }
-      );
+    let selectedPlan;
+    let purchaseData;
+
+    if (purchase_type === 'direct') {
+      // Compra directa
+      if (!amount_usd || !credits) {
+        return NextResponse.json(
+          { error: 'Datos de compra directa incompletos' },
+          { status: 400 }
+        );
+      }
+      purchaseData = {
+        id: `direct-${Date.now()}`,
+        title: `Compra directa de ${credits} créditos`,
+        price_usd: amount_usd,
+        price_uyu: amount_usd * 40,
+        credits: credits,
+        description: description || `${credits} créditos por $${amount_usd} USD`
+      };
+    } else {
+      // Compra por plan
+      if (!plan_id) {
+        return NextResponse.json(
+          { error: 'Plan ID requerido' },
+          { status: 400 }
+        );
+      }
+      selectedPlan = CREDIT_PLANS.find(plan => plan.id === plan_id);
+      if (!selectedPlan) {
+        return NextResponse.json(
+          { error: 'Plan no encontrado' },
+          { status: 404 }
+        );
+      }
+      purchaseData = selectedPlan;
     }
 
     // Verificar variables de entorno
@@ -61,19 +95,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Generar referencia externa única
-    const externalReference = `${userId}-${plan_id}-${Date.now()}`;
+    const referenceId = purchase_type === 'direct' ? `direct-${Date.now()}` : plan_id;
+    const externalReference = `${userId}-${referenceId}-${Date.now()}`;
     const urls = getPaymentUrls(baseUrl);
 
     // Crear preferencia de Mercado Pago
     const preference: MercadoPagoPreference = {
       items: [
         {
-          id: selectedPlan.id,
-          title: `Plan ${selectedPlan.name} - ${selectedPlan.credits} créditos`,
-          description: selectedPlan.description,
+          id: purchaseData.id,
+          title: purchase_type === 'direct' ? purchaseData.title : `Plan ${purchaseData.name} - ${purchaseData.credits} créditos`,
+          description: purchaseData.description,
           quantity: 1,
           currency_id: MP_CONFIG.CURRENCY,
-          unit_price: selectedPlan.price_uyu
+          unit_price: purchaseData.price_uyu
         }
       ],
       external_reference: externalReference,
@@ -83,15 +118,16 @@ export async function POST(request: NextRequest) {
         pending: urls.pending
       },
       notification_url: urls.notification,
-      auto_return: 'approved',
       payment_methods: {
         excluded_payment_types: [...MP_CONFIG.EXCLUDED_PAYMENT_TYPES],
         installments: MP_CONFIG.MAX_INSTALLMENTS
       },
       metadata: {
         user_id: userId,
-        plan_id: selectedPlan.id,
-        credits: selectedPlan.credits
+        purchase_type: purchase_type || 'plan',
+        plan_id: selectedPlan?.id || null,
+        credits: purchaseData.credits,
+        amount_usd: purchase_type === 'direct' ? amount_usd : null
       }
     };
 
@@ -124,10 +160,10 @@ export async function POST(request: NextRequest) {
         external_reference: externalReference,
         preference_id: mpData.id,
         init_point: mpData.init_point,
-        plan_type: selectedPlan.id,
-        amount_usd: selectedPlan.price_usd,
-        amount_uyu: selectedPlan.price_uyu,
-        credits: selectedPlan.credits,
+        plan_type: purchase_type === 'direct' ? 'direct' : selectedPlan?.id,
+        amount_usd: purchaseData.price_usd,
+        amount_uyu: purchaseData.price_uyu,
+        credits: purchaseData.credits,
         status: 'pending'
       });
 

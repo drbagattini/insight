@@ -52,7 +52,7 @@ export interface CreditUsage {
 }
 
 export interface DebitCreditsRequest {
-  type: 'report' | 'transcription' | 'supervisor_chat';
+  type: 'report' | 'transcription' | 'supervisor_chat' | 'synthesis';
   quantity: number;
   description: string;
   metadata?: Record<string, any>;
@@ -74,12 +74,13 @@ export interface TransactionHistory {
 export const CREDIT_COSTS = {
   REPORT: 8,           // 8 créditos por informe
   WHISPER_PER_MINUTE: 1, // 1 crédito por minuto de audio
-  CHAT_PER_1K_TOKENS: 1  // 1 crédito por cada 1,000 tokens
+  CHAT_PER_1K_TOKENS: 0.5, // 0.5 créditos por cada 1,000 tokens (sesión = 40 créditos)
+  SYNTHESIS: 140       // 140 créditos por síntesis
 } as const;
 
 // Tokens consumidos por una sesión típica de supervisión (chat)
-// Recomendación: 80k tokens por sesión (~1 consulta completa)
-export const TOKENS_PER_SUPERVISION_SESSION = 80_000;
+// Recomendación: 112k tokens por sesión (56 créditos × 2000 tokens/crédito)
+export const TOKENS_PER_SUPERVISION_SESSION = 112_000;
 
 // Umbral por defecto para advertencia de fair use (80%)
 export const FAIR_USE_WARN_THRESHOLD = 0.8;
@@ -170,11 +171,17 @@ export const CREDIT_PLANS: CreditPlan[] = [
   }
 ];
 
+// Función para calcular equivalencias balanceadas (no máximos absolutos)
 export const calculateCreditUsage = (balance: number): CreditUsage => {
+  // Usar el plan básico como referencia para escalado proporcional
+  // Esto es más intuitivo: 1600 créditos = 2x básico
+  const basicPlan = CREDIT_PLANS.find(plan => plan.id === 'basic')!;
+  const scaleFactor = balance / basicPlan.credits;
+  
   return {
-    supervision_sessions: Math.floor(balance / 80), // 80 créditos por sesión de supervisión
-    sessions_45min: Math.floor(balance / (45 * CREDIT_COSTS.WHISPER_PER_MINUTE)),
-    synthesis_evolutions: Math.floor(balance / 0.75), // ~0.75 créditos por síntesis
-    reports: Math.floor(balance / CREDIT_COSTS.REPORT)
+    supervision_sessions: Math.floor(basicPlan.equivalences.supervision_sessions * scaleFactor),
+    sessions_45min: Math.floor(basicPlan.equivalences.sessions_45min * scaleFactor),
+    synthesis_evolutions: Math.floor(basicPlan.equivalences.synthesis_evolutions * scaleFactor),
+    reports: Math.floor(basicPlan.equivalences.reports * scaleFactor)
   };
 };

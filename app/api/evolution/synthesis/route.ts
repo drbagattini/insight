@@ -139,6 +139,60 @@ export async function POST(request: NextRequest) {
     const outputCost = (outputTokens / 1000000) * 0.30;
     const totalCost = inputCost + outputCost;
 
+    // Debitar créditos por la síntesis generada
+    try {
+      const debitResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/credits/debit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cookie': request.headers.get('cookie') || ''
+        },
+        body: JSON.stringify({
+          type: 'synthesis',
+          quantity: 1,
+          description: `Síntesis de evolución generada (${evolutions.length} entradas analizadas)`,
+          metadata: {
+            analyzed_entries: evolutions.length,
+            tokens_used: totalTokens,
+            model: 'gemini-2.0-flash-exp',
+            cost: totalCost
+          }
+        })
+      });
+
+      if (!debitResponse.ok) {
+        const debitError = await debitResponse.json();
+        console.error('[ERROR] Failed to debit credits for synthesis:', debitError);
+        
+        // Si no hay créditos suficientes, retornar error específico
+        if (debitResponse.status === 402) {
+          return NextResponse.json(
+            { 
+              error: 'Créditos insuficientes para generar la síntesis',
+              credits_needed: 1, // Las síntesis cuestan 1 crédito
+              current_balance: debitError.current_balance || 0
+            },
+            { status: 402 }
+          );
+        }
+        
+        // Si se superó el límite de fair-use, retornar error específico
+        if (debitResponse.status === 429) {
+          return NextResponse.json(
+            {
+              error: debitError.error || 'Límite mensual de síntesis superado',
+              fair_use: debitError.fair_use
+            },
+            { status: 429 }
+          );
+        }
+      }
+    } catch (debitError) {
+      console.error('[ERROR] Credit debit failed for synthesis:', debitError);
+      // Continúar con la respuesta aunque falle el débito de créditos
+      // En producción podrías querer fallar aquí
+    }
+
     return NextResponse.json({
       synthesis: synthesis.trim(),
       tokensUsed: totalTokens,

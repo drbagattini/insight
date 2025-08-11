@@ -37,8 +37,8 @@ export default function CreditHistory() {
       <div className="bg-white rounded-lg shadow-sm border">
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <History className="h-6 w-6 text-purple-600" />
+            <div className="p-2 bg-sky-100 rounded-lg">
+              <History className="h-6 w-6 text-sky-600" />
             </div>
             <div>
               <h2 className="text-xl font-semibold text-gray-900">Historial de Créditos</h2>
@@ -58,8 +58,8 @@ export default function CreditHistory() {
       <div className="bg-white rounded-lg shadow-sm border">
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <History className="h-6 w-6 text-purple-600" />
+            <div className="p-2 bg-sky-100 rounded-lg">
+              <History className="h-6 w-6 text-sky-600" />
             </div>
             <div>
               <h2 className="text-xl font-semibold text-gray-900">Historial de Créditos</h2>
@@ -83,8 +83,8 @@ export default function CreditHistory() {
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <History className="h-6 w-6 text-purple-600" />
+            <div className="p-2 bg-sky-100 rounded-lg">
+              <History className="h-6 w-6 text-sky-600" />
             </div>
             <div>
               <h2 className="text-xl font-semibold text-gray-900">Historial de Créditos</h2>

@@ -115,10 +115,10 @@ export const MP_CONFIG = {
 
 // URLs de retorno
 export const getPaymentUrls = (baseUrl: string) => ({
-  success: `${baseUrl}/credits?payment=success`,
-  failure: `${baseUrl}/credits?payment=failure`,
-  pending: `${baseUrl}/credits?payment=pending`,
-  notification: `${baseUrl}/api/payments/mp-webhook`
+  success: `${baseUrl}/pago/success`,
+  failure: `${baseUrl}/pago/failure`,
+  pending: `${baseUrl}/pago/pending`,
+  notification: `${baseUrl}/api/webhooks/mp`
 });
 
 // Mapeo de estados de Mercado Pago a estados internos

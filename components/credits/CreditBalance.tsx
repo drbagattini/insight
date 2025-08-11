@@ -1,11 +1,15 @@
 // components/credits/CreditBalance.tsx
 'use client';
 
+import { useState } from 'react';
 import { useCredits } from '@/hooks/useCredits';
-import { Coins, FileText, Mic, MessageSquare, Loader2, Brain, BarChart3 } from 'lucide-react';
+import { Coins, FileText, Mic, MessageSquare, Loader2, Brain, BarChart3, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import DirectPurchase from './DirectPurchase';
 
 export default function CreditBalance() {
   const { data: credits, isLoading, error } = useCredits();
+  const [showDirectPurchase, setShowDirectPurchase] = useState(false);
 
   if (isLoading) {
     return (
@@ -40,18 +44,29 @@ export default function CreditBalance() {
       {/* Header */}
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
+          <div className="flex items-center space-x-4">
+            <div className="p-3 bg-blue-100 rounded-lg">
               <Coins className="h-6 w-6 text-blue-600" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">Balance de Créditos</h2>
-              <p className="text-sm text-gray-500">Créditos disponibles para usar</p>
+              <div className="flex items-baseline space-x-3">
+                <h2 className="text-2xl font-semibold text-gray-900">Balance de Créditos</h2>
+                <span className="text-gray-300 text-xl">=</span>
+                <span className="text-3xl font-bold text-gray-900">{balance.toLocaleString()}</span>
+                <span className="text-lg text-gray-600">créditos</span>
+              </div>
+              <p className="text-sm text-gray-500 mt-1">Créditos disponibles para usar</p>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-3xl font-bold text-blue-600">{balance.toLocaleString()}</div>
-            <div className="text-sm text-gray-500">créditos</div>
+          
+          <div className="flex-shrink-0">
+            <Button 
+              onClick={() => setShowDirectPurchase(true)}
+              className="bg-sky-600 hover:bg-sky-700 text-white whitespace-nowrap"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Comprar Créditos
+            </Button>
           </div>
         </div>
       </div>
@@ -59,61 +74,83 @@ export default function CreditBalance() {
       {/* Equivalencias */}
       <div className="p-6">
         <h3 className="text-lg font-medium text-gray-900 mb-4">Con tu saldo actual puedes:</h3>
-        <div className="flex flex-col md:flex-row md:flex-wrap gap-4">
-          {/* 1º Sesiones de Supervisión IA */}
-          <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg md:flex-1 md:min-w-0">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <Brain className="h-5 w-5 text-orange-600" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* 1º Supervisión IA */}
+          <div className="p-4 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
+            <div className="flex items-center space-x-3 mb-2">
+              <div className="p-2 bg-sky-100 rounded-lg">
+                <Brain className="h-5 w-5 text-sky-600" />
+              </div>
+              <div className="text-xs font-medium text-sky-600 uppercase tracking-wide">Supervisión IA</div>
             </div>
-            <div>
-              <div className="text-lg font-semibold text-gray-900">{usage.supervision_sessions}</div>
-              <div className="text-sm text-gray-500">Sesiones de supervisión con IA</div>
-              <div className="text-xs text-gray-400">80 créditos c/u</div>
-            </div>
+            <div className="text-2xl font-bold text-gray-900 mb-1">{usage.supervision_sessions}</div>
+            <div className="text-sm text-gray-600">sesiones de supervisión con IA</div>
+            <div className="text-xs text-gray-400 mt-1">80 créditos c/u</div>
           </div>
 
-          {/* 2º Transcripciones de sesiones */}
-          <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg md:flex-1 md:min-w-0">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Mic className="h-5 w-5 text-purple-600" />
+          {/* 2º Transcripción de sesiones */}
+          <div className="p-4 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
+            <div className="flex items-center space-x-3 mb-2">
+              <div className="p-2 bg-sky-100 rounded-lg">
+                <Mic className="h-5 w-5 text-sky-600" />
+              </div>
+              <div className="text-xs font-medium text-sky-600 uppercase tracking-wide">Transcripción de sesiones</div>
             </div>
-            <div>
-              <div className="text-lg font-semibold text-gray-900">{usage.sessions_45min}</div>
-              <div className="text-sm text-gray-500">Transcripción de sesiones</div>
-              <div className="text-xs text-gray-400">45 créditos c/u</div>
-            </div>
+            <div className="text-2xl font-bold text-gray-900 mb-1">{usage.sessions_45min}</div>
+            <div className="text-sm text-gray-600">sesiones de 45 minutos</div>
+            <div className="text-xs text-gray-400 mt-1">45 créditos c/u</div>
           </div>
 
           {/* 3º Síntesis de evoluciones */}
-          <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg md:flex-1 md:min-w-0">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <MessageSquare className="h-5 w-5 text-blue-600" />
+          <div className="p-4 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
+            <div className="flex items-center space-x-3 mb-2">
+              <div className="p-2 bg-sky-100 rounded-lg">
+                <MessageSquare className="h-5 w-5 text-sky-600" />
+              </div>
+              <div className="text-xs font-medium text-sky-600 uppercase tracking-wide">Síntesis de evoluciones</div>
             </div>
-            <div>
-              <div className="text-lg font-semibold text-gray-900">{usage.synthesis_evolutions}</div>
-              <div className="text-sm text-gray-500">Informe de Síntesis de evolución Clínica</div>
-              <div className="text-xs text-gray-400">0.75 créditos c/u</div>
-            </div>
+            <div className="text-2xl font-bold text-gray-900 mb-1">{usage.synthesis_evolutions}</div>
+            <div className="text-sm text-gray-600">informes de síntesis de evolución</div>
+            <div className="text-xs text-gray-400 mt-1">0.75 créditos c/u</div>
           </div>
 
-          {/* 4º Informes clínicos */}
-          <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg md:flex-1 md:min-w-0">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <FileText className="h-5 w-5 text-green-600" />
+          {/* 4º Informes IA */}
+          <div className="p-4 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
+            <div className="flex items-center space-x-3 mb-2">
+              <div className="p-2 bg-sky-100 rounded-lg">
+                <FileText className="h-5 w-5 text-sky-600" />
+              </div>
+              <div className="text-xs font-medium text-sky-600 uppercase tracking-wide">Informes IA</div>
             </div>
-            <div>
-              <div className="text-lg font-semibold text-gray-900">{usage.reports}</div>
-              <div className="text-sm text-gray-500">Informes clínicos por IA</div>
-              <div className="text-xs text-gray-400">8 créditos c/u</div>
-            </div>
+            <div className="text-2xl font-bold text-gray-900 mb-1">{usage.reports}</div>
+            <div className="text-sm text-gray-600">informes clínicos por IA</div>
+            <div className="text-xs text-gray-400 mt-1">8 créditos c/u</div>
           </div>
         </div>
 
-        {/* Mensaje de créditos bajos */}
-        {balance < 100 && (
-          <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
+        {/* Sistema de alertas por niveles */}
+        {balance > 100 && (
+          <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-start">
+              <div className="p-1 bg-green-100 rounded-lg mr-3 mt-0.5">
+                <Coins className="h-5 w-5 text-green-600" />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-green-800">
+                  Créditos disponibles
+                </h3>
+                <div className="mt-1 text-sm text-green-700">
+                  Tienes suficientes créditos para usar todas las funcionalidades.
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {balance > 0 && balance <= 50 && (
+          <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="flex items-start">
+              <div className="p-1 bg-yellow-100 rounded-lg mr-3 mt-0.5">
                 <Coins className="h-5 w-5 text-yellow-600" />
               </div>
               <div className="ml-3">
@@ -127,7 +164,31 @@ export default function CreditBalance() {
             </div>
           </div>
         )}
+        
+        {balance === 0 && (
+          <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-start">
+              <div className="p-1 bg-red-100 rounded-lg mr-3 mt-0.5">
+                <Coins className="h-5 w-5 text-red-600" />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-red-800">
+                  Sin créditos
+                </h3>
+                <div className="mt-1 text-sm text-red-700">
+                  No tienes créditos disponibles. Compra créditos para usar las funcionalidades de IA.
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+      
+      {/* Direct Purchase Modal */}
+      <DirectPurchase 
+        isOpen={showDirectPurchase}
+        onClose={() => setShowDirectPurchase(false)}
+      />
     </div>
   );
 }
