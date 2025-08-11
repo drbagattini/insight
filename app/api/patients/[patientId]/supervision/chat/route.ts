@@ -356,8 +356,70 @@ export async function POST(request: NextRequest, { params }: any) {
 
     const aiResponse = openaiData.choices[0].message.content;
     const totalDuration = Date.now() - requestStartTime;
+    const tokensUsed = openaiData.usage?.total_tokens || 0;
 
     console.log(`[SUPERVISION CHAT] ✅ Response generated in ${totalDuration}ms (OpenAI: ${openaiDuration}ms)`);
+
+    // Debitar créditos por la sesión de supervisión
+    try {
+      const baseUrl = request.url.replace(/\/api\/patients\/.*$/, '');
+      const debitResponse = await fetch(`${baseUrl}/api/credits/debit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cookie': request.headers.get('cookie') || ''
+        },
+        body: JSON.stringify({
+          type: 'supervisor_chat',
+          quantity: tokensUsed,
+          description: `Sesión de supervisión IA para paciente ${patientData.patient.name}`,
+          metadata: {
+            patient_id: patientId,
+            patient_name: patientData.patient.name,
+            tokens_used: tokensUsed,
+            model: 'gpt-4o',
+            duration_ms: totalDuration,
+            usage_type: 'supervisor_chat',
+            usage_quantity: tokensUsed
+          }
+        })
+      });
+
+      if (!debitResponse.ok) {
+        const debitError = await debitResponse.json();
+        console.error('[SUPERVISION CHAT] ❌ Failed to debit credits:', debitError);
+        
+        // Si no hay créditos suficientes, retornar error específico
+        if (debitResponse.status === 402) {
+          return NextResponse.json(
+            { 
+              error: 'Créditos insuficientes para la sesión de supervisión',
+              credits_needed: Math.ceil(tokensUsed / 1000 * 0.5), // Aproximado basado en CREDIT_COSTS
+              current_balance: debitError.current_balance || 0,
+              tokens_required: tokensUsed
+            },
+            { status: 402 }
+          );
+        }
+        
+        // Si se superó el límite de fair-use, retornar error específico
+        if (debitResponse.status === 429) {
+          return NextResponse.json(
+            {
+              error: debitError.error || 'Límite mensual de supervisión superado',
+              fair_use: debitError.fair_use
+            },
+            { status: 429 }
+          );
+        }
+      } else {
+        console.log(`[SUPERVISION CHAT] ✅ Credits debited successfully for ${tokensUsed} tokens`);
+      }
+    } catch (debitError) {
+      console.error('[SUPERVISION CHAT] ❌ Credit debit failed:', debitError);
+      // Continuar con la respuesta aunque falle el débito de créditos
+      // En producción podrías querer fallar aquí
+    }
 
     return NextResponse.json({
       response: aiResponse,

@@ -116,8 +116,22 @@ export function useSupervisionChat({ patientId }: UseSupervisionChatProps): UseS
         const errorData = await response.json();
         const errorMessage = errorData.error || 'Error enviando mensaje';
         
+        // Manejo específico para créditos insuficientes
+        if (response.status === 402) {
+          throw new Error(`💳 Créditos insuficientes para la sesión de supervisión. Se necesitan ${errorData.credits_needed || 'algunos'} créditos adicionales.`);
+        }
+        
+        // Manejo específico para límites de fair-use
+        if (response.status === 429) {
+          if (errorData.fair_use) {
+            throw new Error(`⏱️ Límite mensual de supervisión superado para tu plan ${errorData.fair_use.plan_type}. Límite: ${errorData.fair_use.limit}, usado: ${errorData.fair_use.used}.`);
+          } else {
+            throw new Error('⏳ API temporalmente saturada. La cuota se restablece automáticamente. Intenta nuevamente en unos minutos.');
+          }
+        }
+        
         // Manejo específico para errores de cuota de API
-        if (errorMessage.includes('cuota') || errorMessage.includes('quota') || response.status === 429) {
+        if (errorMessage.includes('cuota') || errorMessage.includes('quota')) {
           throw new Error('⏳ API temporalmente saturada. La cuota se restablece automáticamente. Intenta nuevamente en unos minutos.');
         }
         
