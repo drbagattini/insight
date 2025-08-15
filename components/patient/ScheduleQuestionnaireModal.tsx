@@ -143,6 +143,7 @@ export default function ScheduleQuestionnaireModal({
       const sendRes = await fetch('/api/cuestionarios/enviar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // Incluir cookies de sesión
         body: JSON.stringify({
           pacienteId: scheduleData.pacienteId,
           cuestionarioId: scheduleData.cuestionarioId,

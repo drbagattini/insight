@@ -84,8 +84,7 @@ export async function GET(request: Request) {
 // POST: crear un nuevo envío programado
 export async function POST(request: Request) {
   const body = await request.json();
-  console.log('envios_programados POST body:', body);
-  const { pacienteId, canal, frecuencia, proximoEnvio: fechaInicioStr, destinatario } = body; // proximoEnvio del body es nuestra fechaInicioStr
+  const { pacienteId, canal, frecuencia, proximoEnvio: fechaInicioStr, destinatario } = body;
   let cuestionarioId = body.cuestionarioId;
 
   if (!pacienteId || !canal || !frecuencia || !fechaInicioStr) {
