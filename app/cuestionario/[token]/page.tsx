@@ -28,9 +28,47 @@ type LinkInfo = {
   expirado: boolean;
 };
 
-const getColorForValue = (value: number, codigo: string, maxValue: number) => {
+const getQuestionnaireIntroText = (codigo: string) => {
+  switch (codigo) {
+    case 'OYS-PS-P-SF20':
+      return 'Por favor, indique con qué frecuencia su hijo/a ha mostrado cada uno de los siguientes comportamientos durante los últimos 30 días.';
+    case 'OYS-F-P-SF20':
+      return 'Por favor, indique qué tan bien su hijo/a ha funcionado en cada una de las siguientes áreas durante los últimos 30 días.';
+    case 'OYS-PS-Y-SF20':
+      return 'Por favor, indique con qué frecuencia has mostrado cada uno de los siguientes comportamientos durante los últimos 30 días.';
+    case 'OYS-F-Y-SF20':
+      return 'Por favor, indique qué tan bien has funcionado en cada una de las siguientes áreas durante los últimos 30 días.';
+    case 'WHO-5':
+      return 'Por favor, responda a cada pregunta en relación a cómo se sintió en las últimas dos semanas.';
+    case 'PHQ-9':
+      return 'Durante las últimas 2 semanas, ¿con qué frecuencia le han molestado los siguientes problemas?';
+    case 'GAD-7':
+      return 'Durante las últimas 2 semanas, ¿con qué frecuencia le han molestado los siguientes problemas?';
+    case 'BR-WAI':
+      return 'Por favor, califique cada una de las siguientes afirmaciones según su experiencia en la terapia hasta ahora.';
+    case 'OPD-CA2-SQ':
+      return 'Por favor, responda las siguientes preguntas sobre cómo se siente y actúa en diferentes situaciones.';
+    default:
+      return 'Por favor, responda las siguientes preguntas de manera honesta y reflexiva.';
+  }
+};
+
+export default function CuestionarioPage({ params }: { params: { token: string } }) {
+  const { token } = params;
+  const router = useRouter();
+  
+  const [linkInfo, setLinkInfo] = useState<LinkInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [respuestas, setRespuestas] = useState<Record<string, number>>({});
+  const [enviando, setEnviando] = useState(false);
+  const [completado, setCompletado] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  const getColorForValue = (value: number, questionnaireCode: string, maxValue: number) => {
   // Para cuestionarios clínicos (PHQ-9, GAD-7): mayor valor = mayor severidad = más rojo
-  const isClinicalScale = ['PHQ-9', 'GAD-7'].includes(codigo);
+  const isClinicalScale = ['PHQ-9', 'GAD-7'].includes(questionnaireCode);
   
   if (isClinicalScale) {
     // Escala invertida para cuestionarios clínicos
@@ -225,9 +263,10 @@ export default function CuestionarioPage() {
 
   // Estado para feedback visual
   // Verifica si todas las preguntas fueron respondidas (no null ni undefined)
-  const allAnswered = linkInfo && linkInfo.cuestionario.items.every(item => 
-    respuestas[item.id] !== undefined && respuestas[item.id] !== null
-  );
+  const allAnswered = linkInfo && linkInfo.cuestionario.items.every(item => {
+    const uniqueKey = String(item.orden || item.id || `item-${item.id}`);
+    return respuestas[uniqueKey] !== undefined && respuestas[uniqueKey] !== null;
+  });
 
   // Cargar información del cuestionario
   useEffect(() => {
@@ -508,7 +547,7 @@ export default function CuestionarioPage() {
               
               <div className="bg-blue-50 p-3 rounded-lg border-l-4 border-blue-500">
                 <p className="text-gray-700 text-base leading-relaxed">
-                  {linkInfo.cuestionario.descripcion || 'Cuestionario de 81 ítems que evalúa cuatro dimensiones de capacidades psicodinámicas según el modelo OPD.'}
+                  {getQuestionnaireIntroText(linkInfo.cuestionario.codigo)}
                 </p>
               </div>
             </div>
