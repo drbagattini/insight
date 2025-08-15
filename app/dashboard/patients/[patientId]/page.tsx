@@ -9,6 +9,7 @@ import questionnairesMeta from '@/src/data/questionnairesMeta';
 import { PatientResponsesSection } from '@/components/patient/PatientResponsesSection';
 import { PatientDetails } from '@/components/patient/PatientDetails';
 import { PatientIntakeTab } from '@/components/patient/PatientIntakeTab';
+import { QUESTIONNAIRE_ORDER } from '@/lib/questionnaire-order';
 
 
 
@@ -21,8 +22,8 @@ export default function PatientEvolutionPage() {
   const [error, setError] = useState<string | null>(null);
   const [patientName, setPatientName] = useState<string>('');
   
-  // Estado para el selector de cuestionario
-  const [selectedQuestionnaire, setSelectedQuestionnaire] = useState<'WHO-5' | 'OPD-CA2-SQ' | 'BR-WAI' | 'PHQ-9' | 'GAD-7'>('WHO-5');
+  // Estado para el selector de cuestionario - usar el primer elemento del orden específico
+  const [selectedQuestionnaire, setSelectedQuestionnaire] = useState<'WHO-5' | 'OPD-CA2-SQ' | 'BR-WAI' | 'PHQ-9' | 'GAD-7' | 'OYS-PS-Y-SF20' | 'OYS-F-Y-SF20' | 'OYS-PS-P-SF20' | 'OYS-F-P-SF20'>('WHO-5');
   const [evolutionData, setEvolutionData] = useState<any[]>([]);
 
   // Tipado y estados para envíos programados

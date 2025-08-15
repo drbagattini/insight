@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { FiX, FiCalendar, FiClock, FiSend, FiRepeat } from 'react-icons/fi';
+import { sortQuestionnaires } from '@/lib/questionnaire-order';
 import { Button } from '@/components/ui/button';
 import { X, Calendar, Send } from 'lucide-react';
 
@@ -14,8 +16,10 @@ interface ScheduleQuestionnaireModalProps {
 
 interface Questionnaire {
   id: string;
-  codigo: string;
-  nombre: string;
+  codigo?: string;
+  nombre?: string;
+  titulo?: string;
+  destinatario?: string;
 }
 
 interface ScheduleData {
@@ -24,6 +28,7 @@ interface ScheduleData {
   canal: string;
   frecuencia: string;
   proximoEnvio: string;
+  destinatario?: string; // Nuevo campo para especificar destinatario
 }
 
 export default function ScheduleQuestionnaireModal({
@@ -39,6 +44,7 @@ export default function ScheduleQuestionnaireModal({
   const [newCuestionarioId, setNewCuestionarioId] = useState<string>('');
   const [newCanal, setNewCanal] = useState<string>('email');
   const [newFrecuencia, setNewFrecuencia] = useState<string>('mensual');
+  const [newDestinatario, setNewDestinatario] = useState<string>('paciente');
   const [newProximoEnvio, setNewProximoEnvio] = useState<string>(() =>
     new Date().toISOString().split('T')[0] // Formato YYYY-MM-DD
   );
@@ -60,8 +66,10 @@ export default function ScheduleQuestionnaireModal({
     try {
       const res = await fetch('/api/cuestionarios');
       const data = await res.json();
-      setQuestionnaires(data);
-      if (data.length > 0) setNewCuestionarioId(data[0].id);
+      // Aplicar ordenamiento específico
+      const sortedData = sortQuestionnaires(data) as Questionnaire[];
+      setQuestionnaires(sortedData);
+      if (sortedData.length > 0) setNewCuestionarioId(sortedData[0].id);
     } catch (e) {
       console.error('Error al cargar cuestionarios:', e);
       onError('Error al cargar cuestionarios');
@@ -140,6 +148,7 @@ export default function ScheduleQuestionnaireModal({
           cuestionarioId: scheduleData.cuestionarioId,
           canal: scheduleData.canal,
           envioProgramadoId: envioProgramadoId,
+          destinatario: scheduleData.destinatario,
         }),
       });
       const sendData = await sendRes.json();
@@ -167,17 +176,18 @@ export default function ScheduleQuestionnaireModal({
 
     setIsSubmitting(true);
 
-    const fechaParaEnviar = newProximoEnvio.split('T')[0];
-    const currentScheduleData: ScheduleData = {
+    const scheduleData: ScheduleData = {
       pacienteId: patientId,
-      cuestionarioId: newCuestionarioId || undefined,
+      cuestionarioId: newCuestionarioId,
       canal: newCanal,
       frecuencia: newFrecuencia,
-      proximoEnvio: fechaParaEnviar,
+      proximoEnvio: newProximoEnvio,
+      destinatario: newDestinatario,
     };
-    setPendingScheduleData(currentScheduleData);
+    setPendingScheduleData(scheduleData);
 
     const hoyStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local TZ
+    const fechaParaEnviar = newProximoEnvio.split('T')[0];
 
     if (fechaParaEnviar === hoyStr) {
       // Fecha es hoy, mostrar modal de confirmación
@@ -185,7 +195,7 @@ export default function ScheduleQuestionnaireModal({
       setIsSubmitting(false);
     } else if (fechaParaEnviar > hoyStr) {
       // Fecha futura, programar sin modal
-      await handleScheduleFutureSend(currentScheduleData, fechaParaEnviar);
+      await handleScheduleFutureSend(scheduleData, fechaParaEnviar);
       setIsSubmitting(false);
     } else {
       onError("No se puede programar un envío para una fecha pasada.");
@@ -205,6 +215,10 @@ export default function ScheduleQuestionnaireModal({
   };
 
   const resetForm = () => {
+    setNewCuestionarioId(questionnaires.length > 0 ? questionnaires[0].id : '');
+    setNewCanal('email');
+    setNewFrecuencia('mensual');
+    setNewDestinatario('paciente');
     setNewProximoEnvio(new Date().toISOString().split('T')[0]);
     setPendingScheduleData(null);
     setShowConfirmationModal(false);
@@ -280,6 +294,22 @@ export default function ScheduleQuestionnaireModal({
                 >
                   <option value="email">📧 Email</option>
                   <option value="whatsapp">📱 WhatsApp</option>
+                </select>
+              </div>
+
+              {/* Selector de destinatario */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Destinatario
+                </label>
+                <select
+                  value={newDestinatario}
+                  onChange={e => setNewDestinatario(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  disabled={isSubmitting}
+                >
+                  <option value="paciente">👤 Paciente</option>
+                  <option value="padre_tutor">👨‍👩‍👧‍👦 Padre/Tutor</option>
                 </select>
               </div>
 

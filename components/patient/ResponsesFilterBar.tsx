@@ -2,6 +2,7 @@
 
 import React from 'react';
 import type { QuestionnaireType } from '@/hooks/usePatientResponses'; // Assuming QuestionnaireType is exported from the hook
+import { sortQuestionnaires } from '@/lib/questionnaire-order';
 
 interface ResponsesFilterBarProps {
   availableQuestionnaires: QuestionnaireType[];
@@ -60,7 +61,7 @@ export const ResponsesFilterBar: React.FC<ResponsesFilterBarProps> = ({
             className="block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
           >
             <option value="">Seleccionar cuestionario...</option>
-            {availableQuestionnaires.map(q => (
+            {sortQuestionnaires(availableQuestionnaires as any[]).map(q => (
               <option key={q.id} value={q.codigo}>{q.nombre}</option>
             ))}
           </select>

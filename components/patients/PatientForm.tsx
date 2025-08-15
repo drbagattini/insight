@@ -20,31 +20,111 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
         frecuencia: 'mensual'
       },
       // sendInitial removed from here
-      whatsappConsent: patient?.metadata?.whatsappConsent ?? false
+      whatsappConsent: patient?.metadata?.whatsappConsent ?? false,
+      // Campos para contacto de padre/tutor
+      padre_tutor: patient?.metadata?.padre_tutor || {
+        nombre: '',
+        email: '',
+        telefono: ''
+      }
     },
     sendInitial: patient ? false : true, // Default to false for existing, true for new
   }));
   const [error, setError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [questionarios, setQuestionarios] = useState<{ id: string; nombre: string }[]>([]);
+  const [questionarios, setQuestionarios] = useState<{ id: string; nombre: string; codigo?: string; titulo?: string; destinatario?: string }[]>([]);
 
   useEffect(() => {
-    fetch('/api/cuestionarios')
-      .then(res => res.json())
-      .then((data: any[]) => {
-        setQuestionarios(data);
-        if (data.length) {
+    // Intentar primero el endpoint autenticado, luego el público como fallback
+    const fetchCuestionarios = async () => {
+      console.log('🔄 Iniciando carga de cuestionarios...');
+      try {
+        let response: Response | null = null;
+
+        // Intentar endpoint autenticado primero
+        try {
+          console.log('📡 Intentando endpoint autenticado: /api/cuestionarios');
+          response = await fetch('/api/cuestionarios');
+          console.log('📡 Respuesta endpoint autenticado:', response?.status, response?.ok);
+        } catch (e) {
+          console.warn('❌ Fallo en endpoint autenticado, usando público como fallback:', e);
+        }
+
+        // Fallback al endpoint público ante cualquier status no-OK o si la petición anterior falló
+        if (!response || !response.ok) {
+          console.warn(`⚠️ GET /api/cuestionarios respondió ${response?.status ?? 'sin respuesta'}; intentando /api/cuestionarios/public...`);
+          response = await fetch('/api/cuestionarios/public');
+          console.log('📡 Respuesta endpoint público:', response?.status, response?.ok);
+        }
+
+        if (!response.ok) {
+          throw new Error(`HTTP error al obtener cuestionarios. Último status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('📋 Datos recibidos del API:', data);
+
+        // Asegurar que data es un array
+        const cuestionariosArray = Array.isArray(data) ? data : (data.cuestionarios || []);
+        console.log('✅ Cuestionarios procesados:', cuestionariosArray.length, cuestionariosArray);
+
+        setQuestionarios(cuestionariosArray);
+
+        if (cuestionariosArray.length > 0 && !patient) {
+          // Solo establecer cuestionario por defecto para pacientes nuevos
+          console.log('🎯 Estableciendo cuestionario por defecto:', cuestionariosArray[0]);
           setFormData(prev => ({
             ...prev,
             metadata: {
               ...(prev.metadata as any),
-              cuestionario_id: prev.metadata?.cuestionario_id || data[0].id
+              cuestionario_id: prev.metadata?.cuestionario_id || cuestionariosArray[0].id
             }
           }));
         }
-      })
-      .catch(err => console.error('Error fetching cuestionarios:', err));
-  }, []);
+      } catch (err) {
+        console.error('❌ Error fetching cuestionarios:', err);
+        setError('No se pudieron cargar los cuestionarios. Intenta nuevamente.');
+        setQuestionarios([]); // Fallback a array vacío
+      }
+    };
+
+    fetchCuestionarios();
+  }, [patient]);
+
+  // Función para detectar si un cuestionario es para padres/tutores
+  const isParentQuestionnaire = (cuestionarioId: string) => {
+    const cuestionario = questionarios.find(q => q.id === cuestionarioId);
+    return cuestionario?.destinatario === 'padre_tutor' || cuestionario?.destinatario === 'ambos';
+  };
+
+  // Función para determinar el destinatario apropiado
+  const getAppropriateRecipient = (cuestionarioId: string) => {
+    if (!cuestionarioId) return 'paciente';
+    
+    if (isParentQuestionnaire(cuestionarioId)) {
+      const hasParentContact = (formData.metadata as any)?.padre_tutor?.email || 
+                              (formData.metadata as any)?.padre_tutor?.telefono;
+      return hasParentContact ? 'padre_tutor' : 'paciente';
+    }
+    
+    return 'paciente';
+  };
+
+  // Función para validar si el contacto está disponible para el destinatario
+  const validateRecipientContact = (cuestionarioId: string, canal: string) => {
+    const recipient = getAppropriateRecipient(cuestionarioId);
+    
+    if (recipient === 'padre_tutor') {
+      const parentData = (formData.metadata as any)?.padre_tutor;
+      if (canal === 'email' && !parentData?.email) return false;
+      if (canal === 'whatsapp' && !parentData?.telefono) return false;
+    } else {
+      if (canal === 'email' && !formData.email) return false;
+      if (canal === 'whatsapp' && !formData.whatsapp) return false;
+    }
+    
+    return true;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     console.log('[PatientForm] handleSubmit triggered'); // Debug log
@@ -78,14 +158,14 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
           </div>
         </div>
       )}
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div>
-          <div className="flex items-center mb-4">
+          <div className="flex items-center mb-3">
             <FiUser className="h-5 w-5 text-blue-500 mr-2" />
             <h3 className="text-lg font-medium text-gray-900">Información del Paciente</h3>
           </div>
-          <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-            <div className="sm:col-span-6">
+          <div className="grid grid-cols-1 gap-y-4 gap-x-4 sm:grid-cols-3">
+            <div className="sm:col-span-1">
               <label htmlFor="name" className="block text-sm font-medium text-gray-700">
                 Nombre completo <span className="text-red-500">*</span>
               </label>
@@ -107,7 +187,7 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
               </div>
             </div>
 
-            <div className="sm:col-span-3">
+            <div className="sm:col-span-1">
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 Correo electrónico
               </label>
@@ -131,7 +211,7 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
               </div>
             </div>
 
-            <div className="sm:col-span-3">
+            <div className="sm:col-span-1">
               <label htmlFor="whatsapp" className="block text-sm font-medium text-gray-700">
                 Teléfono (WhatsApp)
               </label>
@@ -155,34 +235,104 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
               </div>
             </div>
 
-            <div className="sm:col-span-6">
-              <div className="relative flex items-start">
-                <div className="flex h-5 items-center">
-                  <input
-                    id="whatsappConsent"
-                    name="whatsappConsent"
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-  checked={!!(formData.metadata as any).whatsappConsent}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        metadata: {
-                          ...(prev.metadata as any),
-                          whatsappConsent: e.target.checked,
-                        },
-                      }))
-                    }
-                  />
+
+          </div>
+        </div>
+
+        <div className="border-t border-gray-200 pt-4">
+          <div className="flex items-center mb-3">
+            <FiUser className="h-4 w-4 text-green-500 mr-2" />
+            <h3 className="text-base font-medium text-gray-900">Contacto de Padre/Tutor</h3>
+            <span className="ml-2 text-xs text-gray-500">(Opcional)</span>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div>
+              <label htmlFor="padre_nombre" className="block text-sm font-medium text-gray-700">
+                Nombre completo
+              </label>
+              <div className="mt-1 relative rounded-md shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FiUser className="h-4 w-4 text-gray-400" />
                 </div>
-                <div className="ml-3 text-sm">
-                  <label htmlFor="whatsappConsent" className="font-medium text-gray-700">
-                    Consentimiento de WhatsApp
-                  </label>
-                  <p className="text-gray-500">
-                    He obtenido el consentimiento del paciente para enviarle notificaciones por WhatsApp
-                  </p>
+                <input
+                  type="text"
+                  id="padre_nombre"
+                  className="block w-full rounded-md border-gray-300 pl-10 py-2.5 focus:border-blue-500 focus:ring-blue-500 sm:text-sm shadow-sm"
+                  value={(formData.metadata as any).padre_tutor?.nombre || ''}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      metadata: {
+                        ...(prev.metadata as any),
+                        padre_tutor: {
+                          ...(prev.metadata as any).padre_tutor,
+                          nombre: e.target.value
+                        }
+                      }
+                    }))
+                  }
+                  placeholder="María González"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="padre_email" className="block text-sm font-medium text-gray-700">
+                Email
+              </label>
+              <div className="mt-1 relative rounded-md shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FiMail className="h-4 w-4 text-gray-400" />
                 </div>
+                <input
+                  type="email"
+                  id="padre_email"
+                  className="block w-full rounded-md border-gray-300 pl-10 py-2.5 focus:border-blue-500 focus:ring-blue-500 sm:text-sm shadow-sm"
+                  value={(formData.metadata as any).padre_tutor?.email || ''}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      metadata: {
+                        ...(prev.metadata as any),
+                        padre_tutor: {
+                          ...(prev.metadata as any).padre_tutor,
+                          email: e.target.value
+                        }
+                      }
+                    }))
+                  }
+                  placeholder="maria@email.com"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="padre_telefono" className="block text-sm font-medium text-gray-700">
+                Teléfono
+              </label>
+              <div className="mt-1 relative rounded-md shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FiPhone className="h-4 w-4 text-gray-400" />
+                </div>
+                <input
+                  type="tel"
+                  id="padre_telefono"
+                  className="block w-full rounded-md border-gray-300 pl-10 py-2.5 focus:border-blue-500 focus:ring-blue-500 sm:text-sm shadow-sm"
+                  value={(formData.metadata as any).padre_tutor?.telefono?.replace('+54', '') || ''}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      metadata: {
+                        ...(prev.metadata as any),
+                        padre_tutor: {
+                          ...(prev.metadata as any).padre_tutor,
+                          telefono: e.target.value ? `+54${e.target.value.replace(/\D/g, '')}` : ''
+                        }
+                      }
+                    }))
+                  }
+                  placeholder="11 1234-5678"
+                />
               </div>
             </div>
           </div>
@@ -193,8 +343,8 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
             <FiFileText className="h-5 w-5 text-blue-500 mr-2" />
             <h3 className="text-lg font-medium text-gray-900">Preferencias de Cuestionario</h3>
           </div>
-          <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-            <div className="sm:col-span-6">
+          <div className="grid grid-cols-1 gap-y-4 gap-x-4 sm:grid-cols-3">
+            <div className="sm:col-span-3">
               <label htmlFor="cuestionario" className="block text-sm font-medium text-gray-700">
                 Cuestionario
               </label>
@@ -202,7 +352,8 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
                 id="cuestionario"
                 className="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm shadow-sm"
                 value={(formData.metadata as any).cuestionario_id || ''}
-                onChange={e =>
+                onChange={e => {
+                  console.log('🎯 Seleccionando cuestionario:', e.target.value);
                   setFormData(prev => ({
                     ...prev,
                     metadata: {
@@ -211,26 +362,60 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
                     },
                     sendInitial: !!e.target.value // Auto-set based on selection
                   }))
-                }
+                }}
               >
                 <option value="">No enviar cuestionario ahora</option>
-                {questionarios.map(q => (
-                  <option key={q.id} value={q.id}>{q.nombre}</option>
-                ))}
+                {Array.isArray(questionarios) && questionarios.length > 0 ? (
+                  questionarios.map(q => (
+                    <option key={q.id} value={q.id}>
+                      {q.nombre || q.titulo || `Cuestionario ${q.codigo}`}
+                    </option>
+                  ))
+                ) : (
+                  <option disabled>Cargando cuestionarios...</option>
+                )}
               </select>
+
               {!(formData.metadata as any).cuestionario_id && (
                 <p className="mt-1 text-xs text-gray-500">
                   Puedes configurar el envío de cuestionarios más tarde desde el perfil del paciente
                 </p>
               )}
-              {(formData.metadata as any).cuestionario_id && (
-                <p className="mt-1 text-xs text-green-600">
-                  ✅ El paciente recibirá el cuestionario inmediatamente después de guardar
-                </p>
-              )}
+              {(formData.metadata as any).cuestionario_id && (() => {
+                const cuestionarioId = (formData.metadata as any).cuestionario_id;
+                const recipient = getAppropriateRecipient(cuestionarioId);
+                const canal = (formData.metadata?.preferencias_cuestionario as any)?.canal || 'email';
+                const isValid = validateRecipientContact(cuestionarioId, canal);
+                const isParent = isParentQuestionnaire(cuestionarioId);
+                
+                if (!isValid) {
+                  return (
+                    <p className="mt-1 text-xs text-amber-600">
+                      ⚠️ {recipient === 'padre_tutor' 
+                        ? `Falta información de contacto del padre/tutor para envío por ${canal === 'email' ? 'email' : 'WhatsApp'}`
+                        : `Falta información de contacto del paciente para envío por ${canal === 'email' ? 'email' : 'WhatsApp'}`
+                      }
+                    </p>
+                  );
+                }
+                
+                return (
+                  <p className="mt-1 text-xs text-green-600">
+                    ✅ {recipient === 'padre_tutor' 
+                      ? `El padre/tutor recibirá el cuestionario por ${canal === 'email' ? 'email' : 'WhatsApp'} después de guardar`
+                      : `El paciente recibirá el cuestionario por ${canal === 'email' ? 'email' : 'WhatsApp'} después de guardar`
+                    }
+                    {isParent && recipient === 'paciente' && (
+                      <span className="block text-amber-600 mt-1">
+                        💡 Este cuestionario está diseñado para padres/tutores. Considera agregar su información de contacto.
+                      </span>
+                    )}
+                  </p>
+                );
+              })()}
             </div>
 
-            <div className="sm:col-span-3">
+            <div className="sm:col-span-1">
               <label htmlFor="canal" className="block text-sm font-medium text-gray-700">
                 <FiSend className="inline h-4 w-4 mr-1" />
                 Canal de envío
@@ -258,7 +443,7 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
               </select>
             </div>
 
-            <div className="sm:col-span-3">
+            <div className="sm:col-span-1">
               <label htmlFor="frecuencia" className="block text-sm font-medium text-gray-700">
                 <FiSettings className="inline h-4 w-4 mr-1" />
                 Frecuencia
@@ -288,6 +473,30 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
               </select>
             </div>
 
+            {/* Checkbox de WhatsApp horizontal y compacto */}
+            <div className="sm:col-span-3">
+              <div className="flex items-center space-x-3 mt-2 p-3 bg-gray-50 rounded-md">
+                <input
+                  id="whatsappConsent"
+                  name="whatsappConsent"
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  checked={!!(formData.metadata as any).whatsappConsent}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      metadata: {
+                        ...(prev.metadata as any),
+                        whatsappConsent: e.target.checked,
+                      },
+                    }))
+                  }
+                />
+                <label htmlFor="whatsappConsent" className="text-sm font-medium text-gray-700">
+                  Consentimiento de WhatsApp - He obtenido el consentimiento del paciente para enviarle notificaciones por WhatsApp
+                </label>
+              </div>
+            </div>
 
           </div>
         </div>

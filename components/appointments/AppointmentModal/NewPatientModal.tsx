@@ -126,7 +126,7 @@ export default function NewPatientModal({ isOpen, onClose, onPatientCreated }: N
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black/30 dark:bg-black/50" />
+          <div className="fixed inset-0 bg-gray-900/30 backdrop-blur-sm dark:bg-gray-900/40" />
         </Transition.Child>
 
         <div className="fixed inset-0 overflow-y-auto">
@@ -140,7 +140,7 @@ export default function NewPatientModal({ isOpen, onClose, onPatientCreated }: N
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 p-6 text-left align-middle shadow-xl transition-all">
+              <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 p-4 text-left align-middle shadow-xl transition-all">
                 <Dialog.Title
                   as="h3"
                   className="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100"

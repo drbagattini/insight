@@ -7,11 +7,16 @@ import { createClient } from '@supabase/supabase-js';
 interface RiskPatient {
   id: string;
   name: string;
-  score: number;
+  score?: number;
   date: string; // ISO string for date
   questionnaire: string; // Código del cuestionario que generó la alerta
-  riskType: 'suicide' | 'general'; // Tipo de riesgo
+  riskType: 'suicide' | 'general' | 'tdah' | 'sustancias' | 'autolesion'; // Tipos de riesgo expandidos
   item9?: number; // Para PHQ-9, valor del ítem 9 (ideación suicida)
+  // Campos para alertas OYS
+  alertType?: 'score' | 'clinical'; // Tipo de alerta: por puntaje o clínica específica
+  message?: string; // Mensaje específico de la alerta
+  evidence?: Array<{ item: number; value: number; text: string }>; // Evidencia de alertas OYS
+  recommendations?: string[]; // Recomendaciones clínicas
 }
 
 interface DashboardSummary {
@@ -188,7 +193,8 @@ export async function GET() {
                 score: response.puntuacion,
                 date: response.creado_en,
                 questionnaire: 'WHO-5',
-                riskType: 'general'
+                riskType: 'general',
+                alertType: 'score'
               });
             }
           }
@@ -233,13 +239,85 @@ export async function GET() {
                     date: response.creado_en,
                     questionnaire: 'PHQ-9',
                     riskType,
-                    item9
+                    item9,
+                    alertType: 'score'
                   });
                 }
               }
             }
           }
         }
+      }
+
+      // Agregar alertas clínicas de Ohio Youth Scales
+      try {
+        const { data: oysAlerts, error: oysAlertsError } = await supabase
+          .from('alertas_clinicas')
+          .select(`
+            id,
+            paciente_id,
+            tipo,
+            severidad,
+            mensaje,
+            evidencia,
+            fecha_creacion,
+            patients!inner(id, name, psychologist_id)
+          `)
+          .eq('patients.psychologist_id', psychologistId)
+          .eq('activa', true)
+          .order('fecha_creacion', { ascending: false });
+
+        if (!oysAlertsError && oysAlerts) {
+          // Agrupar alertas por paciente (tomar la más reciente de cada tipo)
+          const latestAlertsByPatient = new Map<string, typeof oysAlerts[0]>();
+          
+          for (const alert of oysAlerts) {
+            const key = `${alert.paciente_id}-${alert.tipo}`;
+            if (!latestAlertsByPatient.has(key)) {
+              latestAlertsByPatient.set(key, alert);
+            }
+          }
+
+          // Convertir alertas OYS a formato RiskPatient
+          for (const alert of latestAlertsByPatient.values()) {
+            if (alert.patients) {
+              const patient = Array.isArray(alert.patients) ? alert.patients[0] : alert.patients;
+              
+              // Determinar prioridad de la alerta (autolesión > sustancias > tdah)
+              const alertPriority = {
+                'autolesion': 3,
+                'sustancias': 2,
+                'tdah': 1
+              };
+              
+              const existingRisk = allRiskPatients.get(alert.paciente_id);
+              const currentPriority = alertPriority[alert.tipo as keyof typeof alertPriority] || 0;
+              const existingPriority = existingRisk?.riskType === 'suicide' ? 4 : 
+                                     existingRisk?.riskType === 'autolesion' ? 3 :
+                                     existingRisk?.riskType === 'sustancias' ? 2 :
+                                     existingRisk?.riskType === 'tdah' ? 1 : 0;
+
+              // Solo agregar/reemplazar si la nueva alerta tiene mayor o igual prioridad
+              if (currentPriority >= existingPriority) {
+                allRiskPatients.set(alert.paciente_id, {
+                  id: patient.id,
+                  name: (patient.name || '').trim(),
+                  date: alert.fecha_creacion,
+                  questionnaire: 'Ohio Youth Scales',
+                  riskType: alert.tipo as 'tdah' | 'sustancias' | 'autolesion',
+                  alertType: 'clinical',
+                  message: alert.mensaje,
+                  evidence: alert.evidencia || []
+                });
+              }
+            }
+          }
+        } else if (oysAlertsError && oysAlertsError.code !== '42P01') {
+          // Log error only if it's not "table doesn't exist"
+          console.error('[DashboardSummary] Error fetching OYS alerts:', oysAlertsError.message);
+        }
+      } catch (error) {
+        console.error('[DashboardSummary] Error processing OYS alerts:', error);
       }
 
       riskPatients = Array.from(allRiskPatients.values());

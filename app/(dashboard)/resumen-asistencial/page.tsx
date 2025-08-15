@@ -33,6 +33,7 @@ import { NewPatient } from '@/types/patients';
 import { AppointmentModal, ModalAppointmentData } from '@/components/appointments/AppointmentModal';
 import RiskPatientsDrawer from '@/components/dashboard/RiskPatientsDrawer';
 import PendingQuestionnairesModal from '@/components/dashboard/PendingQuestionnairesModal';
+
 import { useDashboardSummary } from '@/hooks/useDashboardSummary';
 
 import { Dialog, Transition } from '@headlessui/react';
@@ -173,7 +174,7 @@ export default function DashboardPage() {
           onClick={() => setIsPendingModalOpen(true)}
         />
         <KpiCard
-          title="Pacientes en Riesgo"
+          title="Alertas Clínicas"
           value={summaryData?.riskPatients?.length ?? '-'}
           icon={AlertTriangle}
           isLoading={loadingSummary}
@@ -182,6 +183,7 @@ export default function DashboardPage() {
           textColor="text-white"
         />
       </div>
+
       {/* Gráfico WHO-5 Scatter Plot */}
       <div className="bg-white p-6 rounded-lg shadow">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
@@ -361,7 +363,7 @@ export default function DashboardPage() {
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <div className="fixed inset-0 bg-black/50 transition-opacity" />
+            <div className="fixed inset-0 bg-gray-900/30 backdrop-blur-sm transition-opacity" />
           </Transition.Child>
 
           <div className="fixed inset-0 z-10 overflow-y-auto">
@@ -375,7 +377,7 @@ export default function DashboardPage() {
                 leaveFrom="opacity-100 translate-y-0 sm:scale-100"
                 leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
               >
-                <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white p-6 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-md">
+                <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white p-4 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-3xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
                   <h2 className="text-lg font-medium text-gray-900 mb-4">
                     Agregar Nuevo Paciente
                   </h2>

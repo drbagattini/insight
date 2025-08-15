@@ -248,6 +248,16 @@ export async function POST(req: NextRequest) {
     try {
       const origin = new URL(req.url).origin;
       
+      // Determinar destinatario automáticamente basándose en el tipo de cuestionario
+      let destinatario = 'paciente';
+      if (cuestionario.destinatario === 'padre_tutor' || cuestionario.destinatario === 'ambos') {
+        // Si es cuestionario para padres y hay contacto de padre/tutor, usar ese destinatario
+        const hasParentContact = metadataAny.padre_tutor?.email || metadataAny.padre_tutor?.telefono;
+        if (hasParentContact) {
+          destinatario = 'padre_tutor';
+        }
+      }
+      
       // 1. Programar la recurrencia primero
       const scheduleRes = await fetch(`${origin}/api/envios_programados`, {
         method: 'POST',
@@ -260,7 +270,8 @@ export async function POST(req: NextRequest) {
           cuestionarioId: cuestionario.id,
           canal: canalToSend,
           frecuencia: frecuencia,
-          proximoEnvio: calcularProximoEnvio(frecuencia)
+          proximoEnvio: calcularProximoEnvio(frecuencia),
+          destinatario: destinatario
         }),
       });
       
@@ -280,7 +291,8 @@ export async function POST(req: NextRequest) {
             pacienteId: paciente.id, 
             cuestionarioId: cuestionario.id, 
             canal: canalToSend,
-            envioProgramadoId: scheduleData.id
+            envioProgramadoId: scheduleData.id,
+            destinatario: destinatario
           }),
         });
         

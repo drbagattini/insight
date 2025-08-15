@@ -85,7 +85,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const body = await request.json();
   console.log('envios_programados POST body:', body);
-  const { pacienteId, canal, frecuencia, proximoEnvio: fechaInicioStr } = body; // proximoEnvio del body es nuestra fechaInicioStr
+  const { pacienteId, canal, frecuencia, proximoEnvio: fechaInicioStr, destinatario } = body; // proximoEnvio del body es nuestra fechaInicioStr
   let cuestionarioId = body.cuestionarioId;
 
   if (!pacienteId || !canal || !frecuencia || !fechaInicioStr) {
@@ -155,6 +155,7 @@ export async function POST(request: Request) {
         fecha_inicio_programada: fechaInicio.toISOString(), // Guardar como ISO string (UTC)
         proximo_envio: fechaInicio.toISOString(), // Inicialmente igual a la fecha de inicio
         activo: true,
+        destinatario: destinatario || 'paciente', // Default a paciente si no se especifica
       },
     ])
     .select()

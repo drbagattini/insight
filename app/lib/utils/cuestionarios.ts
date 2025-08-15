@@ -29,6 +29,8 @@ if (
  * @param nombreCuestionario - Nombre del cuestionario a enviar
  * @param canal - Canal de envío ('email' o 'whatsapp')
  * @param linkPublico - URL del cuestionario
+ * @param destinatario - Tipo de destinatario ('paciente' o 'padre_tutor')
+ * @param nombreDestinatario - Nombre del destinatario (padre/tutor si aplica)
  * @returns Promise<boolean> - true si el envío fue exitoso
  */
 export async function enviarCuestionarioPorCanal(
@@ -37,25 +39,47 @@ export async function enviarCuestionarioPorCanal(
   nombrePaciente: string,
   nombreCuestionario: string,
   canal: string,
-  linkPublico: string
+  linkPublico: string,
+  destinatario: string = 'paciente',
+  nombreDestinatario?: string
 ): Promise<boolean> {
   if (canal === 'email' && email) {
-    console.log('Enviando email:', { to: email, plantilla: nombreCuestionario, link: linkPublico });
+    console.log('Enviando email:', { to: email, plantilla: nombreCuestionario, link: linkPublico, destinatario });
     if (brevoTransporter) {
-      await brevoTransporter.sendMail({
-        from: `"Insight | Centro UNO" <${process.env.EMAIL_SENDER ?? process.env.BREVO_SMTP_USER}>`,
-        to: email,
-        subject: 'Completá tu cuestionario de seguimiento',
-        html: `
-          <p style="margin-bottom: 12px;">Hola <strong>${nombrePaciente}</strong>,</p>
-          <p style="margin-bottom: 12px;">Te invitamos a completar el cuestionario "<strong>${nombreCuestionario}</strong>", como parte de tu proceso en Centro UNO.</p>
-          <p style="margin-bottom: 12px;">Esta información nos permitirá acompañarte mejor en tu evolución.</p>
-          <p style="margin-bottom: 12px;"><strong><a href="${linkPublico}" style="text-decoration: none; color: #007bff;">Haz clic aquí para acceder al cuestionario</a></strong>.</p>
-          <p style="margin-bottom: 12px;">Si tenés dudas, podés consultar con tu profesional o comunicarte con el Centro UNO al 2401 2966.</p>
-          <p style="margin-bottom: 12px;">Gracias por tu tiempo.</p>
-          <p style="margin-bottom: 0;">El equipo de Insight</p>
-        `
-      });
+      // Template específico para padres/tutores
+      if (destinatario === 'padre_tutor') {
+        await brevoTransporter.sendMail({
+          from: `"Insight | Centro UNO" <${process.env.EMAIL_SENDER ?? process.env.BREVO_SMTP_USER}>`,
+          to: email,
+          subject: `Cuestionario de evaluación sobre ${nombrePaciente}`,
+          html: `
+            <p style="margin-bottom: 12px;">Estimado/a <strong>${nombreDestinatario || 'Padre/Tutor'}</strong>,</p>
+            <p style="margin-bottom: 12px;">Como parte del proceso terapéutico de <strong>${nombrePaciente}</strong> en Centro UNO, solicitamos su colaboración completando el cuestionario "<strong>${nombreCuestionario}</strong>".</p>
+            <p style="margin-bottom: 12px;">Su perspectiva como padre/tutor es fundamental para brindar la mejor atención posible a ${nombrePaciente}.</p>
+            <p style="margin-bottom: 12px;"><strong><a href="${linkPublico}" style="text-decoration: none; color: #007bff;">Haz clic aquí para acceder al cuestionario</a></strong></p>
+            <p style="margin-bottom: 12px;">El cuestionario toma aproximadamente 8 minutos en completarse y sus respuestas son completamente confidenciales.</p>
+            <p style="margin-bottom: 12px;">Si tiene dudas sobre el cuestionario, puede consultar con el profesional tratante o comunicarse con el Centro UNO al 2401 2966.</p>
+            <p style="margin-bottom: 12px;">Agradecemos su tiempo y colaboración.</p>
+            <p style="margin-bottom: 0;">El equipo de Insight</p>
+          `
+        });
+      } else {
+        // Template original para pacientes
+        await brevoTransporter.sendMail({
+          from: `"Insight | Centro UNO" <${process.env.EMAIL_SENDER ?? process.env.BREVO_SMTP_USER}>`,
+          to: email,
+          subject: 'Completá tu cuestionario de seguimiento',
+          html: `
+            <p style="margin-bottom: 12px;">Hola <strong>${nombrePaciente}</strong>,</p>
+            <p style="margin-bottom: 12px;">Te invitamos a completar el cuestionario "<strong>${nombreCuestionario}</strong>", como parte de tu proceso en Centro UNO.</p>
+            <p style="margin-bottom: 12px;">Esta información nos permitirá acompañarte mejor en tu evolución.</p>
+            <p style="margin-bottom: 12px;"><strong><a href="${linkPublico}" style="text-decoration: none; color: #007bff;">Haz clic aquí para acceder al cuestionario</a></strong>.</p>
+            <p style="margin-bottom: 12px;">Si tenés dudas, podés consultar con tu profesional o comunicarte con el Centro UNO al 2401 2966.</p>
+            <p style="margin-bottom: 12px;">Gracias por tu tiempo.</p>
+            <p style="margin-bottom: 0;">El equipo de Insight</p>
+          `
+        });
+      }
       console.log('Email enviado con éxito a', email);
       return true;
     } else {

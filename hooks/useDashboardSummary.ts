@@ -5,11 +5,16 @@ import axios from 'axios';
 interface RiskPatient {
   id: string;
   name: string;
-  score: number;
+  score?: number;
   date: string; // ISO string for date
   questionnaire: string; // Código del cuestionario que generó la alerta
-  riskType: 'suicide' | 'general'; // Tipo de riesgo
+  riskType: 'suicide' | 'general' | 'tdah' | 'sustancias' | 'autolesion'; // Tipos de riesgo expandidos
   item9?: number; // Para PHQ-9, valor del ítem 9 (ideación suicida)
+  // Campos para alertas OYS
+  alertType?: 'score' | 'clinical'; // Tipo de alerta: por puntaje o clínica específica
+  message?: string; // Mensaje específico de la alerta
+  evidence?: Array<{ item: number; value: number; text: string }>; // Evidencia de alertas OYS
+  recommendations?: string[]; // Recomendaciones clínicas
 }
 
 export interface DashboardSummary {

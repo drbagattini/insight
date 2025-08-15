@@ -7,6 +7,7 @@ import { FiSearch } from "react-icons/fi";
 import { FiFileText } from "react-icons/fi";
 import { QUERY_KEYS } from "@/lib/constants";
 import questionnairesMeta from "@/src/data/questionnairesMeta";
+import { sortQuestionnaires } from "@/lib/questionnaire-order";
 
 interface QuestionnaireListItem {
   codigo: string;
@@ -30,21 +31,16 @@ export default function QuestionnairesPage() {
   const [search, setSearch] = useState("");
   const [domainFilter, setDomainFilter] = useState<string>("Todos");
 
-  const {
-    data: questionnaires = [],
-    isLoading,
-    error,
-  } = useQuery<QuestionnaireListItem[]>({
-    queryKey: QUERY_KEYS.QUESTIONNAIRES,
-    queryFn: async () => {
-      const res = await fetch("/api/questionnaires", { cache: "no-store" });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || "Error al cargar cuestionarios");
+  const { data: questionnaires = [], isLoading, error } = useQuery({
+    queryKey: ['questionnaires'],
+    queryFn: async (): Promise<QuestionnaireListItem[]> => {
+      const response = await fetch('/api/cuestionarios');
+      if (!response.ok) {
+        throw new Error('Error al cargar cuestionarios');
       }
-      return res.json();
+      const data = await response.json();
+      return sortQuestionnaires(data) as unknown as QuestionnaireListItem[];
     },
-    refetchOnMount: true,
   });
 
   // Available domains for the filter dropdown (including "Todos")
@@ -55,14 +51,19 @@ export default function QuestionnairesPage() {
 
   // Filtered questionnaire list based on search text and domain
   const filteredQuestionnaires = useMemo(() => {
-    return questionnaires.filter((q) => {
-      const matchesSearch = q.nombre
-        .toLowerCase()
-        .includes(search.toLowerCase());
-      const matchesDomain =
-        domainFilter === "Todos" || q.dominio === domainFilter;
-      return matchesSearch && matchesDomain;
-    });
+    return questionnaires
+      .map((q: any) => ({
+        ...q,
+        dominio: q.dominio || "Otro",
+      }))
+      .filter((q: any) => {
+        const matchesSearch = q.nombre
+          .toLowerCase()
+          .includes(search.toLowerCase());
+        const matchesDomain =
+          domainFilter === "Todos" || q.dominio === domainFilter;
+        return matchesSearch && matchesDomain;
+      });
   }, [questionnaires, search, domainFilter]);
 
   if (isLoading) {

@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Dialog, Transition } from "@headlessui/react";
 import { X } from "lucide-react";
 import QuickSendForm from "@/components/QuickSendForm";
+import { sortQuestionnaires } from "@/lib/questionnaire-order";
 
 interface QuickSendDialogProps {
   isOpen: boolean;
@@ -22,9 +23,11 @@ export default function QuickSendDialog({
   const { data: questionnaires = [], isLoading: loadingQuestionnaires } = useQuery<{ id: string; codigo: string; nombre: string }[]>({
     queryKey: ["questionnaires"],
     queryFn: async () => {
-      const res = await fetch("/api/questionnaires");
+      const res = await fetch("/api/cuestionarios");
       if (!res.ok) throw new Error("Error al cargar cuestionarios");
-      return res.json();
+      const data = await res.json();
+      // Aplicar ordenamiento específico
+      return sortQuestionnaires(data);
     },
     enabled: !cuestionarioId, // solo cargar si no viene predefinido
   });

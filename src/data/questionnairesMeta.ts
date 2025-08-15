@@ -470,6 +470,241 @@ const questionnairesMeta = {
       complementar: 'HAM-A, HADS, WHO-DAS II para evaluación de discapacidad. Entrevista clínica para diagnóstico definitivo',
       advertencia: '⚠️ Punto de corte ≥ 10: Sensibilidad 86.8%, Especificidad 93.4%. Personas mayores pueden necesitar asistencia para completarlo'
     }
+  },
+  'OYS-PS-P-SF20': {
+    code: 'OYS-PS-P-SF20',
+    title: 'Ohio Youth Scales – Problemas (Padre/Tutor)',
+    shortTitle: 'OYS Problemas (P)',
+    chartType: 'line' as const,
+    thresholds: {
+      warning: 20,
+      danger: 30
+    },
+    dominio: 'Problemas de Comportamiento',
+    descripcion: 'Frecuencia de problemas conductuales y emocionales en los últimos 30 días (informante: padre/tutor).',
+    poblacion: 'Niños/as y adolescentes 5–18 años (informante: padre/tutor)',
+    tiempoMin: 7,
+    destinatario: 'padre_tutor',
+    items: [],
+    respuestaTipo: 'Likert 0-5 (0=Nada en absoluto, 1=Una o dos veces, 2=Varias veces, 3=A menudo, 4=La mayor parte del tiempo, 5=Todo el tiempo)',
+    scoring: {
+      rango: [0, 100] as const,
+      sentido: 'A mayor puntuación, mayor severidad de problemas',
+      tipo: 'Suma directa de ítems 1-20 (rango 0-5 cada uno)',
+      puntosDeCorte: [
+        { umbral: 20, label: 'Referencia comunitaria (+1SD)' },
+        { umbral: 25, label: 'Corte clínico' },
+        { umbral: 30, label: 'Referencia comunitaria (+2SD)' }
+      ] as const,
+      interpretacion: {
+        direccion: 'Puntuaciones más altas indican mayor severidad de problemas',
+        escalas: '0-19: Normal | 20-24: Atención | 25-29: Clínico | 30+: Severo',
+        puntuacionTotal: 'Suma de ítems 1-20'
+      },
+      alertas: {
+        tdah: { umbral: 3, item: 11, descripcion: 'TDAH screening: ítem 11 ≥ 3' },
+        sustancias: { umbral: 2, item: 7, descripcion: 'Consumo sustancias: ítem 7 ≥ 2' },
+        autolesion: { umbral: 1, items: [12, 13], descripcion: 'Riesgo autolesión: ítems 12 o 13 ≥ 1' }
+      } as const
+    },
+    validez: {
+      fiabilidad: 'Ohio Youth Scales - Instrumento validado',
+      muestra: 'Muestra comunitaria y clínica',
+      estudiosClave: [
+        {
+          cita: 'Ogles, B. M., et al. (2001). Ohio Youth Problems, Functioning, and Satisfaction Scales',
+          doi: '10.1037/t02313-000'
+        }
+      ]
+    },
+    fundamentoTeorico: {
+      modelo: 'Evaluación multidimensional de problemas en juventud',
+      enfoque: 'Modelo basado en frecuencia de problemas observables',
+      objetivo: 'Evaluar severidad de problemas conductuales y emocionales',
+      baseConceptual: 'Subdominios: Externalizantes, Internalizantes, Riesgo/Autolesión, Consumo'
+    },
+    aplicacionClinica: {
+      usoRecomendado: 'Evaluación inicial y seguimiento en terapia infantil/adolescente',
+      requiere: 'Padre/tutor observador durante últimos 30 días',
+      complementar: 'OYS Funcionamiento, evaluación directa del joven',
+      advertencia: '⚠️ Cambio fiable: 10 puntos. Corte clínico: 25 puntos'
+    }
+  },
+
+  'OYS-F-P-SF20': {
+    code: 'OYS-F-P-SF20',
+    title: 'Ohio Youth Scales – Funcionamiento (Padre/Tutor)',
+    shortTitle: 'OYS Funcionamiento (P)',
+    chartType: 'line' as const,
+    thresholds: {
+      warning: 52,
+      danger: 40
+    },
+    dominio: 'Funcionamiento Global',
+    descripcion: 'Nivel de funcionamiento en áreas de la vida diaria (informante: padre/tutor).',
+    poblacion: 'Niños/as y adolescentes 5–18 años (informante: padre/tutor)',
+    tiempoMin: 7,
+    destinatario: 'padre_tutor',
+    items: [],
+    respuestaTipo: 'Likert 0-4 (0=Problemas extremos, 1=Bastantes problemas, 2=Algunos problemas, 3=Bien, 4=Muy bien)',
+    scoring: {
+      rango: [0, 80] as const,
+      sentido: 'A mayor puntuación, mejor funcionamiento',
+      tipo: 'Suma directa de ítems 1-20 (rango 0-4 cada uno)',
+      puntosDeCorte: [
+        { umbral: 40, label: 'Referencia comunitaria (-2SD)' },
+        { umbral: 50, label: 'Corte clínico' },
+        { umbral: 52, label: 'Referencia comunitaria (-1SD)' }
+      ] as const,
+      interpretacion: {
+        direccion: 'Puntuaciones más altas indican mejor funcionamiento',
+        escalas: '0-39: Severo | 40-49: Clínico | 50-51: Atención | 52+: Normal',
+        puntuacionTotal: 'Suma de ítems 1-20'
+      },
+      alertas: {
+        tdah: { umbral: 1, item: 16, descripcion: 'TDAH screening: ítem 16 ≤ 1' }
+      } as const
+    },
+    validez: {
+      fiabilidad: 'Ohio Youth Scales - Instrumento validado',
+      muestra: 'Muestra comunitaria y clínica',
+      estudiosClave: [
+        {
+          cita: 'Ogles, B. M., et al. (2001). Ohio Youth Problems, Functioning, and Satisfaction Scales',
+          doi: '10.1037/t02313-000'
+        }
+      ]
+    },
+    fundamentoTeorico: {
+      modelo: 'Evaluación multidimensional del funcionamiento juvenil',
+      enfoque: 'Modelo basado en competencias y habilidades adaptativas',
+      objetivo: 'Evaluar nivel de funcionamiento en múltiples dominios',
+      baseConceptual: 'Funcionamiento social, académico, emocional y conductual'
+    },
+    aplicacionClinica: {
+      usoRecomendado: 'Evaluación inicial y seguimiento en terapia infantil/adolescente',
+      requiere: 'Padre/tutor observador del funcionamiento actual',
+      complementar: 'OYS Problemas, evaluación directa del joven',
+      advertencia: '⚠️ Cambio fiable: 8 puntos. Corte clínico: 50 puntos'
+    }
+  },
+
+  'OYS-PS-Y-SF20': {
+    code: 'OYS-PS-Y-SF20',
+    title: 'Ohio Youth Scales – Problemas (Joven)',
+    shortTitle: 'OYS Problemas (J)',
+    chartType: 'line' as const,
+    thresholds: {
+      warning: 33,
+      danger: 48
+    },
+    dominio: 'Problemas de Comportamiento',
+    descripcion: 'Frecuencia de problemas en los últimos 30 días (autorreporte del joven).',
+    poblacion: 'Adolescentes 12–18 años (autorreporte)',
+    tiempoMin: 7,
+    destinatario: 'paciente',
+    items: [],
+    respuestaTipo: 'Likert 0-5 (0=Nada en absoluto, 1=Una o dos veces, 2=Varias veces, 3=A menudo, 4=La mayor parte del tiempo, 5=Todo el tiempo)',
+    scoring: {
+      rango: [0, 100] as const,
+      sentido: 'A mayor puntuación, mayor severidad de problemas',
+      tipo: 'Suma directa de ítems 1-20 (rango 0-5 cada uno)',
+      puntosDeCorte: [
+        { umbral: 25, label: 'Corte clínico' },
+        { umbral: 33, label: 'Referencia comunitaria (+1SD)' },
+        { umbral: 48, label: 'Referencia comunitaria (+2SD)' }
+      ] as const,
+      interpretacion: {
+        direccion: 'Puntuaciones más altas indican mayor severidad de problemas',
+        escalas: '0-24: Normal | 25-32: Clínico | 33-47: Atención | 48+: Severo',
+        puntuacionTotal: 'Suma de ítems 1-20'
+      },
+      alertas: {
+        tdah: { umbral: 3, item: 11, descripcion: 'TDAH screening: ítem 11 ≥ 3' },
+        sustancias: { umbral: 2, item: 7, descripcion: 'Consumo sustancias: ítem 7 ≥ 2' },
+        autolesion: { umbral: 1, items: [12, 13], descripcion: 'Riesgo autolesión: ítems 12 o 13 ≥ 1' }
+      } as const
+    },
+    validez: {
+      fiabilidad: 'Ohio Youth Scales - Instrumento validado',
+      muestra: 'Muestra comunitaria y clínica juvenil',
+      estudiosClave: [
+        {
+          cita: 'Ogles, B. M., et al. (2001). Ohio Youth Problems, Functioning, and Satisfaction Scales',
+          doi: '10.1037/t02313-000'
+        }
+      ]
+    },
+    fundamentoTeorico: {
+      modelo: 'Evaluación multidimensional de problemas en juventud',
+      enfoque: 'Modelo basado en autorreporte de frecuencia de problemas',
+      objetivo: 'Evaluar severidad de problemas desde perspectiva del joven',
+      baseConceptual: 'Subdominios: Externalizantes, Internalizantes, Riesgo/Autolesión, Consumo'
+    },
+    aplicacionClinica: {
+      usoRecomendado: 'Evaluación inicial y seguimiento en terapia adolescente',
+      requiere: 'Adolescente 12-18 años capaz de autorreporte',
+      complementar: 'OYS Funcionamiento, evaluación parental',
+      advertencia: '⚠️ Cambio fiable: 10 puntos. Corte clínico: 25 puntos'
+    }
+  },
+
+  'OYS-F-Y-SF20': {
+    code: 'OYS-F-Y-SF20',
+    title: 'Ohio Youth Scales – Funcionamiento (Joven)',
+    shortTitle: 'OYS Funcionamiento (J)',
+    chartType: 'line' as const,
+    thresholds: {
+      warning: 48,
+      danger: 35
+    },
+    dominio: 'Funcionamiento Global',
+    descripcion: 'Nivel de funcionamiento en áreas de la vida diaria (autorreporte del joven).',
+    poblacion: 'Adolescentes 12–18 años (autorreporte)',
+    tiempoMin: 7,
+    destinatario: 'paciente',
+    items: [],
+    respuestaTipo: 'Likert 0-4 (0=Problemas extremos, 1=Bastantes problemas, 2=Algunos problemas, 3=Bien, 4=Muy bien)',
+    scoring: {
+      rango: [0, 80] as const,
+      sentido: 'A mayor puntuación, mejor funcionamiento',
+      tipo: 'Suma directa de ítems 1-20 (rango 0-4 cada uno)',
+      puntosDeCorte: [
+        { umbral: 35, label: 'Referencia comunitaria (-2SD)' },
+        { umbral: 48, label: 'Referencia comunitaria (-1SD)' },
+        { umbral: 60, label: 'Corte clínico' }
+      ] as const,
+      interpretacion: {
+        direccion: 'Puntuaciones más altas indican mejor funcionamiento',
+        escalas: '0-34: Severo | 35-47: Atención | 48-59: Clínico | 60+: Normal',
+        puntuacionTotal: 'Suma de ítems 1-20'
+      },
+      alertas: {
+        tdah: { umbral: 1, item: 16, descripcion: 'TDAH screening: ítem 16 ≤ 1' }
+      } as const
+    },
+    validez: {
+      fiabilidad: 'Ohio Youth Scales - Instrumento validado',
+      muestra: 'Muestra comunitaria y clínica juvenil',
+      estudiosClave: [
+        {
+          cita: 'Ogles, B. M., et al. (2001). Ohio Youth Problems, Functioning, and Satisfaction Scales',
+          doi: '10.1037/t02313-000'
+        }
+      ]
+    },
+    fundamentoTeorico: {
+      modelo: 'Evaluación multidimensional del funcionamiento juvenil',
+      enfoque: 'Modelo basado en autorreporte de competencias',
+      objetivo: 'Evaluar funcionamiento desde perspectiva del joven',
+      baseConceptual: 'Funcionamiento social, académico, emocional y conductual'
+    },
+    aplicacionClinica: {
+      usoRecomendado: 'Evaluación inicial y seguimiento en terapia adolescente',
+      requiere: 'Adolescente 12-18 años capaz de autorreporte',
+      complementar: 'OYS Problemas, evaluación parental',
+      advertencia: '⚠️ Cambio fiable: 8 puntos. Corte clínico: 60 puntos'
+    }
   }
 } as const;
 

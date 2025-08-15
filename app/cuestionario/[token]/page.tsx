@@ -169,6 +169,23 @@ export default function CuestionarioPage() {
         "Más de la mitad de los días",
         "Casi todos los días"
       ];
+    } else if (codigo === 'OYS-PS-P-SF20' || codigo === 'OYS-PS-Y-SF20') {
+      return [
+        "Nada en absoluto",
+        "Una o dos veces",
+        "Varias veces",
+        "A menudo",
+        "La mayor parte del tiempo",
+        "Todo el tiempo"
+      ];
+    } else if (codigo === 'OYS-F-P-SF20' || codigo === 'OYS-F-Y-SF20') {
+      return [
+        "Problemas extremos",
+        "Bastantes problemas",
+        "Algunos problemas",
+        "Bien",
+        "Muy bien"
+      ];
     }
     return [];
   };
@@ -178,6 +195,8 @@ export default function CuestionarioPage() {
     if (codigo === 'BR-WAI') return 5;
     if (codigo === 'PHQ-9') return 3;
     if (codigo === 'GAD-7') return 3;
+    if (codigo === 'OYS-PS-P-SF20' || codigo === 'OYS-PS-Y-SF20') return 5;
+    if (codigo === 'OYS-F-P-SF20' || codigo === 'OYS-F-Y-SF20') return 4;
     return 4; // OPD-CA2-SQ y otros
   };
   
@@ -192,6 +211,10 @@ export default function CuestionarioPage() {
       return { min: 'Nunca', max: 'Casi todos los días' };
     } else if (codigo === 'GAD-7') {
       return { min: 'Nunca', max: 'Casi todos los días' };
+    } else if (codigo === 'OYS-PS-P-SF20' || codigo === 'OYS-PS-Y-SF20') {
+      return { min: 'Nada en absoluto', max: 'Todo el tiempo' };
+    } else if (codigo === 'OYS-F-P-SF20' || codigo === 'OYS-F-Y-SF20') {
+      return { min: 'Problemas extremos', max: 'Muy bien' };
     }
     return { min: '', max: '' };
   };

@@ -9,11 +9,16 @@ import Link from 'next/link';
 interface RiskPatient {
   id: string;
   name: string;
-  score: number;
+  score?: number;
   date: string; // ISO string for date
   questionnaire: string; // Código del cuestionario que generó la alerta
-  riskType: 'suicide' | 'general'; // Tipo de riesgo
+  riskType: 'suicide' | 'general' | 'tdah' | 'sustancias' | 'autolesion'; // Tipos de riesgo expandidos
   item9?: number; // Para PHQ-9, valor del ítem 9 (ideación suicida)
+  // Campos para alertas OYS
+  alertType?: 'score' | 'clinical'; // Tipo de alerta: por puntaje o clínica específica
+  message?: string; // Mensaje específico de la alerta
+  evidence?: Array<{ item: number; value: number; text: string }>; // Evidencia de alertas OYS
+  recommendations?: string[]; // Recomendaciones clínicas
 }
 
 interface RiskPatientsDrawerProps {
@@ -55,7 +60,7 @@ const RiskPatientsDrawer: React.FC<RiskPatientsDrawerProps> = ({ isOpen, onClose
                     <div className="bg-red-700 px-4 py-6 sm:px-6">
                       <div className="flex items-center justify-between">
                         <Dialog.Title className="text-lg font-medium text-white flex items-center">
-                          <AlertTriangle className="h-6 w-6 mr-2" /> Pacientes en Riesgo
+                          <AlertTriangle className="h-6 w-6 mr-2" /> Alertas Clínicas
                         </Dialog.Title>
                         <div className="ml-3 flex h-7 items-center">
                           <button
@@ -70,7 +75,7 @@ const RiskPatientsDrawer: React.FC<RiskPatientsDrawerProps> = ({ isOpen, onClose
                       </div>
                       <div className="mt-1">
                         <p className="text-sm text-red-200">
-                          Pacientes con puntuaciones de riesgo en cuestionarios de salud mental.
+                          Alertas por puntajes de riesgo y alertas específicas de Ohio Youth Scales.
                         </p>
                       </div>
                     </div>
@@ -86,20 +91,72 @@ const RiskPatientsDrawer: React.FC<RiskPatientsDrawerProps> = ({ isOpen, onClose
                                     {patient.name}
                                   </p>
                                   <div className="space-y-1">
-                                    <p className={`text-sm flex items-center ${patient.riskType === 'suicide' ? 'text-red-800 font-semibold' : 'text-red-600'}`}>
-                                      <AlertTriangle className={`h-4 w-4 mr-2 ${patient.riskType === 'suicide' ? 'text-red-800' : 'text-red-600'}`} />
-                                      {patient.questionnaire === 'WHO-5' && `Índice de Bienestar (WHO-5): ${patient.score}`}
-                                      {patient.questionnaire === 'PHQ-9' && `Cuestionario de Salud del Paciente-9 (PHQ-9): ${patient.score}`}
-                                    </p>
-                                    {patient.riskType === 'suicide' && patient.item9 !== undefined && (
-                                      <p className="text-xs text-red-800 font-medium bg-red-100 px-2 py-1 rounded">
-                                        ⚠️ RIESGO SUICIDA: Ítem 9 = {patient.item9} (requiere evaluación inmediata)
+                                    {/* Alertas por Puntajes (Existentes) */}
+                                    {patient.alertType === 'score' && (
+                                      <p className={`text-sm flex items-center ${patient.riskType === 'suicide' ? 'text-red-800 font-semibold' : 'text-red-600'}`}>
+                                        <AlertTriangle className={`h-4 w-4 mr-2 ${patient.riskType === 'suicide' ? 'text-red-800' : 'text-red-600'}`} />
+                                        {patient.questionnaire === 'WHO-5' && `Índice de Bienestar (WHO-5): ${patient.score}`}
+                                        {patient.questionnaire === 'PHQ-9' && `Cuestionario de Salud del Paciente-9 (PHQ-9): ${patient.score}`}
                                       </p>
                                     )}
+                                    
+                                    {/* Alertas Clínicas OYS (Nuevas) */}
+                                    {patient.alertType === 'clinical' && (
+                                      <p className={`text-sm flex items-center font-medium ${
+                                        patient.riskType === 'autolesion' ? 'text-red-800' :
+                                        patient.riskType === 'sustancias' ? 'text-orange-700' :
+                                        patient.riskType === 'tdah' ? 'text-blue-700' : 'text-gray-700'
+                                      }`}>
+                                        <AlertTriangle className={`h-4 w-4 mr-2 ${
+                                          patient.riskType === 'autolesion' ? 'text-red-800' :
+                                          patient.riskType === 'sustancias' ? 'text-orange-700' :
+                                          patient.riskType === 'tdah' ? 'text-blue-700' : 'text-gray-700'
+                                        }`} />
+                                        {patient.message}
+                                      </p>
+                                    )}
+
+                                    {/* Detalles específicos por tipo de alerta */}
+                                    {patient.riskType === 'suicide' && patient.item9 !== undefined && (
+                                      <p className="text-xs text-red-800 font-medium bg-red-100 px-2 py-1 rounded">
+                                        🚨 RIESGO SUICIDA: Ítem 9 = {patient.item9} (requiere evaluación inmediata)
+                                      </p>
+                                    )}
+                                    
+                                    {patient.riskType === 'autolesion' && patient.alertType === 'clinical' && (
+                                      <p className="text-xs text-red-800 font-medium bg-red-100 px-2 py-1 rounded">
+                                        🚨 RIESGO DE AUTOLESIÓN: Evaluación inmediata requerida
+                                      </p>
+                                    )}
+                                    
+                                    {patient.riskType === 'sustancias' && patient.alertType === 'clinical' && (
+                                      <p className="text-xs text-orange-800 font-medium bg-orange-100 px-2 py-1 rounded">
+                                        ⚠️ CONSUMO DE SUSTANCIAS: Evaluación especializada recomendada
+                                      </p>
+                                    )}
+                                    
+                                    {patient.riskType === 'tdah' && patient.alertType === 'clinical' && (
+                                      <p className="text-xs text-blue-800 font-medium bg-blue-100 px-2 py-1 rounded">
+                                        💡 INDICADOR TDAH: Considerar evaluación especializada
+                                      </p>
+                                    )}
+                                    
                                     {patient.riskType === 'general' && patient.questionnaire === 'PHQ-9' && (
                                       <p className="text-xs text-orange-700 bg-orange-100 px-2 py-1 rounded">
                                         Depresión moderada o superior (requiere intervención clínica)
                                       </p>
+                                    )}
+
+                                    {/* Evidencia para alertas OYS */}
+                                    {patient.evidence && patient.evidence.length > 0 && (
+                                      <div className="text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded">
+                                        <strong>Evidencia:</strong> 
+                                        {patient.evidence.map((ev, idx) => (
+                                          <span key={idx} className="block">
+                                            • Ítem {ev.item}: {ev.text} (Valor: {ev.value})
+                                          </span>
+                                        ))}
+                                      </div>
                                     )}
                                   </div>
                                   <p className="text-sm text-gray-500 flex items-center mt-1">
@@ -121,8 +178,8 @@ const RiskPatientsDrawer: React.FC<RiskPatientsDrawerProps> = ({ isOpen, onClose
                       ) : (
                         <div className="text-center py-10">
                           <AlertTriangle className="mx-auto h-12 w-12 text-gray-400" />
-                          <h3 className="mt-2 text-sm font-medium text-gray-900">No hay pacientes en riesgo</h3>
-                          <p className="mt-1 text-sm text-gray-500">Actualmente, ningún paciente cumple los criterios de riesgo.</p>
+                          <h3 className="mt-2 text-sm font-medium text-gray-900">No hay alertas clínicas</h3>
+                          <p className="mt-1 text-sm text-gray-500">Actualmente, no hay alertas por puntajes de riesgo ni alertas específicas de Ohio Youth Scales.</p>
                         </div>
                       )}
                     </div>

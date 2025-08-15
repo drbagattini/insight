@@ -185,9 +185,10 @@ export default function PatientsPage() {
 
       {/* Patient Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center p-4 pt-20 overflow-y-auto z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
-            <div className="p-6">
+        <div className="fixed inset-0 flex items-center justify-center p-4 z-50">
+          <div className="absolute inset-0 bg-gray-900/30 backdrop-blur-sm"></div>
+          <div className="relative bg-white rounded-lg shadow-xl w-full max-w-3xl h-fit max-h-[95vh]">
+            <div className="p-4">
               <h2 className="text-xl font-semibold mb-6">
                 {editingPatient ? 'Editar Paciente' : 'Agregar Nuevo Paciente'}
               </h2>

@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
-import { supabaseAdmin } from "@/app/lib/supabaseAdmin";
+import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/app/lib/supabaseAdmin';
+import { z } from 'zod';
+import { calculateOYSAlerts, calculateOYSFunctioningAlerts, combineOYSAlerts } from '@/app/lib/utils/oysAlerts';
 
 // Schema para validar las respuestas
 const respuestasSchema = z.object({
@@ -115,7 +116,52 @@ export async function POST(
       return NextResponse.json({ error: "Error al guardar respuestas" }, { status: 500 });
     }
 
-    // 6. Marcar el link como consumido
+    // 6. Calcular alertas para Ohio Youth Scales
+    let alertsCalculated = false;
+    if (cuestionarioRow?.codigo?.startsWith('OYS-')) {
+      try {
+        const answersNumeric = respuestas.map((r) => r.valor);
+        let alertResult;
+
+        if (cuestionarioRow.codigo.includes('PS')) {
+          // Cuestionario de Problemas
+          alertResult = calculateOYSAlerts(cuestionarioRow.codigo, answersNumeric);
+        } else if (cuestionarioRow.codigo.includes('F')) {
+          // Cuestionario de Funcionamiento
+          alertResult = calculateOYSFunctioningAlerts(cuestionarioRow.codigo, answersNumeric);
+        }
+
+        if (alertResult && alertResult.hasAlerts) {
+          // Guardar alertas en la tabla de alertas
+          const alertsToInsert = alertResult.alerts.map(alert => ({
+            paciente_id: linkData.paciente_id,
+            respuesta_id: respuestaData?.id,
+            tipo: alert.type,
+            severidad: alert.severity,
+            mensaje: alert.message,
+            evidencia: JSON.stringify(alert.evidence),
+            recomendaciones: JSON.stringify(alert.recommendations),
+            activa: true,
+            fecha_creacion: new Date().toISOString()
+          }));
+
+          const { error: alertsError } = await supabaseAdmin
+            .from('alertas_clinicas')
+            .insert(alertsToInsert);
+
+          if (alertsError) {
+            console.error('Error al guardar alertas OYS:', alertsError);
+          } else {
+            console.log(`[OYS ALERTS] ${alertResult.alerts.length} alertas guardadas para ${cuestionarioRow.codigo}`);
+            alertsCalculated = true;
+          }
+        }
+      } catch (alertError) {
+        console.error('Error al calcular alertas OYS:', alertError);
+      }
+    }
+
+    // 7. Marcar el link como consumido
     const { error: updateError } = await supabaseAdmin
       .from("links_cuestionario")
       .update({ consumido: true })
@@ -130,6 +176,7 @@ export async function POST(
       success: true,
       message: "Respuestas registradas correctamente",
       id: respuestaData?.id,
+      alertsCalculated
     });
   } catch (error) {
     console.error("Error al procesar respuestas:", error);
