@@ -4,9 +4,10 @@ import { supabaseAdmin } from "@/app/lib/supabaseAdmin";
 export const dynamic = 'force-dynamic';
 
 export async function GET(
-  request: NextRequest
+  request: NextRequest,
+  context: { params: Promise<{ token: string }> }
 ) {
-  const token = request.nextUrl.pathname.split('/').pop();
+  const { token } = await context.params;
 
   if (!token) {
     return NextResponse.json({ error: "Token no proporcionado" }, { status: 400 });
@@ -81,7 +82,8 @@ export async function GET(
 
     // Agregar opciones de respuesta basadas en el código del cuestionario
     const addResponseOptions = (codigo: string) => {
-      if (codigo === 'OYS-PS-P-SF20' || codigo === 'OYS-PS-Y-SF20') {
+      const code = (codigo || '').toUpperCase();
+      if (code.includes('OYS-PS')) {
         return [
           { valor: 0, texto: "Nada en absoluto" },
           { valor: 1, texto: "Una o dos veces" },
@@ -90,7 +92,7 @@ export async function GET(
           { valor: 4, texto: "La mayor parte del tiempo" },
           { valor: 5, texto: "Todo el tiempo" }
         ];
-      } else if (codigo === 'OYS-F-P-SF20' || codigo === 'OYS-F-Y-SF20') {
+      } else if (code.includes('OYS-F')) {
         return [
           { valor: 0, texto: "Problemas extremos" },
           { valor: 1, texto: "Bastantes problemas" },
@@ -98,7 +100,7 @@ export async function GET(
           { valor: 3, texto: "Bien" },
           { valor: 4, texto: "Muy bien" }
         ];
-      } else if (codigo === 'WHO-5') {
+      } else if (code === 'WHO-5') {
         return [
           { valor: 0, texto: "En ningún momento" },
           { valor: 1, texto: "Menos de la mitad del tiempo" },
@@ -107,21 +109,21 @@ export async function GET(
           { valor: 4, texto: "Casi todo el tiempo" },
           { valor: 5, texto: "Todo el tiempo" }
         ];
-      } else if (codigo === 'PHQ-9') {
+      } else if (code === 'PHQ-9') {
         return [
           { valor: 0, texto: "Nunca" },
           { valor: 1, texto: "Varios días" },
           { valor: 2, texto: "Más de la mitad de los días" },
           { valor: 3, texto: "Casi todos los días" }
         ];
-      } else if (codigo === 'GAD-7') {
+      } else if (code === 'GAD-7') {
         return [
           { valor: 0, texto: "Nunca" },
           { valor: 1, texto: "Varios días" },
           { valor: 2, texto: "Más de la mitad de los días" },
           { valor: 3, texto: "Casi todos los días" }
         ];
-      } else if (codigo === 'BR-WAI') {
+      } else if (code === 'BR-WAI') {
         return [
           { valor: 1, texto: "Totalmente en desacuerdo" },
           { valor: 2, texto: "En desacuerdo" },
@@ -129,7 +131,7 @@ export async function GET(
           { valor: 4, texto: "De acuerdo" },
           { valor: 5, texto: "Totalmente de acuerdo" }
         ];
-      } else if (codigo === 'OPD-CA2-SQ') {
+      } else if (code === 'OPD-CA2-SQ') {
         return [
           { valor: 0, texto: "No se aplica" },
           { valor: 1, texto: "Raramente cierto" },
@@ -141,12 +143,48 @@ export async function GET(
       return [];
     };
 
-    // Asegurar que todos los items tengan opciones de respuesta
-    const responseOptions = addResponseOptions(cuestionario.codigo);
-    items = items.map(item => ({
-      ...item,
-      opciones_respuesta: item.opciones_respuesta || responseOptions
-    }));
+    // Opciones específicas por ítem para OYS consolidados (40 ítems)
+    const codeUpper = (cuestionario.codigo || '').toUpperCase();
+    if (codeUpper === 'OYS-PADRES-40' || codeUpper === 'OYS-JOVENES-40') {
+      const psOptions = [
+        { valor: 0, texto: "Nada en absoluto" },
+        { valor: 1, texto: "Una o dos veces" },
+        { valor: 2, texto: "Varias veces" },
+        { valor: 3, texto: "A menudo" },
+        { valor: 4, texto: "La mayor parte del tiempo" },
+        { valor: 5, texto: "Todo el tiempo" }
+      ];
+      const fOptions = [
+        { valor: 0, texto: "Problemas extremos" },
+        { valor: 1, texto: "Bastantes problemas" },
+        { valor: 2, texto: "Algunas dificultades" },
+        { valor: 3, texto: "OK" },
+        { valor: 4, texto: "Muy bien" }
+      ];
+
+      // Asegurar orden estable y opciones por ítem según seccion
+      items = items
+        .map((item, idx) => {
+          const seccion = (item as any).seccion || (idx < 20 ? 'severidad_problemas' : 'funcionamiento');
+          const opciones = seccion === 'funcionamiento' ? fOptions : psOptions;
+          const orden = (item as any).orden ?? (item as any).orden_global ?? (idx + 1);
+          return {
+            ...item,
+            orden,
+            opciones_respuesta: (item as any).opciones_respuesta && (item as any).opciones_respuesta.length > 0
+              ? (item as any).opciones_respuesta
+              : opciones,
+          };
+        })
+        .sort((a: any, b: any) => (a.orden ?? 0) - (b.orden ?? 0));
+    } else {
+      // Asegurar que todos los items tengan opciones de respuesta (otros cuestionarios)
+      const responseOptions = addResponseOptions(cuestionario.codigo);
+      items = items.map(item => ({
+        ...item,
+        opciones_respuesta: (item as any).opciones_respuesta || responseOptions
+      }));
+    }
 
     // Actualizar el cuestionario con items procesados
     const updatedCuestionario = {
@@ -155,13 +193,18 @@ export async function GET(
     };
 
     // 6. Devolver toda la información necesaria
-    return NextResponse.json({
+    const resp = NextResponse.json({
       pacienteId: paciente.id,
       pacienteNombre: paciente.name,
       cuestionarioId: cuestionario.id,
       cuestionario: updatedCuestionario,
       expirado,
     });
+    // Evitar caching de la verificación
+    resp.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    resp.headers.set('Pragma', 'no-cache');
+    resp.headers.set('Expires', '0');
+    return resp;
   } catch (error) {
     console.error("Error al verificar token:", error);
     return NextResponse.json({ error: "Error al procesar la solicitud" }, { status: 500 });

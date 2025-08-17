@@ -51,9 +51,9 @@ type Cuestionario = {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: RouteHandlerParams }
+  { params }: { params: Promise<{ responseId: string }> }
 ) {
-  const { responseId } = params;
+  const { responseId } = await params;
   if (!responseId) {
     return NextResponse.json({ error: 'Response ID is required' }, { status: 400 });
   }

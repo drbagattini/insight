@@ -33,7 +33,7 @@ RESTRICCIONES CRÍTICAS:
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { patientId: string } }
+  { params }: { params: Promise<{ patientId: string }> }
 ) {
   try {
     // Verificar autenticación

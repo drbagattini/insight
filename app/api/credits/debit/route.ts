@@ -6,7 +6,7 @@ import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { CREDIT_COSTS, CREDIT_PLANS, FAIR_USE_WARN_THRESHOLD } from '@/types/credits';
 import type { DebitCreditsRequest } from '@/types/credits';
-import { sendBalanceUpdate } from '../sse/route';
+import { sendBalanceUpdate } from '@/lib/sse-utils';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -149,6 +149,8 @@ export async function POST(request: NextRequest) {
           category = 'chat_tokens';
           attemptQty = Math.ceil(validatedData.quantity);
           break;
+        default:
+          return NextResponse.json({ error: 'Tipo de débito no válido' }, { status: 400 });
       }
 
       const used = usage[category];

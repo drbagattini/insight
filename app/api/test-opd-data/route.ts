@@ -60,21 +60,26 @@ export async function POST(request: NextRequest) {
     }
 
     // Procesar respuestas como lo hace el endpoint real
-    const processedQuestionnaires = responses?.map(response => ({
-      id: response.id,
-      codigo: response.cuestionarios.codigo,
-      titulo: response.cuestionarios.titulo,
-      descripcion: response.cuestionarios.descripcion,
-      fecha_completado: response.creado_en,
-      respuestas: response.respuestas,
-      puntuacion: response.puntuacion,
-      score_detallado: response.score_detallado,
-      metadata: {
-        total_items: response.respuestas ? Object.keys(response.respuestas).length : 0,
-        completed: response.creado_en ? true : false,
-        has_detailed_score: !!response.score_detallado
-      }
-    })) || [];
+    const processedQuestionnaires = (responses || []).map((response: any) => {
+      const cuestionario = Array.isArray(response.cuestionarios)
+        ? response.cuestionarios[0]
+        : response.cuestionarios;
+      return {
+        id: response.id,
+        codigo: cuestionario?.codigo,
+        titulo: cuestionario?.titulo,
+        descripcion: cuestionario?.descripcion,
+        fecha_completado: response.creado_en,
+        respuestas: response.respuestas,
+        puntuacion: response.puntuacion,
+        score_detallado: response.score_detallado,
+        metadata: {
+          total_items: response.respuestas ? Object.keys(response.respuestas).length : 0,
+          completed: !!response.creado_en,
+          has_detailed_score: !!response.score_detallado
+        }
+      };
+    });
 
     // Filtrar específicamente OPD-CA2-SQ
     const opdCa2Responses = processedQuestionnaires.filter(

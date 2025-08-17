@@ -3,9 +3,10 @@ import { supabaseAdmin } from '@/app/lib/supabaseAdmin';
 
 // DELETE: cancelar un envío programado por ID
 export async function DELETE(
-  request: NextRequest
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const id = request.nextUrl.pathname.split('/').pop();
+  const { id } = await params;
   if (!id) {
     return NextResponse.json({ error: 'Envio programado ID no proporcionado' }, { status: 400 });
   }

@@ -29,11 +29,7 @@ const updateAppointmentSchema = z.object({
   metadata: z.record(z.unknown()).optional(),
 });
 
-// Helper function to extract ID from path
-const getIdFromPath = (request: NextRequest) => {
-  const pathParts = request.nextUrl.pathname.split('/');
-  return pathParts[pathParts.length - 1];
-};
+// Helper no longer needed: dynamic params are provided via Next.js 15 Promise-based params.
 
 // GET a single appointment
 export async function GET(
@@ -70,8 +66,11 @@ export async function GET(
 }
 
 // PATCH/PUT: update an appointment
-export async function PATCH(request: NextRequest) {
-  const id = getIdFromPath(request);
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
   
   if (!session?.user?.id) {
@@ -110,8 +109,11 @@ export async function PATCH(request: NextRequest) {
 }
 
 // DELETE: remove an appointment
-export async function DELETE(request: NextRequest) {
-  const id = getIdFromPath(request);
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
   
   if (!session?.user?.id) { // Check for user ID for Supabase operations

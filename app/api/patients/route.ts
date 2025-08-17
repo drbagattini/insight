@@ -203,7 +203,7 @@ export async function POST(req: NextRequest) {
   // Obtener el ID del cuestionario WHO-5
   const { data: cuestionario, error: cuestionarioError } = await supabaseAdmin
     .from("cuestionarios")
-    .select("id")
+    .select("id, destinatario")
     .eq("codigo", "WHO-5")
     .single();
 

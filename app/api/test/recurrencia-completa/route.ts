@@ -2,10 +2,46 @@ import { NextResponse, NextRequest } from "next/server";
 import { supabaseAdmin } from "@/app/lib/supabaseAdmin";
 import { computeNextDate } from "@/app/lib/utils/cuestionarios";
 
+type TriggerTest = {
+  success: boolean;
+  error?: string;
+  details?: string;
+  originalTime?: string;
+  newTime?: string;
+};
+
+type ScheduledSendsTest = {
+  success: boolean;
+  error?: string;
+  createdId?: string;
+  details?: string;
+};
+
+type ProcessTest = {
+  success: boolean;
+  error?: string;
+  processed?: any;
+  details?: string;
+};
+
+type FinalStatus = {
+  triggerWorking: boolean;
+  nextScheduled: string;
+  stillActive: boolean;
+  details: string;
+};
+
+type Results = {
+  triggerTest: TriggerTest | null;
+  scheduledSendsTest: ScheduledSendsTest | null;
+  processTest: ProcessTest | null;
+  finalStatus: FinalStatus | null;
+};
+
 export async function POST(req: NextRequest) {
   console.log('🧪 TESTING COMPLETE RECURRENCE SYSTEM...\n');
   
-  const results = {
+  const results: Results = {
     triggerTest: null,
     scheduledSendsTest: null,
     processTest: null,

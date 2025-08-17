@@ -14,9 +14,10 @@ const respuestasSchema = z.object({
 });
 
 export async function POST(
-  request: NextRequest
+  request: NextRequest,
+  context: { params: Promise<{ token: string }> }
 ) {
-  const token = request.nextUrl.pathname.split('/').pop();
+  const { token } = await context.params;
 
   if (!token) {
     return NextResponse.json({ error: "Token no proporcionado" }, { status: 400 });
@@ -123,7 +124,15 @@ export async function POST(
         const answersNumeric = respuestas.map((r) => r.valor);
         let alertResult;
 
-        if (cuestionarioRow.codigo.includes('PS')) {
+        const codeUpper = (cuestionarioRow.codigo || '').toUpperCase();
+        if (codeUpper === 'OYS-PADRES-40' || codeUpper === 'OYS-JOVENES-40') {
+          // Dividir en PS (primeros 20) y F (últimos 20) y combinar alertas
+          const psAnswers = answersNumeric.slice(0, 20);
+          const fAnswers = answersNumeric.slice(20, 40);
+          const psAlerts = calculateOYSAlerts('OYS-PS', psAnswers);
+          const fAlerts = calculateOYSFunctioningAlerts('OYS-F', fAnswers);
+          alertResult = combineOYSAlerts(psAlerts, fAlerts);
+        } else if (cuestionarioRow.codigo.includes('PS')) {
           // Cuestionario de Problemas
           alertResult = calculateOYSAlerts(cuestionarioRow.codigo, answersNumeric);
         } else if (cuestionarioRow.codigo.includes('F')) {

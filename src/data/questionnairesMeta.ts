@@ -477,15 +477,35 @@ const questionnairesMeta = {
     shortTitle: 'OYS Problemas (P)',
     chartType: 'line' as const,
     thresholds: {
-      warning: 20,
-      danger: 30
+      warning: 60,
+      danger: 80
     },
-    dominio: 'Problemas de Comportamiento',
-    descripcion: 'Frecuencia de problemas conductuales y emocionales en los últimos 30 días (informante: padre/tutor).',
     poblacion: 'Niños/as y adolescentes 5–18 años (informante: padre/tutor)',
+    items: [
+      { id: 1, texto: 'Discutir con otros' },
+      { id: 2, texto: 'Meterse en peleas' },
+      { id: 3, texto: 'Tener problemas con la policía' },
+      { id: 4, texto: 'Mentir o hacer trampa' },
+      { id: 5, texto: 'Robar' },
+      { id: 6, texto: 'Tener rabietas' },
+      { id: 7, texto: 'Desobedecer en casa' },
+      { id: 8, texto: 'Desobedecer en la escuela' },
+      { id: 9, texto: 'Estar triste o deprimido/a' },
+      { id: 10, texto: 'Estar nervioso/a, tenso/a o preocupado/a' },
+      { id: 11, texto: 'Tener miedos o fobias' },
+      { id: 12, texto: 'Sentirse solo/a o no querido/a' },
+      { id: 13, texto: 'Sentirse confundido/a o en un mundo de fantasía' },
+      { id: 14, texto: 'Tener problemas de atención o concentración' },
+      { id: 15, texto: 'Actuar demasiado joven para su edad' },
+      { id: 16, texto: 'Culpar a otros por los problemas' },
+      { id: 17, texto: 'Faltar o llegar tarde a la escuela' },
+      { id: 18, texto: 'Hacer las cosas lentamente' },
+      { id: 19, texto: 'Tener problemas con el uso de drogas o alcohol' },
+      { id: 20, texto: 'Tener problemas para dormir' }
+    ],
+    descripcion: 'Frecuencia de problemas conductuales y emocionales en los últimos 30 días (informante: padre/tutor).',
     tiempoMin: 7,
     destinatario: 'padre_tutor',
-    items: [],
     respuestaTipo: 'Likert 0-5 (0=Nada en absoluto, 1=Una o dos veces, 2=Varias veces, 3=A menudo, 4=La mayor parte del tiempo, 5=Todo el tiempo)',
     scoring: {
       rango: [0, 100] as const,
@@ -545,7 +565,28 @@ const questionnairesMeta = {
     poblacion: 'Niños/as y adolescentes 5–18 años (informante: padre/tutor)',
     tiempoMin: 7,
     destinatario: 'padre_tutor',
-    items: [],
+    items: [
+      { id: 1, texto: 'Llevarse bien con padres' },
+      { id: 2, texto: 'Llevarse bien con otros adultos' },
+      { id: 3, texto: 'Llevarse bien con hermanos/as' },
+      { id: 4, texto: 'Llevarse bien con otros niños/as de su edad' },
+      { id: 5, texto: 'Participar en actividades familiares' },
+      { id: 6, texto: 'Hacer amigos' },
+      { id: 7, texto: 'Disfrutar de actividades recreativas' },
+      { id: 8, texto: 'Lidiar con el estrés' },
+      { id: 9, texto: 'Lidiar con problemas y frustraciones' },
+      { id: 10, texto: 'Lidiar con cosas que le dan miedo o le ponen nervioso/a' },
+      { id: 11, texto: 'Mostrar interés en cosas' },
+      { id: 12, texto: 'Completar tareas o proyectos' },
+      { id: 13, texto: 'Completar tareas escolares' },
+      { id: 14, texto: 'Asistir a la escuela' },
+      { id: 15, texto: 'Aprender en la escuela' },
+      { id: 16, texto: 'Pensar claramente y tomar buenas decisiones' },
+      { id: 17, texto: 'Controlar su comportamiento' },
+      { id: 18, texto: 'Controlar sus emociones' },
+      { id: 19, texto: 'Cuidar de sí mismo/a (higiene, vestirse, etc.)' },
+      { id: 20, texto: 'Dormir' }
+    ],
     respuestaTipo: 'Likert 0-4 (0=Problemas extremos, 1=Bastantes problemas, 2=Algunos problemas, 3=Bien, 4=Muy bien)',
     scoring: {
       rango: [0, 80] as const,
@@ -603,7 +644,28 @@ const questionnairesMeta = {
     poblacion: 'Adolescentes 12–18 años (autorreporte)',
     tiempoMin: 7,
     destinatario: 'paciente',
-    items: [],
+    items: [
+      { id: 1, texto: 'Discutir con otros' },
+      { id: 2, texto: 'Meterme en peleas' },
+      { id: 3, texto: 'Tener problemas con la policía' },
+      { id: 4, texto: 'Mentir o hacer trampa' },
+      { id: 5, texto: 'Robar' },
+      { id: 6, texto: 'Tener rabietas' },
+      { id: 7, texto: 'Desobedecer en casa' },
+      { id: 8, texto: 'Desobedecer en la escuela' },
+      { id: 9, texto: 'Estar triste o deprimido/a' },
+      { id: 10, texto: 'Estar nervioso/a, tenso/a o preocupado/a' },
+      { id: 11, texto: 'Tener miedos o fobias' },
+      { id: 12, texto: 'Sentirme solo/a o no querido/a' },
+      { id: 13, texto: 'Sentirme confundido/a o en un mundo de fantasía' },
+      { id: 14, texto: 'Tener problemas de atención o concentración' },
+      { id: 15, texto: 'Actuar demasiado joven para mi edad' },
+      { id: 16, texto: 'Culpar a otros por mis problemas' },
+      { id: 17, texto: 'Faltar o llegar tarde a la escuela' },
+      { id: 18, texto: 'Hacer las cosas lentamente' },
+      { id: 19, texto: 'Tener problemas con el uso de drogas o alcohol' },
+      { id: 20, texto: 'Tener problemas para dormir' }
+    ],
     respuestaTipo: 'Likert 0-5 (0=Nada en absoluto, 1=Una o dos veces, 2=Varias veces, 3=A menudo, 4=La mayor parte del tiempo, 5=Todo el tiempo)',
     scoring: {
       rango: [0, 100] as const,
@@ -663,7 +725,28 @@ const questionnairesMeta = {
     poblacion: 'Adolescentes 12–18 años (autorreporte)',
     tiempoMin: 7,
     destinatario: 'paciente',
-    items: [],
+    items: [
+      { id: 1, texto: 'Llevarme bien con mis padres' },
+      { id: 2, texto: 'Llevarme bien con otros adultos' },
+      { id: 3, texto: 'Llevarme bien con mis hermanos/as' },
+      { id: 4, texto: 'Llevarme bien con otros jóvenes de mi edad' },
+      { id: 5, texto: 'Participar en actividades familiares' },
+      { id: 6, texto: 'Hacer amigos' },
+      { id: 7, texto: 'Disfrutar de actividades recreativas' },
+      { id: 8, texto: 'Lidiar con el estrés' },
+      { id: 9, texto: 'Lidiar con problemas y frustraciones' },
+      { id: 10, texto: 'Lidiar con cosas que me dan miedo o me ponen nervioso/a' },
+      { id: 11, texto: 'Mostrar interés en cosas' },
+      { id: 12, texto: 'Completar tareas o proyectos' },
+      { id: 13, texto: 'Completar tareas escolares' },
+      { id: 14, texto: 'Asistir a la escuela' },
+      { id: 15, texto: 'Aprender en la escuela' },
+      { id: 16, texto: 'Pensar claramente y tomar buenas decisiones' },
+      { id: 17, texto: 'Controlar mi comportamiento' },
+      { id: 18, texto: 'Controlar mis emociones' },
+      { id: 19, texto: 'Cuidar de mí mismo/a (higiene, vestirme, etc.)' },
+      { id: 20, texto: 'Dormir' }
+    ],
     respuestaTipo: 'Likert 0-4 (0=Problemas extremos, 1=Bastantes problemas, 2=Algunos problemas, 3=Bien, 4=Muy bien)',
     scoring: {
       rango: [0, 80] as const,
@@ -705,6 +788,28 @@ const questionnairesMeta = {
       complementar: 'OYS Problemas, evaluación parental',
       advertencia: '⚠️ Cambio fiable: 8 puntos. Corte clínico: 60 puntos'
     }
+  },
+
+  'OYS-PADRES-40': {
+    code: 'OYS-PADRES-40',
+    title: 'Ohio Youth Scales - Padres/Tutores',
+    shortTitle: 'OYS-40 (P)',
+    chartType: 'line' as const,
+    thresholds: {
+      warning: 60,
+      danger: 80
+    }
+  },
+
+  'OYS-JOVENES-40': {
+    code: 'OYS-JOVENES-40', 
+    title: 'Ohio Youth Scales - Jóvenes',
+    shortTitle: 'OYS-40 (J)',
+    chartType: 'line' as const,
+    thresholds: {
+      warning: 60,
+      danger: 80
+    }
   }
 } as const;
 
@@ -712,8 +817,10 @@ export type QuestionnaireCode = keyof typeof questionnairesMeta;
 export type ChartType = 'line' | 'bar' | 'scatter' | 'bar-multidim' | 'line-multi';
 
 export interface QuestionnaireMetadata {
+  code: string;
   title: string;
-  chartType: ChartType;
+  shortTitle: string;
+  chartType: 'line' | 'bar' | 'radar';
   thresholds: {
     warning?: number;
     danger?: number;

@@ -24,8 +24,8 @@ export async function GET() {
     codigo: q.codigo,
     nombre: q.titulo,
     dominio:
-      questionnairesMeta[q.codigo as keyof typeof questionnairesMeta]?.dominio ||
-      'Otro'
+      (questionnairesMeta as Record<string, { dominio?: string }>)[q.codigo]
+        ?.dominio ?? 'Otro'
   }));
 
   return NextResponse.json(response);

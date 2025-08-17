@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
   // 4) Obtener el cuestionario (WHO-5 por defecto)
   let cuestionarioId = parsed.data.cuestionarioId;
   let nombreCuestionario: string | undefined;
+  let destinatarioOverride: "paciente" | "padre_tutor" | null = null;
 
   if (!cuestionarioId) {
     // Si no viene ID, buscar WHO-5 por defecto y obtener su nombre
@@ -67,7 +68,7 @@ export async function POST(req: NextRequest) {
     // Si viene ID, buscar ese cuestionario específico para obtener su nombre y código
     const { data: cuestionarioEspecifico, error: cuestionarioEspecificoError } = await supabaseAdmin
       .from("cuestionarios")
-      .select("titulo, codigo") // Necesitamos nombre y código
+      .select("id, titulo, codigo") // Necesitamos nombre y código
       .eq("id", cuestionarioId)
       .single();
     
@@ -76,6 +77,29 @@ export async function POST(req: NextRequest) {
     } else {
       nombreCuestionario = cuestionarioEspecifico.titulo; // Guardar nombre
       console.log(`Cuestionario específico encontrado: ID=${cuestionarioId}, Nombre=${nombreCuestionario}, Código=${cuestionarioEspecifico.codigo}`);
+
+      // Autopromover OYS SF20 a forma consolidada 40 si aplica
+      const code = (cuestionarioEspecifico.codigo || '').toUpperCase();
+      const isOysShortForm = code.startsWith('OYS-') && code.endsWith('SF20');
+      if (isOysShortForm) {
+        const consolidatedCode = code.includes('-P-') ? 'OYS-PADRES-40' : code.includes('-Y-') ? 'OYS-JOVENES-40' : null;
+        if (consolidatedCode) {
+          const { data: consolidated, error: consolidatedError } = await supabaseAdmin
+            .from('cuestionarios')
+            .select('id, titulo, codigo, destinatario')
+            .eq('codigo', consolidatedCode)
+            .single();
+          if (!consolidatedError && consolidated?.id) {
+            console.log(`Autopromoviendo ${code} -> ${consolidatedCode} (ID=${consolidated.id})`);
+            cuestionarioId = consolidated.id;
+            nombreCuestionario = consolidated.titulo || nombreCuestionario;
+            // Si no se especificó destinatario explícito, inferir según consolidado
+            destinatarioOverride = (consolidated.destinatario as any) || (consolidatedCode.includes('PADRES') ? 'padre_tutor' : 'paciente');
+          } else {
+            console.warn(`No se encontró consolidado ${consolidatedCode}, enviando SF20 original`);
+          }
+        }
+      }
     }
   }
 
@@ -85,6 +109,9 @@ export async function POST(req: NextRequest) {
   
   // Determinar si debe enviarse a padre/tutor basado en el cuestionario o parámetro explícito
   let destinatario = parsed.data.destinatario || "paciente";
+  if (destinatarioOverride) {
+    destinatario = destinatarioOverride;
+  }
   
   // Auto-detectar si es cuestionario para padres basado en el código del cuestionario
   if (cuestionarioId) {
@@ -94,8 +121,14 @@ export async function POST(req: NextRequest) {
       .eq("id", cuestionarioId)
       .single();
     
-    if (cuestionarioInfo?.codigo === 'CUESTIONARIO-PADRES') {
-      destinatario = "padre_tutor";
+    const codigoUpper = (cuestionarioInfo?.codigo || '').toUpperCase();
+    if (!parsed.data.destinatario) {
+      // Autodetección más amplia
+      if (codigoUpper === 'CUESTIONARIO-PADRES' || codigoUpper.includes('OYS-PADRES')) {
+        destinatario = 'padre_tutor';
+      } else if (codigoUpper.includes('OYS-JOVENES')) {
+        destinatario = 'paciente';
+      }
     }
   }
 

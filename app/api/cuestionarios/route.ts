@@ -48,16 +48,25 @@ export async function GET() {
     error = result.error;
   }
 
-  const inferDestinatario = (codigo: string | null | undefined, titulo?: string | null) => {
-    const c = (codigo || '').toUpperCase();
-    const t = (titulo || '').toUpperCase();
-    if (
-      c.includes('-P-') || c.endsWith('-P') || c.startsWith('P-') ||
-      c.includes('PADRE') || c.includes('PADRES') || c.includes('TUTOR') ||
-      t.includes('PADRE') || t.includes('PADRES') || t.includes('TUTOR')
-    ) {
+  // Inferir destinatario basado en el código o título del cuestionario
+  const inferirDestinatario = (codigo: string, titulo: string) => {
+    const codigoUpper = codigo.toUpperCase();
+    const tituloLower = titulo.toLowerCase();
+    
+    // Casos específicos por código
+    if (codigoUpper === 'CUESTIONARIO-PADRES') return 'padre_tutor';
+    
+    // Ohio Youth Scales - Patrones específicos
+    if (codigoUpper.includes('OYS-') && codigoUpper.includes('-P-')) return 'padre_tutor';
+    if (codigoUpper.includes('OYS-PADRES')) return 'padre_tutor';
+    if (codigoUpper.includes('OYS-') && codigoUpper.includes('-Y-')) return 'paciente';
+    if (codigoUpper.includes('OYS-JOVENES')) return 'paciente';
+    
+    // Casos por patrones en título
+    if (tituloLower.includes('padre') || tituloLower.includes('tutor')) {
       return 'padre_tutor';
     }
+    
     return 'paciente';
   };
 
@@ -66,7 +75,7 @@ export async function GET() {
     id: item.id,
     codigo: item.codigo || '',
     nombre: item.titulo || item.nombre || item.name || 'Cuestionario sin nombre',
-    destinatario: item.destinatario || inferDestinatario(item.codigo, item.titulo)
+    destinatario: item.destinatario || (item.codigo && item.titulo ? inferirDestinatario(item.codigo, item.titulo) : 'paciente')
   })) || [];
 
   if (error) {
@@ -77,5 +86,9 @@ export async function GET() {
   // Aplicar ordenamiento específico
   const sortedData = applySortingToApiResponse(transformedData);
 
-  return NextResponse.json(sortedData);
+  const resp = NextResponse.json(sortedData);
+  resp.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  resp.headers.set('Pragma', 'no-cache');
+  resp.headers.set('Expires', '0');
+  return resp;
 }

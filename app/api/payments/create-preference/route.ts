@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
       items: [
         {
           id: purchaseData.id,
-          title: purchase_type === 'direct' ? purchaseData.title : `Plan ${purchaseData.name} - ${purchaseData.credits} créditos`,
+          title: purchase_type === 'direct' ? (purchaseData as any).title : `Plan ${(purchaseData as any).name} - ${purchaseData.credits} créditos`,
           description: purchaseData.description,
           quantity: 1,
           currency_id: MP_CONFIG.CURRENCY,
@@ -112,6 +112,7 @@ export async function POST(request: NextRequest) {
         }
       ],
       external_reference: externalReference,
+      auto_return: 'approved',
       back_urls: {
         success: urls.success,
         failure: urls.failure,
@@ -125,10 +126,10 @@ export async function POST(request: NextRequest) {
       metadata: {
         user_id: userId,
         purchase_type: purchase_type || 'plan',
-        plan_id: selectedPlan?.id || null,
+        plan_id: selectedPlan?.id || '',
         credits: purchaseData.credits,
         amount_usd: purchase_type === 'direct' ? amount_usd : null
-      }
+      } as any
     };
 
     // Llamar a la API de Mercado Pago

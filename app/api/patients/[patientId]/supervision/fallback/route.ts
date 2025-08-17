@@ -12,7 +12,7 @@ import { authOptions } from '@/app/lib/auth';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { patientId: string } }
+  context: { params: Promise<{ patientId: string }> }
 ) {
   try {
     // Verificar autenticación
@@ -21,7 +21,7 @@ export async function POST(
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const { patientId } = params;
+    const { patientId } = await context.params;
     const body = await request.json();
     const { message, conversationHistory } = body;
 

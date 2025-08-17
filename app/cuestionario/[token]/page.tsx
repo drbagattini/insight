@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Pagination } from '@/components/ui/pagination';
 import { scores } from "@/src/scoring";
-import { useRouter, useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 type Pregunta = {
   id: number;
@@ -30,43 +30,46 @@ type LinkInfo = {
 
 const getQuestionnaireIntroText = (codigo: string) => {
   switch (codigo) {
-    case 'OYS-PS-P-SF20':
-      return 'Por favor, indique con qué frecuencia su hijo/a ha mostrado cada uno de los siguientes comportamientos durante los últimos 30 días.';
-    case 'OYS-F-P-SF20':
-      return 'Por favor, indique qué tan bien su hijo/a ha funcionado en cada una de las siguientes áreas durante los últimos 30 días.';
-    case 'OYS-PS-Y-SF20':
-      return 'Por favor, indique con qué frecuencia has mostrado cada uno de los siguientes comportamientos durante los últimos 30 días.';
-    case 'OYS-F-Y-SF20':
-      return 'Por favor, indique qué tan bien has funcionado en cada una de las siguientes áreas durante los últimos 30 días.';
     case 'WHO-5':
-      return 'Por favor, responda a cada pregunta en relación a cómo se sintió en las últimas dos semanas.';
+      return 'Por favor, indica con qué frecuencia has tenido cada uno de estos sentimientos durante las últimas dos semanas.';
     case 'PHQ-9':
-      return 'Durante las últimas 2 semanas, ¿con qué frecuencia le han molestado los siguientes problemas?';
+      return 'Durante las últimas 2 semanas, ¿con qué frecuencia te han molestado los siguientes problemas?';
     case 'GAD-7':
-      return 'Durante las últimas 2 semanas, ¿con qué frecuencia le han molestado los siguientes problemas?';
+      return 'Durante las últimas 2 semanas, ¿con qué frecuencia te han molestado los siguientes problemas?';
     case 'BR-WAI':
-      return 'Por favor, califique cada una de las siguientes afirmaciones según su experiencia en la terapia hasta ahora.';
+      return 'Las siguientes oraciones describen algunas de las diferentes maneras en que una persona puede pensar o sentirse acerca de su terapeuta. Considera cada declaración cuidadosamente e indica qué tan cierta es para ti.';
     case 'OPD-CA2-SQ':
-      return 'Por favor, responda las siguientes preguntas sobre cómo se siente y actúa en diferentes situaciones.';
+      return 'Las siguientes afirmaciones describen diferentes aspectos de tu personalidad y forma de ser. Lee cada afirmación y marca qué tan cierta es para ti.';
+    
+    // Ohio Youth Scales - Instrucciones específicas por tipo y destinatario
+    case 'OYS-PS-P-SF20':
+      return 'Las siguientes preguntas se refieren a problemas que su hijo/a puede haber tenido durante los últimos 30 días. Por favor, indique con qué frecuencia ocurrió cada situación.';
+    case 'OYS-F-P-SF20':
+      return 'Las siguientes preguntas se refieren al funcionamiento de su hijo/a durante los últimos 30 días. Por favor, indique qué tan bien se desempeñó en cada área.';
+    case 'OYS-PS-Y-SF20':
+      return 'Las siguientes preguntas se refieren a problemas que puedes haber tenido durante los últimos 30 días. Por favor, indica con qué frecuencia ocurrió cada situación.';
+    case 'OYS-F-Y-SF20':
+      return 'Las siguientes preguntas se refieren a tu funcionamiento durante los últimos 30 días. Por favor, indica qué tan bien te desempeñaste en cada área.';
+    case 'OYS-PADRES-40':
+      return 'SECCIÓN A (Preguntas 1-20): Por favor, indique con qué frecuencia su hijo/a ha experimentado los siguientes problemas en los últimos 30 días. SECCIÓN B (Preguntas 21-40): Por favor, indique qué tan bien le ha ido a su hijo/a en las siguientes áreas en los últimos 30 días.';
+    case 'OYS-JOVENES-40':
+      return 'SECCIÓN A (Preguntas 1-20): Por favor, indica con qué frecuencia has experimentado los siguientes problemas en los últimos 30 días. SECCIÓN B (Preguntas 21-40): Por favor, indica qué tan bien te ha ido en las siguientes áreas en los últimos 30 días.';
+    
     default:
-      return 'Por favor, responda las siguientes preguntas de manera honesta y reflexiva.';
+      if (codigo.includes('OYS')) {
+        // Fallback para otros códigos OYS
+        if (codigo.includes('-P-') || codigo.includes('PADRES')) {
+          return 'Las siguientes preguntas se refieren a su hijo/a durante los últimos 30 días. Por favor, responda basándose en su observación.';
+        } else if (codigo.includes('-Y-') || codigo.includes('JOVENES')) {
+          return 'Las siguientes preguntas se refieren a ti durante los últimos 30 días. Por favor, responde con sinceridad sobre tu experiencia.';
+        }
+        return 'Las siguientes preguntas se refieren a problemas y funcionamiento durante los últimos 30 días. Por favor, responde con sinceridad.';
+      }
+      return 'Por favor, responde las siguientes preguntas con sinceridad.';
   }
 };
 
-export default function CuestionarioPage({ params }: { params: { token: string } }) {
-  const { token } = params;
-  const router = useRouter();
-  
-  const [linkInfo, setLinkInfo] = useState<LinkInfo | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [respuestas, setRespuestas] = useState<Record<string, number>>({});
-  const [enviando, setEnviando] = useState(false);
-  const [completado, setCompletado] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
-
-  const getColorForValue = (value: number, questionnaireCode: string, maxValue: number) => {
+const getColorForValue = (value: number, questionnaireCode: string, maxValue: number) => {
   // Para cuestionarios clínicos (PHQ-9, GAD-7): mayor valor = mayor severidad = más rojo
   const isClinicalScale = ['PHQ-9', 'GAD-7'].includes(questionnaireCode);
   
@@ -93,12 +96,20 @@ export default function CuestionarioPage({ params }: { params: { token: string }
   }
 };
 
-
-
 export default function CuestionarioPage() {
+  // Next.js 15: en Client Components preferimos usar useParams en vez de recibir params como prop
+  const routeParams = useParams<{ token: string }>();
+  const token = (routeParams?.token as string) || '';
   const router = useRouter();
-  const params = useParams<{ token: string }>();
-  const token = params?.token;
+  
+  const [linkInfo, setLinkInfo] = useState<LinkInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [respuestas, setRespuestas] = useState<Record<string, number>>({});
+  const [enviando, setEnviando] = useState(false);
+  const [completado, setCompletado] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = linkInfo?.cuestionario?.codigo?.includes('OYS-') && linkInfo.cuestionario.items.length === 40 ? 10 : 5;
 
   // Agregar efecto para sobrescribir el overflow del body
   useEffect(() => {
@@ -123,25 +134,14 @@ export default function CuestionarioPage() {
     };
   }, []);
 
-  if (!token) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-red-500">Token no proporcionado</p>
-      </div>
-    );
-  }
-
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [linkInfo, setLinkInfo] = useState<LinkInfo | null>(null);
-  const [respuestas, setRespuestas] = useState<{ [key: string | number]: number }>({});
-  
   // Función para verificar si el cuestionario está completo
   const isQuestionnaireComplete = () => {
     if (!linkInfo) return false;
-    const totalQuestions = linkInfo.cuestionario.items.length;
-    const answeredQuestions = Object.keys(respuestas).length;
-    return answeredQuestions === totalQuestions;
+    // Verificar que cada ítem tenga una respuesta usando la misma clave única utilizada al renderizar
+    return linkInfo.cuestionario.items.every((item, idx) => {
+      const uniqueKey = `item-${idx}-${(item as any).id || (item as any).orden || 'no-id'}`;
+      return respuestas[uniqueKey] !== undefined && respuestas[uniqueKey] !== null;
+    });
   };
   
   // Función para obtener el progreso
@@ -152,19 +152,13 @@ export default function CuestionarioPage() {
     const percentage = total > 0 ? Math.round((answered / total) * 100) : 0;
     return { answered, total, percentage };
   };
-  
-  // Estado para paginación
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const itemsPerPage = 10;
 
   const handleRespuesta = (preguntaId: string, valor: number) => {
     setRespuestas(prev => ({
       ...prev,
       [preguntaId]: valor
     }));
-  }; // 8 preguntas por página para tener aproximadamente 10 páginas
-  const [enviando, setEnviando] = useState(false);
-  const [completado, setCompletado] = useState(false);
+  };
 
   // Labels dinámicos basados en el tipo de cuestionario
   const getScaleLabels = (codigo: string) => {
@@ -207,7 +201,7 @@ export default function CuestionarioPage() {
         "Más de la mitad de los días",
         "Casi todos los días"
       ];
-    } else if (codigo === 'OYS-PS-P-SF20' || codigo === 'OYS-PS-Y-SF20') {
+    } else if (codigo.includes('OYS-PS')) {
       return [
         "Nada en absoluto",
         "Una o dos veces",
@@ -216,12 +210,12 @@ export default function CuestionarioPage() {
         "La mayor parte del tiempo",
         "Todo el tiempo"
       ];
-    } else if (codigo === 'OYS-F-P-SF20' || codigo === 'OYS-F-Y-SF20') {
+    } else if (codigo.includes('OYS-F')) {
       return [
         "Problemas extremos",
         "Bastantes problemas",
-        "Algunos problemas",
-        "Bien",
+        "Algunas dificultades",
+        "OK",
         "Muy bien"
       ];
     }
@@ -233,8 +227,8 @@ export default function CuestionarioPage() {
     if (codigo === 'BR-WAI') return 5;
     if (codigo === 'PHQ-9') return 3;
     if (codigo === 'GAD-7') return 3;
-    if (codigo === 'OYS-PS-P-SF20' || codigo === 'OYS-PS-Y-SF20') return 5;
-    if (codigo === 'OYS-F-P-SF20' || codigo === 'OYS-F-Y-SF20') return 4;
+    if (codigo.includes('OYS-PS')) return 5;
+    if (codigo.includes('OYS-F')) return 4;
     return 4; // OPD-CA2-SQ y otros
   };
   
@@ -249,17 +243,22 @@ export default function CuestionarioPage() {
       return { min: 'Nunca', max: 'Casi todos los días' };
     } else if (codigo === 'GAD-7') {
       return { min: 'Nunca', max: 'Casi todos los días' };
-    } else if (codigo === 'OYS-PS-P-SF20' || codigo === 'OYS-PS-Y-SF20') {
+    } else if (codigo.includes('OYS-PS')) {
       return { min: 'Nada en absoluto', max: 'Todo el tiempo' };
-    } else if (codigo === 'OYS-F-P-SF20' || codigo === 'OYS-F-Y-SF20') {
+    } else if (codigo.includes('OYS-F')) {
       return { min: 'Problemas extremos', max: 'Muy bien' };
     }
     return { min: '', max: '' };
   };
   
-  const scaleLabels = linkInfo ? getScaleLabels(linkInfo.cuestionario.id) : [];
-  const maxScale = linkInfo ? getMaxScale(linkInfo.cuestionario.id) : 5;
-  const scaleEndLabels = linkInfo ? getScaleEndLabels(linkInfo.cuestionario.id) : { min: '', max: '' };
+  const scaleLabels = linkInfo ? getScaleLabels(linkInfo.cuestionario.codigo || '') : [];
+  const maxScale = linkInfo ? getMaxScale(linkInfo.cuestionario.codigo || '') : 5;
+  const scaleEndLabels = linkInfo ? getScaleEndLabels(linkInfo.cuestionario.codigo || '') : { min: '', max: '' };
+
+  // Determinar sección actual (A: severidad, B: funcionamiento) según el primer ítem visible
+  const firstItemIndex = Math.max(0, (currentPage - 1) * itemsPerPage);
+  const firstItem = linkInfo?.cuestionario.items?.[firstItemIndex] as any;
+  const isFuncionamiento = !!firstItem && (firstItem.seccion === 'funcionamiento' || (firstItem.orden ?? 0) >= 21);
 
   // Estado para feedback visual
   // Verifica si todas las preguntas fueron respondidas (no null ni undefined)
@@ -525,7 +524,7 @@ export default function CuestionarioPage() {
             <div className="text-center">
               <h1 className="text-4xl font-bold text-gray-900 mb-2">{linkInfo.cuestionario.titulo}</h1>
               <div className="w-24 h-1 bg-gradient-to-r from-blue-500 to-indigo-600 mx-auto mb-4 rounded-full"></div>
-              <p className="font-semibold text-xl text-blue-700 mb-4">{linkInfo.pacienteNombre}</p>
+              <p className="font-semibold text-xl text-blue-700 mb-4">{linkInfo.pacienteNombre || 'Paciente'}</p>
               
               {/* Indicador de Progreso */}
               <div className="mb-4">
@@ -547,7 +546,21 @@ export default function CuestionarioPage() {
               
               <div className="bg-blue-50 p-3 rounded-lg border-l-4 border-blue-500">
                 <p className="text-gray-700 text-base leading-relaxed">
-                  {getQuestionnaireIntroText(linkInfo.cuestionario.codigo)}
+                  {(
+                    linkInfo.cuestionario.codigo === 'OYS-PADRES-40' || linkInfo.cuestionario.codigo === 'OYS-JOVENES-40'
+                  ) ? (
+                    isFuncionamiento ? (
+                      linkInfo.cuestionario.codigo === 'OYS-PADRES-40'
+                        ? 'Por favor, indique qué tan bien le ha ido a su hijo/a en las siguientes áreas en los últimos 30 días.'
+                        : 'Por favor, indica qué tan bien te ha ido en las siguientes áreas en los últimos 30 días.'
+                    ) : (
+                      linkInfo.cuestionario.codigo === 'OYS-PADRES-40'
+                        ? 'Por favor, indique con qué frecuencia su hijo/a ha experimentado los siguientes problemas en los últimos 30 días.'
+                        : 'Por favor, indica con qué frecuencia has experimentado los siguientes problemas en los últimos 30 días.'
+                    )
+                  ) : (
+                    getQuestionnaireIntroText(linkInfo.cuestionario.codigo || '')
+                  )}
                 </p>
               </div>
             </div>
@@ -565,14 +578,18 @@ export default function CuestionarioPage() {
             </div>
           </div>
 
+
           <div className="space-y-4">
           {linkInfo.cuestionario.items
             .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
             .map((pregunta, index) => {
               const globalIndex = (currentPage - 1) * itemsPerPage + index;
-              const uniqueKey = String(pregunta.orden || pregunta.id || `item-${globalIndex}`);
+              const uniqueKey = `item-${globalIndex}-${pregunta.id || pregunta.orden || 'no-id'}`;
               const valor = respuestas[uniqueKey];
-              const opciones = pregunta.opciones_respuesta || [];
+              // Fallback: si no hay opciones_respuesta, generar a partir de scaleLabels
+              const opciones = (pregunta.opciones_respuesta && pregunta.opciones_respuesta.length > 0)
+                ? pregunta.opciones_respuesta
+                : scaleLabels.map((texto, idx) => ({ valor: idx, texto }));
               
               // Determinar rango dinámicamente según el cuestionario
               const minValue = opciones.length > 0 ? opciones[0].valor : 0;
@@ -583,7 +600,7 @@ export default function CuestionarioPage() {
 
               return (
                 <div key={uniqueKey} className="bg-white p-4 rounded-xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300">
-                  <p className="font-semibold text-gray-900 mb-4 text-lg leading-relaxed text-center">{pregunta.texto}</p>
+                  <p className="font-semibold text-gray-900 mb-4 text-lg leading-relaxed text-center">{`${pregunta.orden ?? (globalIndex + 1)}. ${pregunta.texto}`}</p>
                   <div className="relative pt-2">
                     {/* Botones Horizontales */}
                     <div className="flex gap-2 justify-center">
@@ -614,7 +631,7 @@ export default function CuestionarioPage() {
                               border: isSelected ? 'none' : '2px solid #e5e7eb'
                             }}
                           >
-                            {opt.valor}
+                            {opt.texto}
                           </button>
                         );
                       })}

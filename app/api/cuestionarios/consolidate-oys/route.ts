@@ -26,29 +26,37 @@ export async function POST() {
 
     // Combinar ítems para padres (Severidad + Funcionamiento)
     const parentsItems = [
-      ...(psParents?.items || []).map((item: any) => ({
+      ...(psParents?.items || []).map((item: any, index: number) => ({
         ...item,
+        id: index + 1,
+        orden: index + 1,
         seccion: 'severidad_problemas',
-        orden_global: item.id
+        orden_global: index + 1
       })),
-      ...(fParents?.items || []).map((item: any) => ({
+      ...(fParents?.items || []).map((item: any, index: number) => ({
         ...item,
+        id: index + 21,
+        orden: index + 21,
         seccion: 'funcionamiento',
-        orden_global: item.id + 20
+        orden_global: index + 21
       }))
     ];
 
     // Combinar ítems para jóvenes (Severidad + Funcionamiento)
     const youthItems = [
-      ...(psYouth?.items || []).map((item: any) => ({
+      ...(psYouth?.items || []).map((item: any, index: number) => ({
         ...item,
+        id: index + 1,
+        orden: index + 1,
         seccion: 'severidad_problemas',
-        orden_global: item.id
+        orden_global: index + 1
       })),
-      ...(fYouth?.items || []).map((item: any) => ({
+      ...(fYouth?.items || []).map((item: any, index: number) => ({
         ...item,
+        id: index + 21,
+        orden: index + 21,
         seccion: 'funcionamiento',
-        orden_global: item.id + 20
+        orden_global: index + 21
       }))
     ];
 

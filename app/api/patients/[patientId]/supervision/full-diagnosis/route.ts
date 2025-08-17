@@ -17,7 +17,7 @@ import { authOptions } from '@/app/lib/auth';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { patientId: string } }
+  { params }: { params: Promise<{ patientId: string }> }
 ) {
   const startTime = Date.now();
   console.log('[FULL DIAGNOSIS] 🔍 Iniciando diagnóstico completo...');
@@ -33,7 +33,7 @@ export async function GET(
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const { patientId } = params;
+    const { patientId } = await params;
 
     // 2. VERIFICAR CONFIGURACIÓN DE GEMINI
     console.log('[FULL DIAGNOSIS] 2️⃣ Verificando configuración de Gemini...');
@@ -151,20 +151,25 @@ Eres un Supervisor Clínico Colaborativo. Tu persona es la de un psicólogo seni
           })
         });
 
-        geminiConnectivity = {
-          canConnect: testResponse.ok,
-          status: testResponse.status,
-          statusText: testResponse.statusText,
-          responseTime: Date.now() - connectivityStart
-        };
-
         if (testResponse.ok) {
           const testData = await testResponse.json();
-          geminiConnectivity.hasValidResponse = !!(testData.candidates && testData.candidates.length > 0);
-          geminiConnectivity.testResponse = testData.candidates?.[0]?.content?.parts?.[0]?.text || 'No text';
+          geminiConnectivity = {
+            canConnect: true,
+            status: testResponse.status,
+            statusText: testResponse.statusText,
+            responseTime: Date.now() - connectivityStart,
+            hasValidResponse: !!(testData.candidates && testData.candidates.length > 0),
+            testResponse: testData.candidates?.[0]?.content?.parts?.[0]?.text || 'No text'
+          };
         } else {
           const errorText = await testResponse.text();
-          geminiConnectivity.error = errorText;
+          geminiConnectivity = {
+            canConnect: false,
+            status: testResponse.status,
+            statusText: testResponse.statusText,
+            responseTime: Date.now() - connectivityStart,
+            error: errorText
+          };
         }
 
       } catch (error) {
@@ -213,7 +218,7 @@ Eres un Supervisor Clínico Colaborativo. Tu persona es la de un psicólogo seni
       });
     }
 
-    if (promptAnalysis?.fullPromptLength > 40000) {
+    if (promptAnalysis?.fullPromptLength && promptAnalysis.fullPromptLength > 40000) {
       bottlenecks.push({
         type: 'PROMPT_TOO_LARGE',
         severity: 'HIGH',
@@ -242,7 +247,7 @@ Eres un Supervisor Clínico Colaborativo. Tu persona es la de un psicólogo seni
       });
     }
 
-    if (geminiConnectivity && geminiConnectivity.responseTime > 5000) {
+    if (geminiConnectivity && geminiConnectivity.responseTime && geminiConnectivity.responseTime > 5000) {
       bottlenecks.push({
         type: 'GEMINI_SLOW_RESPONSE',
         severity: 'HIGH',
@@ -306,11 +311,11 @@ Eres un Supervisor Clínico Colaborativo. Tu persona es la de un psicólogo seni
           "🔧 PRIORIDAD: Optimizar carga de datos del paciente" :
           "✅ Carga de datos dentro de tiempos normales",
           
-        promptAnalysis?.fullPromptLength > 35000 ?
+        (promptAnalysis?.fullPromptLength && promptAnalysis.fullPromptLength > 35000) ?
           "🔧 Considerar reducir datos incluidos en el prompt" :
           "✅ Tamaño de prompt aceptable",
           
-        geminiConnectivity?.responseTime > 3000 ?
+        (geminiConnectivity?.responseTime && geminiConnectivity.responseTime > 3000) ?
           "🔧 Gemini API lento - puede ser problema temporal de Google" :
           "✅ Gemini API respondiendo en tiempos normales",
           

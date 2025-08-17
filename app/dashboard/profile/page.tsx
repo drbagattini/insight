@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { UserCircleIcon, ArrowUpTrayIcon } from '@heroicons/react/24/solid';
-import ConnectCalendarButton from '@/app/components/auth/ConnectCalendarButton';
+import ConnectCalendarButton from '@/components/auth/ConnectCalendarButton';
 import { useState, useRef, useEffect } from 'react';
 
 export default function ProfilePage() {

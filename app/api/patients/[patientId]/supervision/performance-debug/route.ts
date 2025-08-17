@@ -14,7 +14,7 @@ import { authOptions } from '@/app/lib/auth';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { patientId: string } }
+  { params }: { params: Promise<{ patientId: string }> }
 ) {
   try {
     // Verificar autenticación
@@ -23,7 +23,7 @@ export async function GET(
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const { patientId } = params;
+    const { patientId } = await params;
     console.log('[PERFORMANCE DEBUG] Iniciando análisis para patientId:', patientId);
 
     const startTime = Date.now();

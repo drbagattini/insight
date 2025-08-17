@@ -18,10 +18,10 @@ const supabaseAdmin = createClient(
 // GET - Obtener todas las entradas de evolución de un paciente
 export async function GET(
   request: NextRequest,
-  context: { params: { patientId: string } }
+  context: { params: Promise<{ patientId: string }> }
 ) {
   try {
-    const { patientId } = context.params;
+    const { patientId } = await context.params;
 
     // Verificar autenticación con NextAuth
     const session = await getServerSession(authOptions);
@@ -129,10 +129,10 @@ export async function GET(
 // POST - Crear nueva entrada de evolución
 export async function POST(
   request: NextRequest,
-  context: { params: { patientId: string } }
+  context: { params: Promise<{ patientId: string }> }
 ) {
   try {
-    const { patientId } = context.params;
+    const { patientId } = await context.params;
     const body = await request.json();
 
 

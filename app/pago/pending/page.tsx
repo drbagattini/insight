@@ -9,8 +9,8 @@ export default function PaymentPendingPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const paymentId = searchParams.get('payment_id');
-  const status = searchParams.get('status');
+  const paymentId = searchParams?.get('payment_id') ?? null;
+  const status = searchParams?.get('status') ?? null;
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">

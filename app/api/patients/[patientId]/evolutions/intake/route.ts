@@ -23,11 +23,12 @@ async function getAuthenticatedUser() {
  */
 import type { NextRequest } from 'next/server';
 
-export async function GET(request: NextRequest) {
-  const segments = request.nextUrl.pathname.split("/");
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ patientId: string }> }
+) {
   logApiIntake('%s %s', request.method, request.nextUrl.pathname);
-  // Expected path: /api/patients/{pid}/evolutions/intake
-  const patientId = segments[3];
+  const { patientId } = await params;
   const user = await getAuthenticatedUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -79,10 +80,12 @@ export async function GET(request: NextRequest) {
  *     Creates a new draft evolution OR returns existing draft.
  * Body: { data: { ...26 fields... } }
  */
-export async function POST(request: NextRequest) {
-  const segments = request.nextUrl.pathname.split("/");
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ patientId: string }> }
+) {
   logApiIntake('%s %s', request.method, request.nextUrl.pathname);
-  const patientId = segments[3];
+  const { patientId } = await params;
 
   const user = await getAuthenticatedUser();
   if (!user) {
@@ -200,10 +203,12 @@ export async function POST(request: NextRequest) {
  *     Updates the existing draft OR publishes it as final.
  * Body: { data?: {...}, publish?: boolean }
  */
-export async function PATCH(request: NextRequest) {
-  const segments = request.nextUrl.pathname.split("/");
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ patientId: string }> }
+) {
   logApiIntake('%s %s', request.method, request.nextUrl.pathname);
-  const patientId = segments[3];
+  const { patientId } = await params;
   const user = await getAuthenticatedUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

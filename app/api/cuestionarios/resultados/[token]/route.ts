@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/app/lib/supabaseAdmin";
 
 export async function GET(
-  request: NextRequest
+  request: NextRequest,
+  context: { params: Promise<{ token: string }> }
 ) {
-  const token = request.nextUrl.pathname.split('/').pop();
+  const { token } = await context.params;
   if (!token) {
     return NextResponse.json({ error: "Token no proporcionado" }, { status: 400 });
   }

@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { mapMPStatusToInternal } from '@/types/payments';
 import type { MercadoPagoWebhookData, MercadoPagoPayment } from '@/types/payments';
-import { sendBalanceUpdate } from '../../credits/sse/route';
+import { sendBalanceUpdate } from '@/lib/sse-utils';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

@@ -7,12 +7,10 @@ export const QUESTIONNAIRE_ORDER = [
   'WHO-5',           // 1. Índice de Bienestar
   'PHQ-9',           // 2. Cuestionario de Salud del Paciente
   'GAD-7',           // 3. Ansiedad Generalizada
-  'OYS-PS-Y-SF20',   // 4. Ohio Youth Scales - Problemas (Joven)
-  'OYS-F-Y-SF20',    // 5. Ohio Youth Scales - Funcionamiento (Joven)
-  'OYS-PS-P-SF20',   // 6. Ohio Youth Scales - Problemas (Padre/Tutor)
-  'OYS-F-P-SF20',    // 7. Ohio Youth Scales - Funcionamiento (Padre/Tutor)
-  'OPD-CA2-SQ',      // 8. Estructura Psíquica Adolescente
-  'BR-WAI'           // 9. Alianza Terapéutica
+  'OYS-PADRES-40',   // 4. Ohio Youth Scales - Padres/Tutores (Consolidado)
+  'OYS-JOVENES-40',  // 5. Ohio Youth Scales - Jóvenes (Consolidado)
+  'OPD-CA2-SQ',      // 6. Estructura Psíquica Adolescente
+  'BR-WAI'           // 7. Alianza Terapéutica
 ];
 
 interface Questionnaire {

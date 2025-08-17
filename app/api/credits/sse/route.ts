@@ -2,9 +2,7 @@
 import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/lib/auth';
-
-// Store para conexiones SSE activas
-const connections = new Map<string, ReadableStreamDefaultController>();
+import { registerConnection, removeConnection } from '@/lib/sse-utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,7 +18,7 @@ export async function GET(request: NextRequest) {
     const stream = new ReadableStream({
       start(controller) {
         // Almacenar conexión
-        connections.set(userId, controller);
+        registerConnection(userId, controller);
 
         // Enviar evento inicial
         const data = `data: ${JSON.stringify({ 
@@ -39,14 +37,14 @@ export async function GET(request: NextRequest) {
             controller.enqueue(new TextEncoder().encode(heartbeatData));
           } catch (error) {
             clearInterval(heartbeat);
-            connections.delete(userId);
+            removeConnection(userId);
           }
         }, 30000);
 
         // Cleanup cuando se cierra la conexión
         request.signal.addEventListener('abort', () => {
           clearInterval(heartbeat);
-          connections.delete(userId);
+          removeConnection(userId);
           controller.close();
         });
       }
@@ -68,37 +66,4 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Función para enviar actualización de balance a un usuario específico
-export function sendBalanceUpdate(userId: string, balance: number, transaction?: any) {
-  const controller = connections.get(userId);
-  if (controller) {
-    try {
-      const data = `data: ${JSON.stringify({
-        type: 'balance_update',
-        balance,
-        transaction,
-        timestamp: Date.now()
-      })}\n\n`;
-      controller.enqueue(new TextEncoder().encode(data));
-    } catch (error) {
-      console.error('Error sending balance update:', error);
-      connections.delete(userId);
-    }
-  }
-}
 
-// Función para enviar actualización a todos los usuarios conectados
-export function broadcastUpdate(data: any) {
-  connections.forEach((controller, userId) => {
-    try {
-      const message = `data: ${JSON.stringify({
-        ...data,
-        timestamp: Date.now()
-      })}\n\n`;
-      controller.enqueue(new TextEncoder().encode(message));
-    } catch (error) {
-      console.error('Error broadcasting update:', error);
-      connections.delete(userId);
-    }
-  });
-}

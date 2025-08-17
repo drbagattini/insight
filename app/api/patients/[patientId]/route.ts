@@ -5,14 +5,15 @@ import { authOptions } from '@/app/lib/auth';
 import { z } from "zod";
 
 export async function GET(
-  request: NextRequest
+  request: NextRequest,
+  { params }: { params: Promise<{ patientId: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
-
-  const id = request.nextUrl.pathname.split('/').pop();
+  const { patientId } = await params;
+  const id = patientId;
   if (!id) {
     return NextResponse.json({ error: 'Patient ID no proporcionado' }, { status: 400 });
   }
@@ -36,9 +37,11 @@ export async function GET(
 }
 
 export async function DELETE(
-  request: NextRequest
+  request: NextRequest,
+  { params }: { params: Promise<{ patientId: string }> }
 ) {
-  const id = request.nextUrl.pathname.split('/').pop();
+  const { patientId } = await params;
+  const id = patientId;
   if (!id) {
     return NextResponse.json({ error: 'Patient ID no proporcionado' }, { status: 400 });
   }
@@ -64,14 +67,15 @@ const updatePatientSchema = z.object({
 });
 
 export async function PUT(
-  request: NextRequest
+  request: NextRequest,
+  { params }: { params: Promise<{ patientId: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
-
-  const id = request.nextUrl.pathname.split('/').pop();
+  const { patientId } = await params;
+  const id = patientId;
   if (!id) {
     return NextResponse.json({ error: 'Patient ID no proporcionado' }, { status: 400 });
   }

@@ -13,6 +13,7 @@ import { PatientDetails } from '@/components/patient/PatientDetails';
 import { EvolutionTab } from '@/components/patient/EvolutionTab';
 import QuestionnaireChart from '@/components/QuestionnaireChart';
 import questionnairesMeta from '@/src/data/questionnairesMeta';
+import { QUESTIONNAIRE_ORDER } from '@/lib/questionnaire-order';
 import InformesTab from '@/components/informes/InformesTab';
 import ScheduleQuestionnaireModal from '@/components/patient/ScheduleQuestionnaireModal';
 import { SupervisionChatStreaming } from '@/components/patient/SupervisionChatStreaming';
@@ -22,7 +23,7 @@ export default function PatientProfilePage() {
   const patientId = params.patientId;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedQuestionnaire, setSelectedQuestionnaire] = useState<'WHO-5' | 'OPD-CA2-SQ' | 'BR-WAI' | 'PHQ-9' | 'GAD-7'>('WHO-5');
+  const [selectedQuestionnaire, setSelectedQuestionnaire] = useState<string>('WHO-5');
   const [evolutionData, setEvolutionData] = useState<any[]>([]);
   const [patientName, setPatientName] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -609,7 +610,9 @@ export default function PatientProfilePage() {
                         leaveTo="opacity-0"
                       >
                         <Listbox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm">
-                          {(Object.keys(questionnairesMeta) as Array<'WHO-5' | 'OPD-CA2-SQ' | 'BR-WAI' | 'PHQ-9' | 'GAD-7'>).map((key) => (
+                          {QUESTIONNAIRE_ORDER
+                            .filter(code => questionnairesMeta[code as keyof typeof questionnairesMeta])
+                            .map((key) => (
                             <Listbox.Option
                               key={key}
                               className={({ active }) =>

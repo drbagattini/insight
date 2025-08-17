@@ -8,9 +8,9 @@ import { supabaseAdmin } from '@/app/lib/supabaseAdmin';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { codigo: string } }
+  { params }: { params: Promise<{ codigo: string }> }
 ) {
-  const { codigo } = params;
+  const { codigo } = await params;
 
   // Fetch questionnaire by codigo
   const { data, error, count } = await supabaseAdmin

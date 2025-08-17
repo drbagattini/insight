@@ -1,5 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+type SourceStatus = 'unknown' | 'working' | 'failing';
+type DataSource<T> = { status: SourceStatus; data: T | null; error: string | null };
+type Results = {
+  timestamp: string;
+  baseUrl: string;
+  dataSources: {
+    informesData: DataSource<{ hasPatient: boolean; hasIntake: boolean; questionnairesCount: number; hasPsychologist: boolean; hasSummary: boolean }>;
+    evolutionsHistory: DataSource<{ evolutionsCount: number; isArray: boolean; sampleEvolution: { hasContent: boolean; hasDate: boolean; hasType: boolean } | null }>;
+  };
+  summary: { totalSources: number; workingSources: number; failingSources: number };
+};
+
 export async function GET(request: NextRequest) {
   try {
     const patientId = 'test-patient-id'; // Usar un ID de prueba
@@ -8,7 +20,7 @@ export async function GET(request: NextRequest) {
     console.log('🔍 DIAGNÓSTICO DE FUENTES DE DATOS');
     console.log('=====================================');
     
-    const results = {
+    const results: Results = {
       timestamp: new Date().toISOString(),
       baseUrl,
       dataSources: {

@@ -13,9 +13,9 @@ export default function PaymentSuccessPage() {
   const [isProcessing, setIsProcessing] = useState(true);
   const { refetch: refetchCredits } = useCredits();
 
-  const paymentId = searchParams.get('payment_id');
-  const status = searchParams.get('status');
-  const externalReference = searchParams.get('external_reference');
+  const paymentId = searchParams?.get('payment_id') ?? null;
+  const status = searchParams?.get('status') ?? null;
+  const externalReference = searchParams?.get('external_reference') ?? null;
 
   useEffect(() => {
     // Simular procesamiento y refrescar créditos
