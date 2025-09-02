@@ -70,12 +70,31 @@ export async function GET() {
     return 'paciente';
   };
 
+  // Inferir dominio basado en el código del cuestionario
+  const inferirDominio = (codigo: string) => {
+    const codigoUpper = codigo.toUpperCase();
+    
+    // Mapeo de códigos a dominios
+    if (codigoUpper.includes('GAD') || codigoUpper.includes('ANSIEDAD')) return 'Ansiedad';
+    if (codigoUpper.includes('PHQ') || codigoUpper.includes('DEPRESION')) return 'Depresión';
+    if (codigoUpper.includes('OYS') || codigoUpper.includes('OHIO')) return 'Psicopatología';
+    if (codigoUpper.includes('WHO-5') || codigoUpper.includes('WHO5')) return 'Malestar Emocional';
+    if (codigoUpper.includes('BR-WAI') || codigoUpper.includes('BRWAI')) return 'Alianza Terapéutica';
+    if (codigoUpper.includes('ALIANZA') || codigoUpper.includes('ALLIANCE')) return 'Alianza';
+    if (codigoUpper.includes('OPD')) return 'Personalidad';
+    if (codigoUpper.includes('BECK')) return 'Estado de ánimo';
+    if (codigoUpper.includes('HAMILTON')) return 'Estado de ánimo';
+    
+    return 'Otro';
+  };
+
   // Transform data to ensure consistent structure (map titulo to nombre for frontend)
   const transformedData = data?.map((item: any) => ({
     id: item.id,
     codigo: item.codigo || '',
     nombre: item.titulo || item.nombre || item.name || 'Cuestionario sin nombre',
-    destinatario: item.destinatario || (item.codigo && item.titulo ? inferirDestinatario(item.codigo, item.titulo) : 'paciente')
+    destinatario: item.destinatario || (item.codigo && item.titulo ? inferirDestinatario(item.codigo, item.titulo) : 'paciente'),
+    dominio: inferirDominio(item.codigo || '')
   })) || [];
 
   if (error) {
