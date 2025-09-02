@@ -142,7 +142,15 @@ export async function GET(
             processed.opciones_respuesta = defaultLikertOptions;
           }
         }
+        
+        // Map both numeric ID and potential string ID patterns
         questionsMap.set(String(processed.id), processed);
+        
+        // For OYS consolidated questionnaires, also map the item-X-Y pattern
+        if (cuestionario?.codigo?.includes('OYS') && cuestionario.codigo.includes('40')) {
+          const stringId = `item-${idx}-${processed.id}`;
+          questionsMap.set(stringId, processed);
+        }
       });
 
       enrichedItems = rawAnswers.map((rawAnswer): ResponseItemDetail | null => {
