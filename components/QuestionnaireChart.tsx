@@ -4,6 +4,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 import { Line, Bar } from "react-chartjs-2";
 import React from "react";
 import questionnairesMeta, { QuestionnaireCode } from "@/src/data/questionnairesMeta";
+import OhioYouthScalesChart from "./charts/OhioYouthScalesChart";
 
 
 // Register the pieces we may need. Doing this once here avoids duplicate registration warnings.
@@ -304,6 +305,19 @@ const who5ThresholdPlugin = {
 export const QuestionnaireChart: React.FC<QuestionnaireChartProps> = ({ data, codigo, className, titleOverride }) => {
   if (!data || data.length === 0) {
     return <div className="text-center text-gray-500 py-8">Sin datos suficientes para mostrar el gráfico.</div>;
+  }
+
+  // Handle OYS consolidated questionnaires
+  if (codigo === 'OYS-PADRES-40' || codigo === 'OYS-JOVENES-40') {
+    return (
+      <div className={`relative w-full ${className ?? "h-[32rem]"}`}>
+        <OhioYouthScalesChart 
+          data={data as any} 
+          viewType="evolution" 
+          className="h-full"
+        />
+      </div>
+    );
   }
 
   const meta = questionnairesMeta[codigo];

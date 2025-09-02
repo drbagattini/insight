@@ -151,6 +151,16 @@ export default function PatientProfilePage() {
           } else {
             console.log('API OPD-CA2-SQ - No hay datos o array vacío');
           }
+        } else if (selectedQuestionnaire === 'OYS-PADRES-40' || selectedQuestionnaire === 'OYS-JOVENES-40') {
+          console.log(`DATOS API OYS ${selectedQuestionnaire}:`, JSON.stringify(json.data, null, 2));
+          if (json.data && json.data.length > 0) {
+            const firstItem = json.data[0];
+            console.log('Estructura OYS - Primer ítem:', JSON.stringify(firstItem, null, 2));
+            console.log('¿Tiene score_detallado?', !!firstItem.score_detallado);
+            if (firstItem.score_detallado) {
+              console.log('Estructura score_detallado:', Object.keys(firstItem.score_detallado));
+            }
+          }
         } else {
           console.log(`DATOS API ${selectedQuestionnaire}:`, JSON.stringify(json.data, null, 2));
         }
@@ -591,7 +601,7 @@ export default function PatientProfilePage() {
                     </Button>
                   </div>
                 </div>
-                <div className="mb-6 w-fit">
+                <div className="mb-6 w-80">
                   <Listbox value={selectedQuestionnaire} onChange={setSelectedQuestionnaire}>
                     <div className="relative">
                       <Listbox.Button className="relative w-full cursor-default rounded-md bg-white py-1.5 pl-2.5 pr-8 text-left shadow-sm border border-gray-300 focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-1 focus-visible:ring-indigo-500 text-sm">

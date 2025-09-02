@@ -4,7 +4,124 @@ import { scoreOpdCa2 } from '@/src/scoring/opdCa2';
 import { scoreBrWai } from '@/src/scoring/scoreBrWai';
 import { scorePhq9 } from '@/src/scoring/scorePhq9';
 import { scoreGad7 } from '@/src/scoring/scoreGad7';
+import { scoreOYS, outcomes, buildFlags, type OYSCode, type Resp } from '@/lib/oys-scoring';
 import { ResultadoCuestionario, ScoreDetalladoOpdCa2, ScoreDetalladoBrWai, ScoreDetalladoPhq9, ScoreDetalladoGad7 } from '@/src/types/cuestionarios';
+
+/**
+ * Manejo especial para cuestionarios OYS consolidados
+ */
+async function handleOYSConsolidated(pacienteId: string, codigo: string) {
+  // Buscar directamente el cuestionario consolidado
+  const { data: cuestionario, error: cuestionarioError } = await supabaseAdmin
+    .from('cuestionarios')
+    .select('id, codigo, items')
+    .eq('codigo', codigo)
+    .single();
+    
+  if (cuestionarioError || !cuestionario) {
+    return NextResponse.json({ error: 'Cuestionario OYS consolidado no encontrado' }, { status: 404 });
+  }
+  
+  // Obtener todas las respuestas del cuestionario consolidado
+  const { data: respuestasData, error: respuestasError } = await supabaseAdmin
+    .from('respuestas')
+    .select(`
+      respuestas, 
+      puntuacion, 
+      creado_en,
+      enviado_en,
+      cuestionario_id
+    `)
+    .eq('paciente_id', pacienteId)
+    .eq('cuestionario_id', cuestionario.id)
+    .order('enviado_en', { ascending: true });
+    
+  if (respuestasError) {
+    console.error('Error al obtener respuestas OYS:', respuestasError);
+    return NextResponse.json({ error: 'Error al obtener respuestas OYS' }, { status: 500 });
+  }
+  
+  // Procesar cada respuesta del cuestionario consolidado
+  const processedData: any[] = [];
+  const isPadres = codigo === 'OYS-PADRES-40';
+  
+  for (const respuesta of respuestasData) {
+    // Extraer todas las respuestas (40 ítems)
+    const allAnswers = extractAnswersArray(respuesta.respuestas, 40);
+    
+    // Dividir en PS (ítems 1-20) y F (ítems 21-40)
+    const psAnswers = allAnswers.slice(0, 20);
+    const fAnswers = allAnswers.slice(20, 40);
+    
+    // Determinar códigos OYS para scoring
+    const psCode = isPadres ? 'OYS-PS-P-SF20' : 'OYS-PS-Y-SF20';
+    const fCode = isPadres ? 'OYS-F-P-SF20' : 'OYS-F-Y-SF20';
+    
+    // Calcular scores usando las funciones OYS
+    const psScore = scoreOYS(psCode as OYSCode, psAnswers);
+    const fScore = scoreOYS(fCode as OYSCode, fAnswers);
+    
+    // Calcular flags clínicos
+    const flags = buildFlags(psCode as OYSCode, psAnswers, fAnswers);
+    
+    // Crear objeto de respuestas detalladas
+    const respuestasDetalladas: any = {};
+    allAnswers.forEach((valor, index) => {
+      respuestasDetalladas[index + 1] = valor;
+    });
+    
+    processedData.push({
+      id: `${pacienteId}-${codigo}-${respuesta.enviado_en}`,
+      fecha: respuesta.enviado_en,
+      codigo_cuestionario: codigo,
+      score_detallado: {
+        problem_severity: {
+          total: psScore.total,
+          valido: psScore.valido,
+          respuestas: psAnswers
+        },
+        functioning: {
+          total: fScore.total,
+          valido: fScore.valido,
+          respuestas: fAnswers
+        },
+        flags: flags,
+        informante: isPadres ? 'padre_tutor' : 'paciente',
+        total_combinado: (psScore.total !== null && fScore.total !== null) ? psScore.total + fScore.total : null
+      },
+      respuestas: respuestasDetalladas,
+      items: cuestionario.items // Incluir ítems del cuestionario para mostrar detalles
+    });
+  }
+  
+  return NextResponse.json({ success: true, data: processedData });
+}
+
+/**
+ * Extrae respuestas como array numérico
+ */
+function extractAnswersArray(respuestas: any, expectedLength: number): Resp[] {
+  const answersArray: Resp[] = Array(expectedLength).fill(null);
+  
+  if (respuestas && typeof respuestas === 'object') {
+    if (Array.isArray(respuestas)) {
+      respuestas.forEach((val: any, idx: number) => {
+        if (idx < expectedLength) {
+          answersArray[idx] = typeof val === 'object' && 'valor' in val ? val.valor : val;
+        }
+      });
+    } else {
+      for (const [key, value] of Object.entries(respuestas)) {
+        const idx = parseInt(key, 10);
+        if (!isNaN(idx) && idx >= 1 && idx <= expectedLength && value !== null) {
+          answersArray[idx - 1] = typeof value === 'object' && value && 'valor' in value ? (value as any).valor : value as any;
+        }
+      }
+    }
+  }
+  
+  return answersArray;
+}
 
 export async function GET(
   request: Request,
@@ -24,7 +141,10 @@ export async function GET(
     return NextResponse.json({ success: false, message: 'Código de cuestionario no especificado' }, { status: 400 });
   }
 
-
+  // Manejo especial para cuestionarios consolidados OYS
+  if (codigo === 'OYS-PADRES-40' || codigo === 'OYS-JOVENES-40') {
+    return await handleOYSConsolidated(pacienteId, codigo);
+  }
 
   // 1) Obtener ID de cuestionario solicitado
   const { data: cuestionario, error: cuestionarioError } = await supabaseAdmin

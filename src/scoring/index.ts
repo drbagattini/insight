@@ -10,6 +10,7 @@ import { scoreOpdCa2 } from "./opdCa2";
 import { scoreBrWai } from "./scoreBrWai";
 import { scorePhq9 } from "./scorePhq9";
 import { scoreGad7 } from "./scoreGad7";
+import { scoreOYSPadres40, scoreOYSJovenes40 } from "./oysScoring";
 
 export const scores: Record<string, ScoreFn> = {
   "WHO-5": scoreWho5,
@@ -17,6 +18,8 @@ export const scores: Record<string, ScoreFn> = {
   "BR-WAI": scoreBrWai,
   "PHQ-9": scorePhq9,
   "GAD-7": scoreGad7,
+  "OYS-PADRES-40": scoreOYSPadres40,
+  "OYS-JOVENES-40": scoreOYSJovenes40,
 };
 
 /**

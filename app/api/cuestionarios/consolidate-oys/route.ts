@@ -65,7 +65,7 @@ export async function POST() {
       {
         id: '550e8400-e29b-41d4-a716-446655440010',
         codigo: 'OYS-PADRES-40',
-        titulo: 'Ohio Youth Scales - Padres/Tutores (Forma Completa)',
+        titulo: 'Ohio Youth Scales - Padres/Tutores',
         descripcion: 'Cuestionario completo de 40 ítems para evaluar severidad de problemas y funcionamiento desde la perspectiva de padres/tutores',
         activo: true,
         items: parentsItems
@@ -73,7 +73,7 @@ export async function POST() {
       {
         id: '550e8400-e29b-41d4-a716-446655440011',
         codigo: 'OYS-JOVENES-40',
-        titulo: 'Ohio Youth Scales - Jóvenes (Forma Completa)',
+        titulo: 'Ohio Youth Scales - Jóvenes',
         descripcion: 'Cuestionario completo de 40 ítems para evaluar severidad de problemas y funcionamiento desde la perspectiva del joven',
         activo: true,
         items: youthItems
