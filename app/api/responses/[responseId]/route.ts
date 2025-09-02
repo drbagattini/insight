@@ -123,6 +123,26 @@ export async function GET(
 
     if (actualQuestionDefinitions && rawAnswers) {
       const questionsMap = new Map<string, QuestionDefinitionDB>();
+      
+      // OYS scales from questionnaire metadata (exact labels)
+      const problemSeverityOptions: AnswerOption[] = [
+        { valor: 0, texto: 'Nada en absoluto' },
+        { valor: 1, texto: 'Una o dos veces' },
+        { valor: 2, texto: 'Varias veces' },
+        { valor: 3, texto: 'A menudo' },
+        { valor: 4, texto: 'La mayor parte del tiempo' },
+        { valor: 5, texto: 'Todo el tiempo' },
+      ];
+      
+      const functioningOptions: AnswerOption[] = [
+        { valor: 0, texto: 'Problemas extremos' },
+        { valor: 1, texto: 'Bastantes problemas' },
+        { valor: 2, texto: 'Algunos problemas' },
+        { valor: 3, texto: 'Bien' },
+        { valor: 4, texto: 'Muy bien' },
+      ];
+      
+      // Default fallback options
       const defaultLikertOptions: AnswerOption[] = [
         { valor: 0, texto: 'No' },
         { valor: 1, texto: 'Más bien no' },
@@ -139,7 +159,18 @@ export async function GET(
           processed = { ...qDefRaw };
           if (processed.id === undefined || processed.id === null) processed.id = idx + 1;
           if (!processed.opciones_respuesta || processed.opciones_respuesta.length === 0) {
-            processed.opciones_respuesta = defaultLikertOptions;
+            // For OYS consolidated questionnaires, use different scales based on item position
+            if (cuestionario?.codigo?.includes('OYS') && cuestionario.codigo.includes('40')) {
+              if (idx < 20) {
+                // Items 1-20: Problem Severity scale (0-5)
+                processed.opciones_respuesta = problemSeverityOptions;
+              } else {
+                // Items 21-40: Functioning scale (0-4)
+                processed.opciones_respuesta = functioningOptions;
+              }
+            } else {
+              processed.opciones_respuesta = defaultLikertOptions;
+            }
           }
         }
         
@@ -173,12 +204,20 @@ export async function GET(
       }).filter((item): item is ResponseItemDetail => item !== null);
     }
 
+    // For OYS consolidated questionnaires, remove scale description completely
+    let scaleDescription = '';
+    
+    if (!cuestionario?.codigo?.includes('OYS') || !cuestionario.codigo.includes('40')) {
+      // Only show scale description for non-OYS questionnaires
+      scaleDescription = cuestionario?.descripcion_escala || 'Escala: 0 (No), 1 (Más bien no), 2 (Más o menos), 3 (Más bien sí), 4 (Sí)';
+    }
+
     const detailedResponse: ResponseDetail = {
       id: responseData.id,
       patient_id: responseData.paciente_id,
       questionnaire_code: cuestionario?.codigo || 'N/A',
       questionnaire_name: cuestionario?.titulo || 'Unknown Questionnaire',
-      questionnaire_scale_description: cuestionario?.descripcion_escala || 'Escala: 0 (No), 1 (Más bien no), 2 (Más o menos), 3 (Más bien sí), 4 (Sí)',
+      questionnaire_scale_description: scaleDescription,
       date: responseData.enviado_en as string,
       score: responseData.puntuacion,
       items: enrichedItems,
