@@ -2,23 +2,27 @@ import nodemailer, { Transporter } from 'nodemailer';
 
 // Configurar Brevo SMTP
 let brevoTransporter: Transporter | null = null;
-if (
-  process.env.BREVO_SMTP_HOST &&
-  process.env.BREVO_SMTP_PORT &&
-  process.env.BREVO_SMTP_USER &&
-  process.env.BREVO_SMTP_PASS
-) {
+const requiredBrevoVars = [
+  'BREVO_SMTP_HOST',
+  'BREVO_SMTP_PORT',
+  'BREVO_SMTP_USER',
+  'BREVO_SMTP_PASS',
+] as const;
+const missingBrevoVars = requiredBrevoVars.filter((v) => !process.env[v]);
+if (missingBrevoVars.length === 0) {
   brevoTransporter = nodemailer.createTransport({
     host: process.env.BREVO_SMTP_HOST,
-    port: parseInt(process.env.BREVO_SMTP_PORT, 10),
-    secure: parseInt(process.env.BREVO_SMTP_PORT, 10) === 465,
+    port: parseInt(process.env.BREVO_SMTP_PORT as string, 10),
+    secure: parseInt(process.env.BREVO_SMTP_PORT as string, 10) === 465,
     auth: {
-      user: process.env.BREVO_SMTP_USER,
-      pass: process.env.BREVO_SMTP_PASS,
+      user: process.env.BREVO_SMTP_USER as string,
+      pass: process.env.BREVO_SMTP_PASS as string,
     },
   });
 } else {
-  console.warn('Faltan variables de entorno para configurar Brevo SMTP');
+  console.warn(
+    `Faltan variables de entorno para configurar Brevo SMTP: ${missingBrevoVars.join(', ')}`
+  );
 }
 
 /**
@@ -83,7 +87,10 @@ export async function enviarCuestionarioPorCanal(
       console.log('Email enviado con éxito a', email);
       return true;
     } else {
-      console.error('Brevo transporter no está configurado. No se pudo enviar email.');
+      console.error('Brevo transporter no está configurado. No se pudo enviar email.', {
+        missingEnv: missingBrevoVars,
+        hasEmailSender: !!process.env.EMAIL_SENDER,
+      });
       return false;
     }
   } else if (canal === 'whatsapp' && whatsapp) {

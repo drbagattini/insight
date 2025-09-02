@@ -93,6 +93,27 @@ export default function OhioYouthScalesChart({
   className = "h-96"
 }: OhioYouthScalesChartProps) {
   const [chartData, setChartData] = useState<any>(null);
+  
+  // Determinar el tipo de informante basado en los datos
+  const getInformantType = () => {
+    if (!data || data.length === 0) return 'Jóvenes';
+    
+    // Buscar el informante en los datos disponibles
+    const firstValidEntry = data.find(d => d.score_detallado?.informante);
+    if (firstValidEntry?.score_detallado?.informante === 'padre_tutor') {
+      return 'Padres/Tutores';
+    }
+    
+    // También verificar por código de cuestionario como fallback
+    const firstEntry = data[0];
+    if (firstEntry?.codigo_cuestionario === 'OYS-PADRES-40') {
+      return 'Padres/Tutores';
+    }
+    
+    return 'Jóvenes';
+  };
+  
+  const informantType = getInformantType();
 
   useEffect(() => {
     console.log('OhioYouthScalesChart - Datos recibidos:', data);
@@ -191,7 +212,7 @@ export default function OhioYouthScalesChart({
       },
       title: {
         display: true,
-        text: 'Evolución Ohio Youth Scales',
+        text: `Evolución Ohio Youth Scales - ${informantType}`,
         font: { size: 16, weight: 'bold' }
       },
       subtitle: {
@@ -249,7 +270,7 @@ export default function OhioYouthScalesChart({
       },
       title: {
         display: true,
-        text: 'Relación Problemas vs Funcionamiento',
+        text: `Relación Problemas vs Funcionamiento - ${informantType}`,
         font: { size: 16, weight: 'bold' }
       },
       tooltip: {

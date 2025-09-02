@@ -27,7 +27,15 @@ export default function PatientsPage() {
         : '/api/patients';
       const method = editingPatient?.id ? 'PUT' : 'POST';
       
-      console.log('Enviando datos del paciente:', { url, method, data });
+      console.log('[PatientsPage] Enviando datos del paciente:', { 
+        url, 
+        method, 
+        name: data.name,
+        email: data.email,
+        sendInitial: data.sendInitial,
+        cuestionario_id: (data.metadata as any)?.cuestionario_id,
+        canal: (data.metadata as any)?.preferencias_cuestionario?.canal
+      });
       
       const response = await fetch(url, {
         method,

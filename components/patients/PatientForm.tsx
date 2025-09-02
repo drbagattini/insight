@@ -127,7 +127,14 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    console.log('[PatientForm] handleSubmit triggered'); // Debug log
+    console.log('[PatientForm] handleSubmit triggered with data:', {
+      name: formData.name,
+      email: formData.email,
+      sendInitial: formData.sendInitial,
+      cuestionario_id: (formData.metadata as any)?.cuestionario_id,
+      canal: (formData.metadata as any)?.preferencias_cuestionario?.canal,
+      destinatario: getAppropriateRecipient((formData.metadata as any)?.cuestionario_id || '')
+    });
     e.preventDefault();
     setError('');
     setIsSubmitting(true);

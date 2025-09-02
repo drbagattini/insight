@@ -200,40 +200,50 @@ export async function POST(req: NextRequest) {
   }
   console.log('Paciente creado:', paciente);
 
-  // Obtener el ID del cuestionario WHO-5
-  const { data: cuestionario, error: cuestionarioError } = await supabaseAdmin
-    .from("cuestionarios")
-    .select("id, destinatario")
-    .eq("codigo", "WHO-5")
-    .single();
+  // Obtener el cuestionario seleccionado por el usuario (si hay uno)
+  let cuestionario = null;
+  const cuestionarioId = parsed.data.metadata?.cuestionario_id;
+  
+  if (cuestionarioId) {
+    const { data: selectedCuestionario, error: cuestionarioError } = await supabaseAdmin
+      .from("cuestionarios")
+      .select("id, codigo, destinatario")
+      .eq("id", cuestionarioId)
+      .single();
 
-  if (cuestionarioError) {
-    console.warn("[POST /api/patients] No se encontró el cuestionario WHO-5:", cuestionarioError.message);
-    // Continuamos aunque no se encuentre el cuestionario
-  } else if (cuestionario) {
-    // Extraer preferencias de cuestionario del metadata
-    const preferencias = parsed.data.metadata?.preferencias_cuestionario as { canal: string; frecuencia: string } | undefined;
-    const canal = preferencias?.canal || 'email';
-    const frecuencia = preferencias?.frecuencia || 'mensual';
-    
-    // Programar el envío del cuestionario
-    const proximo_envio = calcularProximoEnvio(frecuencia);
-    
-    const { error: scheduleError } = await supabaseAdmin
-      .from("envios_programados")
-      .insert({
-        paciente_id: paciente.id,
-        cuestionario_id: cuestionario.id,
-        canal,
-        frecuencia,
-        proximo_envio
-      });
+    if (cuestionarioError) {
+      console.warn("[POST /api/patients] No se encontró el cuestionario seleccionado:", cuestionarioError.message);
+    } else {
+      cuestionario = selectedCuestionario;
+      console.log("[POST /api/patients] Cuestionario seleccionado:", cuestionario);
+      
+      // Extraer preferencias de cuestionario del metadata
+      const preferencias = parsed.data.metadata?.preferencias_cuestionario as { canal: string; frecuencia: string } | undefined;
+      const canal = preferencias?.canal || 'email';
+      const frecuencia = preferencias?.frecuencia || 'mensual';
+      
+      // Programar el envío del cuestionario
+      const proximo_envio = calcularProximoEnvio(frecuencia);
+      
+      const { error: scheduleError } = await supabaseAdmin
+        .from("envios_programados")
+        .insert({
+          paciente_id: paciente.id,
+          cuestionario_id: cuestionario.id,
+          canal,
+          frecuencia,
+          proximo_envio,
+          activo: true // Asegurar que se cree como activo
+        });
 
-    console.log('Envio programado:', { pacienteId: paciente.id, cuestionarioId: cuestionario.id, canal, frecuencia, proximo_envio });
-    if (scheduleError) {
-      console.error("[POST /api/patients] Error al programar cuestionario:", scheduleError.message);
-      // No fallamos la creación del paciente si falla la programación
+      console.log('Envio programado:', { pacienteId: paciente.id, cuestionarioId: cuestionario.id, canal, frecuencia, proximo_envio });
+      if (scheduleError) {
+        console.error("[POST /api/patients] Error al programar cuestionario:", scheduleError.message);
+        // No fallamos la creación del paciente si falla la programación
+      }
     }
+  } else {
+    console.log("[POST /api/patients] No se seleccionó cuestionario - no se programará envío");
   }
 
   // Preparar payload de respuesta
@@ -245,84 +255,85 @@ export async function POST(req: NextRequest) {
   
   // Envío inicial si se solicitó
   if (sendInitial && cuestionario) {
+    console.log('[POST /api/patients] 🚀 Iniciando envío inicial de cuestionario:', {
+      sendInitial,
+      cuestionarioId: cuestionario.id,
+      cuestionarioCodigo: cuestionario.codigo,
+      pacienteId: paciente.id,
+      canalToSend
+    });
+    
     try {
       const origin = new URL(req.url).origin;
       
-      // Determinar destinatario automáticamente basándose en el tipo de cuestionario
+      // Determinar destinatario basándose en el código del cuestionario
       let destinatario = 'paciente';
-      if (cuestionario.destinatario === 'padre_tutor' || cuestionario.destinatario === 'ambos') {
-        // Si es cuestionario para padres y hay contacto de padre/tutor, usar ese destinatario
+      
+      // Para OYS de padres, enviar al padre/tutor si hay contacto disponible
+      if (cuestionario.codigo && cuestionario.codigo.includes('OYS-') && cuestionario.codigo.includes('-P-')) {
         const hasParentContact = metadataAny.padre_tutor?.email || metadataAny.padre_tutor?.telefono;
         if (hasParentContact) {
           destinatario = 'padre_tutor';
+          console.log('[POST /api/patients] OYS Parent questionnaire - enviando a padre/tutor');
+        } else {
+          console.warn('[POST /api/patients] OYS Parent questionnaire pero no hay contacto de padre/tutor - enviando a paciente');
         }
       }
       
-      // 1. Programar la recurrencia primero
-      const scheduleRes = await fetch(`${origin}/api/envios_programados`, {
+      console.log('[POST /api/patients] Destinatario determinado:', destinatario, 'para cuestionario:', cuestionario.codigo);
+      
+      // 1. Programar la recurrencia usando llamada directa a la base de datos
+      console.log('[POST /api/patients] 📅 Creando envío programado directamente...');
+      const proximo_envio = calcularProximoEnvio(frecuencia);
+
+      const { data: scheduleData, error: scheduleError } = await supabaseAdmin
+        .from("envios_programados")
+        .insert({
+          paciente_id: paciente.id,
+          cuestionario_id: cuestionario.id,
+          canal: canalToSend,
+          frecuencia,
+          proximo_envio,
+          activo: true,
+          destinatario: destinatario
+        })
+        .select()
+        .single();
+
+      if (scheduleError) {
+        console.error('[POST /api/patients] ❌ Error al crear envío programado:', scheduleError);
+        throw new Error(`Error al programar envío: ${scheduleError.message}`);
+      }
+
+      console.log('[POST /api/patients] ✅ Envío programado creado:', scheduleData);
+      
+      // 2. Enviar inmediatamente usando endpoint interno (sin autenticación)
+      console.log('[POST /api/patients] 📧 Enviando cuestionario inmediatamente...');
+      const sendRes = await fetch(`${origin}/api/internal/enviar-cuestionario`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Cookie': req.headers.get('cookie') || ''
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           pacienteId: paciente.id,
           cuestionarioId: cuestionario.id,
           canal: canalToSend,
-          frecuencia: frecuencia,
-          proximoEnvio: calcularProximoEnvio(frecuencia),
-          destinatario: destinatario
+          envioProgramadoId: scheduleData.id
         }),
       });
       
-      const scheduleData = await scheduleRes.json();
-      
-      if (scheduleRes.ok) {
-        console.log('Recurrencia programada:', scheduleData);
-        
-        // 2. Enviar inmediatamente con referencia al envío programado
-        const sendRes = await fetch(`${origin}/api/cuestionarios/enviar`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Cookie': req.headers.get('cookie') || ''
-          },
-          body: JSON.stringify({ 
-            pacienteId: paciente.id, 
-            cuestionarioId: cuestionario.id, 
-            canal: canalToSend,
-            envioProgramadoId: scheduleData.id,
-            destinatario: destinatario
-          }),
-        });
-        
-        const sendData = await sendRes.json();
-        if (sendRes.ok) {
-          console.log('Primer envío realizado con recurrencia:', sendData);
-          responsePayload.link = sendData.link;
-          responsePayload.recurrencia = {
-            id: scheduleData.id,
-            frecuencia: frecuencia,
-            proximoEnvio: scheduleData.proximoEnvio
-          };
-        } else {
-          console.error('Error en primer envío:', sendData);
-        }
+      const sendData = await sendRes.json();
+      if (sendRes.ok) {
+        console.log('[POST /api/patients] ✅ Cuestionario enviado exitosamente:', sendData);
+        responsePayload.link = sendData.link;
+        responsePayload.recurrencia = {
+          id: scheduleData.id,
+          frecuencia: frecuencia,
+          proximoEnvio: scheduleData.proximo_envio
+        };
       } else {
-        console.error('Error al programar recurrencia:', scheduleData);
-        // Fallback: enviar sin recurrencia
-        const sendRes = await fetch(`${origin}/api/cuestionarios/enviar`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Cookie': req.headers.get('cookie') || ''
-          },
-          body: JSON.stringify({ pacienteId: paciente.id, cuestionarioId: cuestionario.id, canal: canalToSend }),
-        });
-        const sendData = await sendRes.json();
-        if (sendRes.ok) {
-          responsePayload.link = sendData.link;
-        }
+        console.error('[POST /api/patients] ❌ Error al enviar cuestionario:', sendData);
+        throw new Error(`Error al enviar cuestionario: ${sendData.error}`);
       }
     } catch (error) {
       console.error('Error al realizar envío con recurrencia:', error);
