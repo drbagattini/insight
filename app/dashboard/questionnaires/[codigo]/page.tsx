@@ -232,8 +232,8 @@ export default function QuestionnaireDetailPage({
               </SectionCard>
             )}
 
-            {/* Fundamento Teórico (para OPD-CA2-SQ) */}
-            {codigo === 'OPD-CA2-SQ' && (meta as any).fundamentoTeorico && (
+            {/* Fundamento Teórico (para OPD-CA2-SQ y OYS) */}
+            {(codigo === 'OPD-CA2-SQ' || codigo.startsWith('OYS-')) && (meta as any).fundamentoTeorico && (
               <SectionCard id="fundamento" className="prose prose-lg dark:prose-invert">
                 <h2 className="text-xl font-semibold border-b border-border pb-2 mb-4">Fundamento Teórico</h2>
                 <div className="space-y-4 not-prose">
@@ -261,42 +261,106 @@ export default function QuestionnaireDetailPage({
             <SectionCard id="items" className="prose prose-lg dark:prose-invert">
               <h2 className="text-xl font-semibold border-b border-border pb-2 mb-4">Ítems</h2>
               {meta.items?.length ? (
-                <div className="space-y-4">
-                  {meta.items.map((item, idx) => (
-                    <div
-                      key={item.orden}
-                      className="md:flex md:items-start md:justify-between gap-4"
-                    >
-                      <p className="md:w-4/5 leading-7">
-                        <span className="font-medium mr-1">{idx + 1}.</span>
-                        {item.texto}
-                      </p>
-                      <div className="mt-2 md:mt-0 md:w-1/5 flex justify-end gap-1 text-xs text-gray-500">
-                        {codigo === 'OPD-CA2-SQ' ? 
-                          [0, 1, 2, 3, 4].map((n) => <span key={n}>{n}</span>) :
-                          [0, 1, 2, 3, 4, 5].map((n) => <span key={n}>{n}</span>)
-                        }
+                codigo.startsWith('OYS-') ? (
+                  // OYS questionnaires: Split into Problems and Functioning sections
+                  <div className="space-y-8">
+                    {/* Problems Section (Items 1-20) */}
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm font-medium">
+                          Problemas (1-20)
+                        </span>
+                        <span className="text-sm text-gray-500">Escala 0-5</span>
+                      </h3>
+                      <div className="space-y-3">
+                        {meta.items.slice(0, 20).map((item, idx) => (
+                          <div
+                            key={item.orden}
+                            className="md:flex md:items-start md:justify-between gap-4 bg-red-50 p-3 rounded-lg"
+                          >
+                            <p className="md:w-4/5 leading-6">
+                              <span className="font-medium mr-2 text-red-700">{idx + 1}.</span>
+                              {item.texto}
+                            </p>
+                            <div className="mt-2 md:mt-0 md:w-1/5 flex justify-end gap-1 text-xs text-gray-500">
+                              {[0, 1, 2, 3, 4, 5].map((n) => <span key={n}>{n}</span>)}
+                            </div>
+                          </div>
+                        ))}
+                        <div className="text-sm text-gray-600 bg-red-50 p-3 rounded">
+                          <strong>Escala Problemas:</strong> <strong>0</strong> Nada en absoluto — <strong>1</strong> Una o dos veces — <strong>2</strong> Varias veces — <strong>3</strong> A menudo — <strong>4</strong> La mayor parte del tiempo — <strong>5</strong> Todo el tiempo
+                        </div>
                       </div>
                     </div>
-                  ))}
-                  {/* Leyenda Likert */}
-                  <div className="mt-6 text-sm text-gray-500 space-y-1 md:w-2/3">
-                    {codigo === 'OPD-CA2-SQ' ? (
-                      <p>
-                        <strong>0</strong> No — <strong>1</strong> Más no —{" "}
-                        <strong>2</strong> Parte/parte — <strong>3</strong> Más sí —{" "}
-                        <strong>4</strong> Sí
-                      </p>
-                    ) : (
-                      <p>
-                        <strong>0</strong> Nunca — <strong>1</strong> Rara vez —{" "}
-                        <strong>2</strong> Menos de la mitad de las veces —{" "}
-                        <strong>3</strong> Más de la mitad de las veces —{" "}
-                        <strong>4</strong> Frecuentemente — <strong>5</strong> Todo el tiempo
-                      </p>
-                    )}
+
+                    {/* Functioning Section (Items 21-40) */}
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm font-medium">
+                          Funcionamiento (21-40)
+                        </span>
+                        <span className="text-sm text-gray-500">Escala 0-4</span>
+                      </h3>
+                      <div className="space-y-3">
+                        {meta.items.slice(20, 40).map((item, idx) => (
+                          <div
+                            key={item.orden}
+                            className="md:flex md:items-start md:justify-between gap-4 bg-green-50 p-3 rounded-lg"
+                          >
+                            <p className="md:w-4/5 leading-6">
+                              <span className="font-medium mr-2 text-green-700">{idx + 21}.</span>
+                              {item.texto}
+                            </p>
+                            <div className="mt-2 md:mt-0 md:w-1/5 flex justify-end gap-1 text-xs text-gray-500">
+                              {[0, 1, 2, 3, 4].map((n) => <span key={n}>{n}</span>)}
+                            </div>
+                          </div>
+                        ))}
+                        <div className="text-sm text-gray-600 bg-green-50 p-3 rounded">
+                          <strong>Escala Funcionamiento:</strong> <strong>0</strong> Problemas extremos — <strong>1</strong> Bastantes problemas — <strong>2</strong> Algunos problemas — <strong>3</strong> OK — <strong>4</strong> Muy bien
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  // Non-OYS questionnaires: Original layout
+                  <div className="space-y-4">
+                    {meta.items.map((item, idx) => (
+                      <div
+                        key={item.orden}
+                        className="md:flex md:items-start md:justify-between gap-4"
+                      >
+                        <p className="md:w-4/5 leading-7">
+                          <span className="font-medium mr-1">{idx + 1}.</span>
+                          {item.texto}
+                        </p>
+                        <div className="mt-2 md:mt-0 md:w-1/5 flex justify-end gap-1 text-xs text-gray-500">
+                          {codigo === 'OPD-CA2-SQ' ? 
+                            [0, 1, 2, 3, 4].map((n) => <span key={n}>{n}</span>) :
+                            [0, 1, 2, 3, 4, 5].map((n) => <span key={n}>{n}</span>)
+                          }
+                        </div>
+                      </div>
+                    ))}
+                    {/* Leyenda Likert */}
+                    <div className="mt-6 text-sm text-gray-500 space-y-1 md:w-2/3">
+                      {codigo === 'OPD-CA2-SQ' ? (
+                        <p>
+                          <strong>0</strong> No — <strong>1</strong> Más no —{" "}
+                          <strong>2</strong> Parte/parte — <strong>3</strong> Más sí —{" "}
+                          <strong>4</strong> Sí
+                        </p>
+                      ) : (
+                        <p>
+                          <strong>0</strong> Nunca — <strong>1</strong> Rara vez —{" "}
+                          <strong>2</strong> Menos de la mitad de las veces —{" "}
+                          <strong>3</strong> Más de la mitad de las veces —{" "}
+                          <strong>4</strong> Frecuentemente — <strong>5</strong> Todo el tiempo
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )
               ) : (
                 <div className="not-prose">
                   <p className="text-gray-600">El cuestionario contiene <strong>81 ítems</strong> distribuidos en las cuatro dimensiones principales.</p>
@@ -376,8 +440,8 @@ export default function QuestionnaireDetailPage({
               )}
             </SectionCard>
 
-            {/* Validez y Fiabilidad (para OPD-CA2-SQ) */}
-            {codigo === 'OPD-CA2-SQ' && meta.validez && (
+            {/* Validez y Fiabilidad (para OPD-CA2-SQ y OYS) */}
+            {(codigo === 'OPD-CA2-SQ' || codigo.startsWith('OYS-')) && meta.validez && (
               <SectionCard id="validez" className="prose prose-lg dark:prose-invert">
                 <h2 className="text-xl font-semibold border-b border-border pb-2 mb-4">Validez y Fiabilidad</h2>
                 <div className="space-y-4 not-prose">
@@ -409,7 +473,7 @@ export default function QuestionnaireDetailPage({
                         {meta.validez.estudiosClave.map((estudio, idx) => (
                           <li key={idx} className="text-gray-600">
                             {estudio.cita}
-                            {estudio.doi && estudio.doi !== 'academic-tests.com' && (
+                            {estudio.doi && estudio.doi !== 'academic-tests.com' && estudio.doi !== 'Manual técnico oficial' && estudio.doi !== 'Fundamentos teóricos' && (
                               <span className="text-blue-600 ml-2">DOI: {estudio.doi}</span>
                             )}
                           </li>
@@ -421,8 +485,8 @@ export default function QuestionnaireDetailPage({
               </SectionCard>
             )}
 
-            {/* Aplicación Clínica (para OPD-CA2-SQ) */}
-            {codigo === 'OPD-CA2-SQ' && meta.aplicacionClinica && (
+            {/* Aplicación Clínica (para OPD-CA2-SQ y OYS) */}
+            {(codigo === 'OPD-CA2-SQ' || codigo.startsWith('OYS-')) && meta.aplicacionClinica && (
               <SectionCard id="aplicacion" className="prose prose-lg dark:prose-invert">
                 <h2 className="text-xl font-semibold border-b border-border pb-2 mb-4">Aplicación Clínica</h2>
                 <div className="space-y-4 not-prose">

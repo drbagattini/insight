@@ -45,7 +45,7 @@ export default function QuestionnairesPage() {
 
   // Available domains for the filter dropdown (including "Todos")
   const availableDomains = useMemo(() => {
-    const set = new Set<string>(questionnaires.map((q) => q.dominio));
+    const set = new Set<string>(questionnaires.map((q) => q.dominio).filter(Boolean));
     return ["Todos", ...Array.from(set)];
   }, [questionnaires]);
 

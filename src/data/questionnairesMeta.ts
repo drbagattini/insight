@@ -480,6 +480,7 @@ const questionnairesMeta = {
       warning: 60,
       danger: 80
     },
+    dominio: 'Problemas de Comportamiento',
     poblacion: 'Niños/as y adolescentes 5–18 años (informante: padre/tutor)',
     items: [
       { id: 1, texto: 'Discutir con otros' },
@@ -528,26 +529,30 @@ const questionnairesMeta = {
       } as const
     },
     validez: {
-      fiabilidad: 'Ohio Youth Scales - Instrumento validado',
-      muestra: 'Muestra comunitaria y clínica',
+      fiabilidad: 'α = 0.93-0.97 (comunitaria), α = 0.90-0.96 (clínica). Test-retest r = 0.88 (1 semana). Confiabilidad inter-evaluador r = 0.44-0.88 (según método)',
+      muestra: 'N = 301 estudiantes (comunitaria), N = 225 K-6° grado, múltiples muestras clínicas (N = 59-66). Edades 5-18 años',
       estudiosClave: [
         {
-          cita: 'Ogles, B. M., et al. (2001). Ohio Youth Problems, Functioning, and Satisfaction Scales',
-          doi: '10.1037/t02313-000'
+          cita: 'Ogles, B. M., Melendez, G., Davis, D. C., & Lunnen, K. M. (2000). The Ohio Youth Problem, Functioning, and Satisfaction Scales Technical Manual. Ohio University.',
+          doi: 'Manual técnico oficial'
+        },
+        {
+          cita: 'Ogles, B. M., Lambert, M. J., & Masters, K. S. (1996). Assessing outcome in clinical practice. Boston: Allyn & Bacon.',
+          doi: 'Fundamentos teóricos'
         }
       ]
     },
     fundamentoTeorico: {
-      modelo: 'Evaluación multidimensional de problemas en juventud',
-      enfoque: 'Modelo basado en frecuencia de problemas observables',
-      objetivo: 'Evaluar severidad de problemas conductuales y emocionales',
-      baseConceptual: 'Subdominios: Externalizantes, Internalizantes, Riesgo/Autolesión, Consumo'
+      modelo: 'Modelo tripartito de Strupp & Hadley (1977): perspectivas de sociedad, consumidor y profesional. Esquema conceptual de Lambert & Hill (1994)',
+      enfoque: 'Evaluación multifuente, multidominio basada en validación social de stakeholders. Análisis factorial: 3 factores (Externalizante, Internalizante, Conducta)',
+      objetivo: 'Medición práctica y psicométricamente rigurosa de severidad de problemas para evaluación de resultados en servicios de salud mental infantil',
+      baseConceptual: 'Integra criterios DSM-IV, problemas más comunes reportados por sistemas de salud mental, input de stakeholders y revisión de literatura'
     },
     aplicacionClinica: {
-      usoRecomendado: 'Evaluación inicial y seguimiento en terapia infantil/adolescente',
-      requiere: 'Padre/tutor observador durante últimos 30 días',
-      complementar: 'OYS Funcionamiento, evaluación directa del joven',
-      advertencia: '⚠️ Cambio fiable: 10 puntos. Corte clínico: 25 puntos'
+      usoRecomendado: 'Evaluación de resultados en servicios comunitarios de salud mental. Seguimiento cada 3 meses durante tratamiento. Cribado inicial y monitoreo de progreso',
+      requiere: 'Padre/tutor como informante. Observación de comportamientos durante últimos 30 días. Mínima capacitación profesional para interpretación',
+      complementar: 'Formas paralelas: OYS-Funcionamiento (W-form), OYS-Joven (Y-form), CBCL, Progress Evaluation Scales. Evaluación multidominio recomendada',
+      advertencia: '⚠️ Cambio fiable: 10 puntos. Corte clínico: 25 puntos. Sensible al cambio durante tratamiento (r = -0.54 con PES)'
     }
   },
 
@@ -607,26 +612,30 @@ const questionnairesMeta = {
       } as const
     },
     validez: {
-      fiabilidad: 'Ohio Youth Scales - Instrumento validado',
-      muestra: 'Muestra comunitaria y clínica',
+      fiabilidad: 'α = 0.89-0.95 (comunitaria), α = 0.91-0.94 (clínica). Test-retest r = 0.77 (1 semana). Confiabilidad inter-evaluador r = 0.22-0.88 (según método)',
+      muestra: 'N = 301 estudiantes (comunitaria), N = 225 K-6° grado, múltiples muestras clínicas. Validez discriminante: diferencias significativas entre muestras comunitarias y clínicas',
       estudiosClave: [
         {
-          cita: 'Ogles, B. M., et al. (2001). Ohio Youth Problems, Functioning, and Satisfaction Scales',
-          doi: '10.1037/t02313-000'
+          cita: 'Ogles, B. M., Melendez, G., Davis, D. C., & Lunnen, K. M. (2000). The Ohio Youth Problem, Functioning, and Satisfaction Scales Technical Manual. Ohio University.',
+          doi: 'Manual técnico oficial'
+        },
+        {
+          cita: 'Ogles, B. M., Davis, D. C., & Lunnen, K. M. (1998). Inter-rater reliability of four measures of functioning. Journal of Clinical Psychology, 54(3), 341-349.',
+          doi: '10.1002/(SICI)1097-4679(199803)54:3<341::AID-JCLP11>3.0.CO;2-P'
         }
       ]
     },
     fundamentoTeorico: {
-      modelo: 'Evaluación multidimensional del funcionamiento juvenil',
-      enfoque: 'Modelo basado en competencias y habilidades adaptativas',
-      objetivo: 'Evaluar nivel de funcionamiento en múltiples dominios',
-      baseConceptual: 'Funcionamiento social, académico, emocional y conductual'
+      modelo: 'Modelo tripartito de Strupp & Hadley (1977) integrado con esquema conceptual de Lambert & Hill (1994). Enfoque en fortalezas y competencias',
+      enfoque: 'Evaluación multifuente de funcionamiento adaptativo. Análisis factorial: 2 factores (Funcionamiento General + Áreas Transicionales)',
+      objetivo: 'Medición práctica del funcionamiento juvenil para evaluación de resultados. Complementa escalas centradas en patología',
+      baseConceptual: 'Funcionamiento social, académico, emocional, conductual y de autocuidado. Incluye áreas transicionales para adolescentes'
     },
     aplicacionClinica: {
-      usoRecomendado: 'Evaluación inicial y seguimiento en terapia infantil/adolescente',
-      requiere: 'Padre/tutor observador del funcionamiento actual',
-      complementar: 'OYS Problemas, evaluación directa del joven',
-      advertencia: '⚠️ Cambio fiable: 8 puntos. Corte clínico: 50 puntos'
+      usoRecomendado: 'Evaluación de resultados en servicios comunitarios. Seguimiento cada 3 meses. Identificación de fortalezas para planificación individualizada',
+      requiere: 'Padre/tutor observador. Referencia CGAS para interpretación de niveles. Ítems 3 y 13 requieren consideración del nivel de desarrollo',
+      complementar: 'OYS Problemas, CAFAS, CGAS, Vanderbilt Functioning Index. Formas paralelas Y-form y W-form disponibles',
+      advertencia: '⚠️ Cambio fiable: 8 puntos. Corte clínico: 50 puntos. Sensible al cambio (r = 0.56 con PES). Correlación con CAFAS r = -0.52'
     }
   },
 
@@ -688,26 +697,30 @@ const questionnairesMeta = {
       } as const
     },
     validez: {
-      fiabilidad: 'Ohio Youth Scales - Instrumento validado',
-      muestra: 'Muestra comunitaria y clínica juvenil',
+      fiabilidad: 'α = 0.90-0.95 (comunitaria), α = 0.90-0.93 (clínica). Test-retest r = 0.72 (1 semana). Correlación con YSR r = 0.82',
+      muestra: 'N = 297 estudiantes grados 7-12 (comunitaria), múltiples muestras clínicas. Validez discriminante: diferencias significativas por historial de servicios de salud mental',
       estudiosClave: [
         {
-          cita: 'Ogles, B. M., et al. (2001). Ohio Youth Problems, Functioning, and Satisfaction Scales',
-          doi: '10.1037/t02313-000'
+          cita: 'Ogles, B. M., Melendez, G., Davis, D. C., & Lunnen, K. M. (2000). The Ohio Youth Problem, Functioning, and Satisfaction Scales Technical Manual. Ohio University.',
+          doi: 'Manual técnico oficial'
+        },
+        {
+          cita: 'Ogles, B. M., Lambert, M. J., & Masters, K. S. (1996). Assessing outcome in clinical practice. Boston: Allyn & Bacon.',
+          doi: 'Fundamentos teóricos'
         }
       ]
     },
     fundamentoTeorico: {
-      modelo: 'Evaluación multidimensional de problemas en juventud',
-      enfoque: 'Modelo basado en autorreporte de frecuencia de problemas',
-      objetivo: 'Evaluar severidad de problemas desde perspectiva del joven',
-      baseConceptual: 'Subdominios: Externalizantes, Internalizantes, Riesgo/Autolesión, Consumo'
+      modelo: 'Modelo tripartito de Strupp & Hadley (1977) con perspectiva del joven. Esquema conceptual de Lambert & Hill (1994)',
+      enfoque: 'Autorreporte de frecuencia de problemas. Validación social con stakeholders. Análisis factorial: 3 factores (Externalizante, Internalizante, Conducta)',
+      objetivo: 'Capturar perspectiva única del adolescente sobre sus problemas. Medición práctica para evaluación de resultados en salud mental juvenil',
+      baseConceptual: 'Integra criterios DSM-IV, problemas reportados por jóvenes en servicios, input de stakeholders adolescentes'
     },
     aplicacionClinica: {
-      usoRecomendado: 'Evaluación inicial y seguimiento en terapia adolescente',
-      requiere: 'Adolescente 12-18 años capaz de autorreporte',
-      complementar: 'OYS Funcionamiento, evaluación parental',
-      advertencia: '⚠️ Cambio fiable: 10 puntos. Corte clínico: 25 puntos'
+      usoRecomendado: 'Evaluación de resultados en servicios adolescentes. Seguimiento cada 3 meses. Complementa perspectivas parentales y profesionales',
+      requiere: 'Adolescente 12-18 años con capacidad de autorreporte. Evaluación de últimos 30 días',
+      complementar: 'OYS Funcionamiento (Y-form), OYS Padres (P-form), YSR, evaluación clínica directa',
+      advertencia: '⚠️ Cambio fiable: 10 puntos. Corte clínico: 25 puntos. Sensible al cambio durante tratamiento ambulatorio'
     }
   },
 
@@ -767,26 +780,30 @@ const questionnairesMeta = {
       } as const
     },
     validez: {
-      fiabilidad: 'Ohio Youth Scales - Instrumento validado',
-      muestra: 'Muestra comunitaria y clínica juvenil',
+      fiabilidad: 'α = 0.88-0.94 (comunitaria), α = 0.90-0.93 (clínica). Test-retest r = 0.69 (1 semana). Correlación con CAFAS r = -0.41',
+      muestra: 'N = 297 estudiantes grados 7-12 (comunitaria), múltiples muestras clínicas. Validez discriminante: diferencias significativas por historial de servicios',
       estudiosClave: [
         {
-          cita: 'Ogles, B. M., et al. (2001). Ohio Youth Problems, Functioning, and Satisfaction Scales',
-          doi: '10.1037/t02313-000'
+          cita: 'Ogles, B. M., Melendez, G., Davis, D. C., & Lunnen, K. M. (2000). The Ohio Youth Problem, Functioning, and Satisfaction Scales Technical Manual. Ohio University.',
+          doi: 'Manual técnico oficial'
+        },
+        {
+          cita: 'Ogles, B. M., Davis, D. C., & Lunnen, K. M. (1998). Inter-rater reliability of four measures of functioning. Journal of Clinical Psychology, 54(3), 341-349.',
+          doi: '10.1002/(SICI)1097-4679(199803)54:3<341::AID-JCLP11>3.0.CO;2-P'
         }
       ]
     },
     fundamentoTeorico: {
-      modelo: 'Evaluación multidimensional del funcionamiento juvenil',
-      enfoque: 'Modelo basado en autorreporte de competencias',
-      objetivo: 'Evaluar funcionamiento desde perspectiva del joven',
-      baseConceptual: 'Funcionamiento social, académico, emocional y conductual'
+      modelo: 'Modelo tripartito de Strupp & Hadley (1977) con autorreporte juvenil. Esquema conceptual de Lambert & Hill (1994)',
+      enfoque: 'Autorreporte de funcionamiento adaptativo. Análisis factorial: 2 factores (Funcionamiento General + Áreas Transicionales)',
+      objetivo: 'Capturar perspectiva del adolescente sobre su funcionamiento. Complementa evaluaciones parentales y profesionales',
+      baseConceptual: 'Funcionamiento social, académico, emocional, conductual y autocuidado desde perspectiva del joven'
     },
     aplicacionClinica: {
-      usoRecomendado: 'Evaluación inicial y seguimiento en terapia adolescente',
-      requiere: 'Adolescente 12-18 años capaz de autorreporte',
-      complementar: 'OYS Problemas, evaluación parental',
-      advertencia: '⚠️ Cambio fiable: 8 puntos. Corte clínico: 60 puntos'
+      usoRecomendado: 'Evaluación de resultados en servicios adolescentes. Seguimiento cada 3 meses. Identificación de fortalezas percibidas',
+      requiere: 'Adolescente 12-18 años con capacidad de autorreporte. Consideración del nivel de desarrollo para ítems específicos',
+      complementar: 'OYS Problemas (Y-form), OYS Padres (P-form), CAFAS, CGAS, evaluación clínica directa',
+      advertencia: '⚠️ Cambio fiable: 8 puntos. Corte clínico: 48 puntos. Sensible al cambio (r = 0.42 con PES). Menor confiabilidad inter-evaluador que formas parentales'
     }
   },
 
@@ -798,6 +815,94 @@ const questionnairesMeta = {
     thresholds: {
       warning: 60,
       danger: 80
+    },
+    dominio: 'Problemas de Comportamiento',
+    poblacion: 'Niños/as y adolescentes 5–18 años (informante: padre/tutor)',
+    descripcion: 'Cuestionario consolidado de 40 ítems que evalúa severidad de problemas (ítems 1-20) y funcionamiento (ítems 21-40) desde la perspectiva de padres/tutores.',
+    tiempoMin: 10,
+    destinatario: 'padre_tutor',
+    respuestaTipo: 'Dual: Problemas 0-5 (Nada en absoluto → Todo el tiempo), Funcionamiento 0-4 (Problemas extremos → Muy bien)',
+    items: [
+      { id: 1, texto: 'Discutir con otros' },
+      { id: 2, texto: 'Meterse en peleas (golpear, patear, empujar)' },
+      { id: 3, texto: 'Gritar, insultar o gritar a otros' },
+      { id: 4, texto: 'Ataques de enojo' },
+      { id: 5, texto: 'Negarse a hacer lo que piden docentes o padres' },
+      { id: 6, texto: 'Causar problemas sin razón' },
+      { id: 7, texto: 'Consumir drogas o alcohol' },
+      { id: 8, texto: 'Romper reglas o infringir la ley (quedarse fuera de horario, robar)' },
+      { id: 9, texto: 'Faltar a la escuela o a clases' },
+      { id: 10, texto: 'Mentir' },
+      { id: 11, texto: 'No poder quedarse quieto/a, tener demasiada energía' },
+      { id: 12, texto: 'Lastimarse a sí mismo/a (cortarse o rasguñarse, tomar pastillas)' },
+      { id: 13, texto: 'Hablar o pensar sobre la muerte' },
+      { id: 14, texto: 'Sentirse sin valor o inútil' },
+      { id: 15, texto: 'Sentirse solo/a y sin amigos' },
+      { id: 16, texto: 'Sentirse ansioso/a o temeroso/a' },
+      { id: 17, texto: 'Preocuparse de que vaya a pasar algo malo' },
+      { id: 18, texto: 'Sentirse triste o deprimido/a' },
+      { id: 19, texto: 'Pesadillas' },
+      { id: 20, texto: 'Problemas con la alimentación' },
+      { id: 21, texto: 'Llevarse bien con los amigos' },
+      { id: 22, texto: 'Llevarse bien con la familia' },
+      { id: 23, texto: 'Desarrollar relaciones de pareja apropiadas para la edad' },
+      { id: 24, texto: 'Llevarse bien con adultos fuera de la familia (docentes, dirección)' },
+      { id: 25, texto: 'Completar las tareas escolares' },
+      { id: 26, texto: 'Hacer bien las tareas escolares' },
+      { id: 27, texto: 'Disfrutar de la escuela' },
+      { id: 28, texto: 'Actuar apropiadamente en la escuela' },
+      { id: 29, texto: 'Concentrarse en las tareas' },
+      { id: 30, texto: 'Completar las tareas asignadas' },
+      { id: 31, texto: 'Dormir bien' },
+      { id: 32, texto: 'Comer apropiadamente' },
+      { id: 33, texto: 'Expresar sentimientos apropiadamente' },
+      { id: 34, texto: 'Responder apropiadamente cuando está molesto/a' },
+      { id: 35, texto: 'Controlar su temperamento' },
+      { id: 36, texto: 'Responder apropiadamente a las bromas' },
+      { id: 37, texto: 'Pensar antes de actuar' },
+      { id: 38, texto: 'Resolver problemas sin ayuda' },
+      { id: 39, texto: 'Usar el tiempo libre apropiadamente' },
+      { id: 40, texto: 'Actuar de manera apropiada para su edad' }
+    ],
+    scoring: {
+      rango: [0, 180] as const,
+      sentido: 'Dual: Problemas (mayor=peor), Funcionamiento (mayor=mejor)',
+      tipo: 'Suma ítems 1-20 (Problemas, 0-5 cada uno) + Suma ítems 21-40 (Funcionamiento, 0-4 cada uno)',
+      puntosDeCorte: [
+        { umbral: 25, label: 'Corte clínico Problemas' },
+        { umbral: 50, label: 'Corte clínico Funcionamiento' }
+      ] as const,
+      interpretacion: {
+        direccion: 'Problemas: mayor puntuación = mayor severidad. Funcionamiento: mayor puntuación = mejor funcionamiento',
+        escalas: 'Problemas: 0-19 Normal | 20-24 Atención | 25+ Clínico. Funcionamiento: 0-49 Clínico | 50+ Normal',
+        puntuacionTotal: 'Suma dual de problemas y funcionamiento'
+      }
+    },
+    validez: {
+      fiabilidad: 'α = 0.93-0.97 (Problemas), α = 0.89-0.95 (Funcionamiento). Test-retest r = 0.88 (Problemas), r = 0.77 (Funcionamiento)',
+      muestra: 'N = 301 estudiantes (comunitaria), N = 225 K-6° grado, múltiples muestras clínicas (N = 59-66). Edades 5-18 años',
+      estudiosClave: [
+        {
+          cita: 'Ogles, B. M., Melendez, G., Davis, D. C., & Lunnen, K. M. (2000). The Ohio Youth Problem, Functioning, and Satisfaction Scales Technical Manual. Ohio University.',
+          doi: 'Manual técnico oficial'
+        },
+        {
+          cita: 'Ogles, B. M., Lambert, M. J., & Masters, K. S. (1996). Assessing outcome in clinical practice. Boston: Allyn & Bacon.',
+          doi: 'Fundamentos teóricos'
+        }
+      ]
+    },
+    fundamentoTeorico: {
+      modelo: 'Modelo tripartito de Strupp & Hadley (1977): perspectivas de sociedad, consumidor y profesional. Esquema conceptual de Lambert & Hill (1994)',
+      enfoque: 'Evaluación multifuente, multidominio basada en validación social de stakeholders. Análisis factorial: 3 factores (Externalizante, Internalizante, Conducta) + 2 factores funcionamiento',
+      objetivo: 'Medición práctica y psicométricamente rigurosa de severidad de problemas y funcionamiento para evaluación de resultados en servicios de salud mental infantil',
+      baseConceptual: 'Integra criterios DSM-IV, problemas más comunes reportados por sistemas de salud mental, input de stakeholders y revisión de literatura'
+    },
+    aplicacionClinica: {
+      usoRecomendado: 'Evaluación de resultados en servicios comunitarios de salud mental. Seguimiento cada 3 meses durante tratamiento. Cribado inicial y monitoreo de progreso integral',
+      requiere: 'Padre/tutor como informante. Observación de comportamientos durante últimos 30 días. Mínima capacitación profesional para interpretación',
+      complementar: 'Formas paralelas: OYS-Joven (Y-form), CBCL, Progress Evaluation Scales, CAFAS, CGAS. Evaluación multidominio recomendada',
+      advertencia: '⚠️ Cambio fiable: 10 puntos (Problemas), 8 puntos (Funcionamiento). Cortes clínicos: 25 (Problemas), 50 (Funcionamiento). Sensible al cambio durante tratamiento'
     }
   },
 
@@ -809,6 +914,94 @@ const questionnairesMeta = {
     thresholds: {
       warning: 60,
       danger: 80
+    },
+    dominio: 'Problemas de Comportamiento',
+    poblacion: 'Adolescentes 12–18 años (autorreporte)',
+    descripcion: 'Cuestionario consolidado de 40 ítems que evalúa severidad de problemas (ítems 1-20) y funcionamiento (ítems 21-40) desde la perspectiva del joven.',
+    tiempoMin: 10,
+    destinatario: 'joven',
+    respuestaTipo: 'Likert dual: 0-5 (Problemas), 0-4 (Funcionamiento)',
+    items: [
+      { id: 1, texto: 'Discutir con otros' },
+      { id: 2, texto: 'Meterse en peleas' },
+      { id: 3, texto: 'Tener problemas con la policía' },
+      { id: 4, texto: 'Mentir o hacer trampa' },
+      { id: 5, texto: 'Robar' },
+      { id: 6, texto: 'Tener rabietas' },
+      { id: 7, texto: 'Desobedecer en casa' },
+      { id: 8, texto: 'Desobedecer en la escuela' },
+      { id: 9, texto: 'Estar triste o deprimido/a' },
+      { id: 10, texto: 'Estar nervioso/a, tenso/a o preocupado/a' },
+      { id: 11, texto: 'Tener miedos o fobias' },
+      { id: 12, texto: 'Sentirse solo/a o no querido/a' },
+      { id: 13, texto: 'Sentirse confundido/a o en un mundo de fantasía' },
+      { id: 14, texto: 'Tener problemas de atención o concentración' },
+      { id: 15, texto: 'Actuar demasiado joven para su edad' },
+      { id: 16, texto: 'Culpar a otros por los problemas' },
+      { id: 17, texto: 'Faltar o llegar tarde a la escuela' },
+      { id: 18, texto: 'Hacer las cosas lentamente' },
+      { id: 19, texto: 'Tener problemas con el uso de drogas o alcohol' },
+      { id: 20, texto: 'Tener problemas para dormir' },
+      { id: 21, texto: 'Llevarse bien con otros niños/as' },
+      { id: 22, texto: 'Llevarse bien con los padres' },
+      { id: 23, texto: 'Participar en actividades familiares' },
+      { id: 24, texto: 'Hacer amigos fácilmente' },
+      { id: 25, texto: 'Completar las tareas escolares' },
+      { id: 26, texto: 'Hacer bien las tareas escolares' },
+      { id: 27, texto: 'Disfrutar de la escuela' },
+      { id: 28, texto: 'Actuar apropiadamente en la escuela' },
+      { id: 29, texto: 'Concentrarse en las tareas' },
+      { id: 30, texto: 'Completar las tareas asignadas' },
+      { id: 31, texto: 'Dormir bien' },
+      { id: 32, texto: 'Comer apropiadamente' },
+      { id: 33, texto: 'Expresar sentimientos apropiadamente' },
+      { id: 34, texto: 'Responder apropiadamente cuando está molesto/a' },
+      { id: 35, texto: 'Controlar su temperamento' },
+      { id: 36, texto: 'Responder apropiadamente a las bromas' },
+      { id: 37, texto: 'Pensar antes de actuar' },
+      { id: 38, texto: 'Resolver problemas sin ayuda' },
+      { id: 39, texto: 'Usar el tiempo libre apropiadamente' },
+      { id: 40, texto: 'Actuar de manera apropiada para su edad' }
+    ],
+    scoring: {
+      rango: [0, 180] as const,
+      sentido: 'Dual: Problemas (mayor=peor), Funcionamiento (mayor=mejor)',
+      tipo: 'Suma ítems 1-20 (Problemas, 0-5 cada uno) + Suma ítems 21-40 (Funcionamiento, 0-4 cada uno)',
+      puntosDeCorte: [
+        { umbral: 25, label: 'Corte clínico Problemas' },
+        { umbral: 48, label: 'Corte clínico Funcionamiento' }
+      ] as const,
+      interpretacion: {
+        direccion: 'Problemas: mayor puntuación = mayor severidad. Funcionamiento: mayor puntuación = mejor funcionamiento',
+        escalas: 'Problemas: 0-24 Normal | 25+ Clínico. Funcionamiento: 0-47 Clínico | 48+ Normal',
+        puntuacionTotal: 'Suma dual de problemas y funcionamiento'
+      }
+    },
+    validez: {
+      fiabilidad: 'α = 0.90-0.95 (Problemas), α = 0.88-0.94 (Funcionamiento). Test-retest r = 0.72 (Problemas), r = 0.69 (Funcionamiento). Correlación con YSR r = 0.82',
+      muestra: 'N = 297 estudiantes grados 7-12 (comunitaria), múltiples muestras clínicas. Validez discriminante: diferencias significativas por historial de servicios',
+      estudiosClave: [
+        {
+          cita: 'Ogles, B. M., Melendez, G., Davis, D. C., & Lunnen, K. M. (2000). The Ohio Youth Problem, Functioning, and Satisfaction Scales Technical Manual. Ohio University.',
+          doi: 'Manual técnico oficial'
+        },
+        {
+          cita: 'Ogles, B. M., Lambert, M. J., & Masters, K. S. (1996). Assessing outcome in clinical practice. Boston: Allyn & Bacon.',
+          doi: 'Fundamentos teóricos'
+        }
+      ]
+    },
+    fundamentoTeorico: {
+      modelo: 'Modelo tripartito de Strupp & Hadley (1977) con perspectiva del joven. Esquema conceptual de Lambert & Hill (1994)',
+      enfoque: 'Autorreporte de frecuencia de problemas y funcionamiento. Validación social con stakeholders adolescentes. Análisis factorial: 3 factores (Externalizante, Internalizante, Conducta) + 2 factores funcionamiento',
+      objetivo: 'Capturar perspectiva única del adolescente sobre sus problemas y funcionamiento. Medición práctica para evaluación de resultados en salud mental juvenil',
+      baseConceptual: 'Integra criterios DSM-IV, problemas reportados por jóvenes en servicios, input de stakeholders adolescentes'
+    },
+    aplicacionClinica: {
+      usoRecomendado: 'Evaluación de resultados en servicios adolescentes. Seguimiento cada 3 meses. Complementa perspectivas parentales y profesionales',
+      requiere: 'Adolescente 12-18 años con capacidad de autorreporte. Evaluación de últimos 30 días. Consideración del nivel de desarrollo',
+      complementar: 'OYS Padres (P-form), YSR, CAFAS, CGAS, evaluación clínica directa. Evaluación multidominio recomendada',
+      advertencia: '⚠️ Cambio fiable: 10 puntos (Problemas), 8 puntos (Funcionamiento). Cortes clínicos: 25 (Problemas), 48 (Funcionamiento). Sensible al cambio durante tratamiento ambulatorio'
     }
   }
 } as const;
