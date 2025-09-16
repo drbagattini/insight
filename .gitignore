@@ -19,3 +19,5 @@ coverage/
 # Tests/build
 junit.xml
 *.cache
+next-env.d.ts
+*.tsbuildinfo
