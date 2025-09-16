@@ -8,6 +8,29 @@ export default withAuth(
     const { token } = request.nextauth;
     const { pathname } = request.nextUrl;
 
+    // Preview lock logic for Vercel preview deployments
+    if (process.env.VERCEL_ENV === "preview") {
+      // Allow these paths without preview lock
+      const allowedPaths = [
+        '/api/healthz',
+        '/preview-lock',
+        '/favicon.ico',
+        '/robots.txt',
+        '/sitemap.xml'
+      ];
+      
+      const isAllowedPath = allowedPaths.some(path => pathname.startsWith(path)) ||
+                           pathname.startsWith('/_next/') ||
+                           /.*\.(png|jpg|jpeg|svg|ico|css|js|map|woff2?)$/.test(pathname);
+      
+      if (!isAllowedPath) {
+        const previewCookie = request.cookies.get('p_stg');
+        if (!previewCookie || previewCookie.value !== '1') {
+          return NextResponse.redirect(new URL('/preview-lock', request.url));
+        }
+      }
+    }
+
     // Comentado temporalmente - problemas con roles en el token JWT
     /* ORIGINAL: Redirigir si el rol no coincide con la ruta
     if (pathname.startsWith('/dashboard') && token?.role !== UserRole.PSICOLOGO && token?.role !== UserRole.ADMIN) {
@@ -25,6 +48,11 @@ export default withAuth(
     callbacks: {
       authorized: ({ token, req }) => {
         const requestedPath = req.nextUrl.pathname;
+
+        // Preview lock paths are always allowed
+        if (requestedPath.startsWith('/preview-lock') || requestedPath === '/api/healthz') {
+          return true;
+        }
 
         // Rutas públicas no requieren token
         if (['/', '/landing'].includes(requestedPath)) {
