@@ -1,7 +1,9 @@
 // app/dashboard/credits/page.tsx
 'use client';
 
-import { useEffect } from 'react';
+export const dynamic = 'force-dynamic';
+
+import { Suspense, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useRefreshCredits } from '@/hooks/useCredits';
 import CreditBalance from '@/components/credits/CreditBalance';
@@ -9,7 +11,7 @@ import CreditPlans from '@/components/credits/CreditPlans';
 import CreditHistory from '@/components/credits/CreditHistory';
 import { CheckCircle, XCircle, Clock } from 'lucide-react';
 
-export default function CreditsPage() {
+function CreditsContent() {
   const searchParams = useSearchParams();
   const refreshCredits = useRefreshCredits();
   const paymentStatus = searchParams?.get('payment');
@@ -100,5 +102,13 @@ export default function CreditsPage() {
       <CreditHistory />
       </div>
     </div>
+  );
+}
+
+export default function CreditsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Cargando...</div>}>
+      <CreditsContent />
+    </Suspense>
   );
 }
