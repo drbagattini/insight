@@ -1,6 +1,8 @@
 // app/pago/failure/page.tsx
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useSearchParams, useRouter } from 'next/navigation';
 import { XCircle, ArrowLeft, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
