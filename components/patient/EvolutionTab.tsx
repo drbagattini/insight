@@ -130,7 +130,7 @@ export const EvolutionTab = memo(function EvolutionTab({ patientId, patientName 
             <EvolutionSynthesis 
               patientId={patientId}
               evolutions={entries}
-              onSynthesisCreated={handleSaveEntry}
+              onSynthesisCreated={handleSaveEntry as any}
             />
             <Button
               onClick={() => {

@@ -58,7 +58,7 @@ export default function DirectPurchase({ isOpen, onClose }: DirectPurchaseProps)
         amount_usd: option.amount_usd,
         credits: option.credits,
         description: option.description
-      });
+      } as any);
 
       // Redirigir a Mercado Pago para pago real
       if (response.init_point) {
