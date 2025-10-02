@@ -54,7 +54,7 @@ export default function PatientProfilePage() {
     if (selectedQuestionnaire === 'OPD-CA2-SQ') {
       return 'Perfil Estructural del Adolescente';
     }
-    return questionnairesMeta[selectedQuestionnaire].title;
+    return questionnairesMeta[selectedQuestionnaire as keyof typeof questionnairesMeta]?.title || selectedQuestionnaire;
   }, [selectedQuestionnaire]);
 
   // Tipado y estados para envíos programados
