@@ -3,11 +3,12 @@
 
 export const dynamic = 'force-dynamic';
 
+import { Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Clock, ArrowRight, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-export default function PaymentPendingPage() {
+function PaymentPendingContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -64,5 +65,13 @@ export default function PaymentPendingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PaymentPendingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center">Cargando...</div>}>
+      <PaymentPendingContent />
+    </Suspense>
   );
 }
