@@ -605,7 +605,7 @@ export default function PatientProfilePage() {
                   <Listbox value={selectedQuestionnaire} onChange={setSelectedQuestionnaire}>
                     <div className="relative">
                       <Listbox.Button className="relative w-full cursor-default rounded-md bg-white py-1.5 pl-2.5 pr-8 text-left shadow-sm border border-gray-300 focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-1 focus-visible:ring-indigo-500 text-sm">
-                        <span className="block truncate">{questionnairesMeta[selectedQuestionnaire].title}</span>
+                        <span className="block truncate">{questionnairesMeta[selectedQuestionnaire as keyof typeof questionnairesMeta]?.title || selectedQuestionnaire}</span>
                         <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
                           <ChevronUpDownIcon
                             className="h-5 w-5 text-gray-400"
@@ -633,7 +633,7 @@ export default function PatientProfilePage() {
                               {({ selected }) => (
                                 <>
                                   <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
-                                    {questionnairesMeta[key].title}
+                                    {questionnairesMeta[key as keyof typeof questionnairesMeta]?.title || key}
                                   </span>
                                   {selected ? (
                                     <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-blue-600">
@@ -679,7 +679,7 @@ export default function PatientProfilePage() {
                 <p className="text-red-500">{error}</p>
               ) : filteredEvolutionData.length > 0 ? (
                 <div className="bg-white p-3 rounded-lg shadow-sm mt-2 border border-gray-100">
-                  <QuestionnaireChart data={filteredEvolutionData} codigo={selectedQuestionnaire} titleOverride={chartTitle} />
+                  <QuestionnaireChart data={filteredEvolutionData} codigo={selectedQuestionnaire as any} titleOverride={chartTitle} />
                 </div>
                 ) : (
                   <p className="mt-4">No hay datos de evolución para mostrar para el cuestionario seleccionado.</p>
