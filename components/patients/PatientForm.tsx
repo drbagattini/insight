@@ -230,14 +230,14 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
                   type="tel"
                   id="whatsapp"
                   className="block w-full rounded-md border-gray-300 pl-10 py-2.5 focus:border-blue-500 focus:ring-blue-500 sm:text-sm shadow-sm"
-                  value={formData.whatsapp?.replace('+54', '') || ''}
+                  value={formData.whatsapp || ''}
                   onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
-                      whatsapp: e.target.value ? `+54${e.target.value.replace(/\D/g, '')}` : null,
+                      whatsapp: e.target.value ? e.target.value.replace(/\D/g, '') : null,
                     }))
                   }
-                  placeholder="9 11 1234-5678"
+                  placeholder="59899123456 (código país + número)"
                 />
               </div>
             </div>
@@ -325,7 +325,7 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
                   type="tel"
                   id="padre_telefono"
                   className="block w-full rounded-md border-gray-300 pl-10 py-2.5 focus:border-blue-500 focus:ring-blue-500 sm:text-sm shadow-sm"
-                  value={(formData.metadata as any).padre_tutor?.telefono?.replace('+54', '') || ''}
+                  value={(formData.metadata as any).padre_tutor?.telefono || ''}
                   onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
@@ -333,12 +333,12 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
                         ...(prev.metadata as any),
                         padre_tutor: {
                           ...(prev.metadata as any).padre_tutor,
-                          telefono: e.target.value ? `+54${e.target.value.replace(/\D/g, '')}` : ''
+                          telefono: e.target.value ? e.target.value.replace(/\D/g, '') : ''
                         }
                       }
                     }))
                   }
-                  placeholder="11 1234-5678"
+                  placeholder="59899123456 (código país + número)"
                 />
               </div>
             </div>
