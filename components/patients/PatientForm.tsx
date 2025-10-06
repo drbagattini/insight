@@ -8,6 +8,14 @@ interface PatientFormProps {
   onCancel: () => void;
 }
 
+const COUNTRY_CODES = [
+  { code: '598', label: '🇺🇾 Uruguay (+598)' },
+  { code: '54', label: '🇦🇷 Argentina (+54)' },
+  { code: '55', label: '🇧🇷 Brasil (+55)' },
+  { code: '56', label: '🇨🇱 Chile (+56)' },
+  { code: '595', label: '🇵🇾 Paraguay (+595)' },
+];
+
 export default function PatientForm({ patient, onSubmit, onCancel }: PatientFormProps) {
   const [formData, setFormData] = useState<NewPatient>(() => ({
     name: patient?.name || '',
@@ -33,6 +41,20 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
   const [error, setError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [questionarios, setQuestionarios] = useState<{ id: string; nombre: string; codigo?: string; titulo?: string; destinatario?: string }[]>([]);
+  const [countryCode, setCountryCode] = useState<string>('598'); // Uruguay por defecto
+  const [parentCountryCode, setParentCountryCode] = useState<string>('598'); // Uruguay por defecto
+
+  // Detectar código de país del paciente existente
+  useEffect(() => {
+    if (patient?.whatsapp) {
+      const detectedCode = COUNTRY_CODES.find(c => patient.whatsapp?.startsWith(c.code))?.code;
+      if (detectedCode) setCountryCode(detectedCode);
+    }
+    if (patient?.metadata?.padre_tutor?.telefono) {
+      const detectedCode = COUNTRY_CODES.find(c => (patient.metadata?.padre_tutor as any)?.telefono?.startsWith(c.code))?.code;
+      if (detectedCode) setParentCountryCode(detectedCode);
+    }
+  }, [patient]);
 
   useEffect(() => {
     // Intentar primero el endpoint autenticado, luego el público como fallback
@@ -222,23 +244,34 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
               <label htmlFor="whatsapp" className="block text-sm font-medium text-gray-700">
                 Teléfono (WhatsApp)
               </label>
-              <div className="mt-1 relative rounded-md shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FiPhone className="h-4 w-4 text-gray-400" />
+              <div className="mt-1 flex gap-2">
+                <select
+                  value={countryCode}
+                  onChange={(e) => setCountryCode(e.target.value)}
+                  className="block w-40 rounded-md border-gray-300 py-2.5 focus:border-blue-500 focus:ring-blue-500 sm:text-sm shadow-sm"
+                >
+                  {COUNTRY_CODES.map((country) => (
+                    <option key={country.code} value={country.code}>
+                      {country.label}
+                    </option>
+                  ))}
+                </select>
+                <div className="flex-1 relative rounded-md shadow-sm">
+                  <input
+                    type="tel"
+                    id="whatsapp"
+                    className="block w-full rounded-md border-gray-300 py-2.5 focus:border-blue-500 focus:ring-blue-500 sm:text-sm shadow-sm"
+                    value={formData.whatsapp?.replace(countryCode, '') || ''}
+                    onChange={(e) => {
+                      const number = e.target.value.replace(/\D/g, '');
+                      setFormData((prev) => ({
+                        ...prev,
+                        whatsapp: number ? `${countryCode}${number}` : null,
+                      }));
+                    }}
+                    placeholder="99123456"
+                  />
                 </div>
-                <input
-                  type="tel"
-                  id="whatsapp"
-                  className="block w-full rounded-md border-gray-300 pl-10 py-2.5 focus:border-blue-500 focus:ring-blue-500 sm:text-sm shadow-sm"
-                  value={formData.whatsapp || ''}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      whatsapp: e.target.value ? e.target.value.replace(/\D/g, '') : null,
-                    }))
-                  }
-                  placeholder="59899123456 (código país + número)"
-                />
               </div>
             </div>
 
@@ -317,29 +350,40 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
               <label htmlFor="padre_telefono" className="block text-sm font-medium text-gray-700">
                 Teléfono
               </label>
-              <div className="mt-1 relative rounded-md shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FiPhone className="h-4 w-4 text-gray-400" />
-                </div>
-                <input
-                  type="tel"
-                  id="padre_telefono"
-                  className="block w-full rounded-md border-gray-300 pl-10 py-2.5 focus:border-blue-500 focus:ring-blue-500 sm:text-sm shadow-sm"
-                  value={(formData.metadata as any).padre_tutor?.telefono || ''}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      metadata: {
-                        ...(prev.metadata as any),
-                        padre_tutor: {
-                          ...(prev.metadata as any).padre_tutor,
-                          telefono: e.target.value ? e.target.value.replace(/\D/g, '') : ''
+              <div className="mt-1 flex gap-2">
+                <select
+                  value={parentCountryCode}
+                  onChange={(e) => setParentCountryCode(e.target.value)}
+                  className="block w-40 rounded-md border-gray-300 py-2.5 focus:border-blue-500 focus:ring-blue-500 sm:text-sm shadow-sm"
+                >
+                  {COUNTRY_CODES.map((country) => (
+                    <option key={country.code} value={country.code}>
+                      {country.label}
+                    </option>
+                  ))}
+                </select>
+                <div className="flex-1 relative rounded-md shadow-sm">
+                  <input
+                    type="tel"
+                    id="padre_telefono"
+                    className="block w-full rounded-md border-gray-300 py-2.5 focus:border-blue-500 focus:ring-blue-500 sm:text-sm shadow-sm"
+                    value={(formData.metadata as any).padre_tutor?.telefono?.replace(parentCountryCode, '') || ''}
+                    onChange={(e) => {
+                      const number = e.target.value.replace(/\D/g, '');
+                      setFormData((prev) => ({
+                        ...prev,
+                        metadata: {
+                          ...(prev.metadata as any),
+                          padre_tutor: {
+                            ...(prev.metadata as any).padre_tutor,
+                            telefono: number ? `${parentCountryCode}${number}` : ''
+                          }
                         }
-                      }
-                    }))
-                  }
-                  placeholder="59899123456 (código país + número)"
-                />
+                      }));
+                    }}
+                    placeholder="99123456"
+                  />
+                </div>
               </div>
             </div>
           </div>
