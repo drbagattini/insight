@@ -376,7 +376,7 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
                           telefono: number ? `${parentCountryCode}${number}` : ''
                         }
                       }
-                    });
+                    }));
                   }}
                   placeholder="99123456"
                 />
