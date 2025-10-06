@@ -31,7 +31,11 @@ export async function POST(req: NextRequest) {
           parameters: [
             {
               type: 'text',
-              text: 'John Doe' // Nombre de prueba
+              text: 'John Doe' // Parámetro 1: Nombre del paciente
+            },
+            {
+              type: 'text',
+              text: 'WHO-5 Wellbeing Index' // Parámetro 2: Nombre del cuestionario
             }
           ]
         },
