@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     template: {
       name: templateName,
       language: {
-        code: 'es',
+        code: 'en', // Template is in English
       },
       components: [
         {

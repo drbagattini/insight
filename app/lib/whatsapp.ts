@@ -16,7 +16,7 @@ export type WhatsAppButtonParameter = {
 interface SendWhatsAppTemplateArgs {
   to: string;
   templateName: string;
-  languageCode?: string; // Make language optional, default to 'es'
+  languageCode?: string; // Make language optional, default to 'en'
   bodyParameters?: WhatsAppParameter[];
   buttonParameters?: WhatsAppButtonParameter[]; // Specifically for button dynamic content
 }
@@ -24,7 +24,7 @@ interface SendWhatsAppTemplateArgs {
 export const sendWhatsAppTemplate = async ({
   to,
   templateName,
-  languageCode = 'es', // Default to Spanish
+  languageCode = 'en', // Default to English (template is in English)
   bodyParameters,
   buttonParameters,
 }: SendWhatsAppTemplateArgs) => {
