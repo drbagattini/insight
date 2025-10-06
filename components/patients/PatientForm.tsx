@@ -9,11 +9,11 @@ interface PatientFormProps {
 }
 
 const COUNTRY_CODES = [
-  { code: '598', label: '🇺🇾 +598', fullLabel: '🇺🇾 Uruguay (+598)' },
-  { code: '54', label: '🇦🇷 +54', fullLabel: '🇦🇷 Argentina (+54)' },
-  { code: '55', label: '🇧🇷 +55', fullLabel: '🇧🇷 Brasil (+55)' },
-  { code: '56', label: '🇨🇱 +56', fullLabel: '🇨🇱 Chile (+56)' },
-  { code: '595', label: '🇵🇾 +595', fullLabel: '🇵🇾 Paraguay (+595)' },
+  { code: '598', label: '+598', fullLabel: '🇺🇾 Uruguay (+598)' },
+  { code: '54', label: '+54', fullLabel: '🇦🇷 Argentina (+54)' },
+  { code: '55', label: '+55', fullLabel: '🇧🇷 Brasil (+55)' },
+  { code: '56', label: '+56', fullLabel: '🇨🇱 Chile (+56)' },
+  { code: '595', label: '+595', fullLabel: '🇵🇾 Paraguay (+595)' },
 ];
 
 export default function PatientForm({ patient, onSubmit, onCancel }: PatientFormProps) {
@@ -248,7 +248,7 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
                 <select
                   value={countryCode}
                   onChange={(e) => setCountryCode(e.target.value)}
-                  className="block w-28 rounded-md border-gray-300 py-2.5 focus:border-blue-500 focus:ring-blue-500 sm:text-sm shadow-sm"
+                  className="block w-24 rounded-md border-gray-300 py-2.5 focus:border-blue-500 focus:ring-blue-500 sm:text-sm shadow-sm"
                   title={COUNTRY_CODES.find(c => c.code === countryCode)?.fullLabel}
                 >
                   {COUNTRY_CODES.map((country) => (
@@ -353,7 +353,7 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
                 <select
                   value={parentCountryCode}
                   onChange={(e) => setParentCountryCode(e.target.value)}
-                  className="block w-28 rounded-md border-gray-300 py-2.5 focus:border-blue-500 focus:ring-blue-500 sm:text-sm shadow-sm"
+                  className="block w-24 rounded-md border-gray-300 py-2.5 focus:border-blue-500 focus:ring-blue-500 sm:text-sm shadow-sm"
                   title={COUNTRY_CODES.find(c => c.code === parentCountryCode)?.fullLabel}
                 >
                   {COUNTRY_CODES.map((country) => (

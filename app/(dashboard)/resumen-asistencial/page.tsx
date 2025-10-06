@@ -107,14 +107,20 @@ export default function DashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      if (!response.ok) throw new Error('Error al crear paciente');
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Error details:', errorData);
+        throw new Error(errorData.error || 'Error al crear paciente');
+      }
+      
       const { paciente } = await response.json();
       setShowPatientForm(false);
       // Redirigir a la página del nuevo paciente
       router.push(`/dashboard/perfil-del-paciente/${paciente.id}`);
     } catch (error) {
       console.error('Error creating patient:', error);
-      // Handle error appropriately in UI
+      alert(`Error al crear paciente: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     }
   };
 
@@ -377,7 +383,7 @@ export default function DashboardPage() {
                 leaveFrom="opacity-100 translate-y-0 sm:scale-100"
                 leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
               >
-                <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white p-4 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-3xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
+                <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white p-4 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-5xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
                   <h2 className="text-lg font-medium text-gray-900 mb-4">
                     Agregar Nuevo Paciente
                   </h2>
