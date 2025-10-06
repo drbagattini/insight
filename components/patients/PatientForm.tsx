@@ -248,11 +248,12 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
                 <select
                   value={countryCode}
                   onChange={(e) => setCountryCode(e.target.value)}
-                  className="block w-24 rounded-md border-gray-300 py-2.5 focus:border-blue-500 focus:ring-blue-500 sm:text-sm shadow-sm"
+                  className="block w-28 rounded-md border-gray-300 py-2.5 focus:border-blue-500 focus:ring-blue-500 sm:text-sm shadow-sm"
+                  title={COUNTRY_CODES.find(c => c.code === countryCode)?.fullLabel}
                 >
                   {COUNTRY_CODES.map((country) => (
-                    <option key={country.code} value={country.code}>
-                      {country.fullLabel}
+                    <option key={country.code} value={country.code} title={country.fullLabel}>
+                      {country.label}
                     </option>
                   ))}
                 </select>
@@ -352,11 +353,12 @@ export default function PatientForm({ patient, onSubmit, onCancel }: PatientForm
                 <select
                   value={parentCountryCode}
                   onChange={(e) => setParentCountryCode(e.target.value)}
-                  className="block w-24 rounded-md border-gray-300 py-2.5 focus:border-blue-500 focus:ring-blue-500 sm:text-sm shadow-sm"
+                  className="block w-28 rounded-md border-gray-300 py-2.5 focus:border-blue-500 focus:ring-blue-500 sm:text-sm shadow-sm"
+                  title={COUNTRY_CODES.find(c => c.code === parentCountryCode)?.fullLabel}
                 >
                   {COUNTRY_CODES.map((country) => (
-                    <option key={country.code} value={country.code}>
-                      {country.fullLabel}
+                    <option key={country.code} value={country.code} title={country.fullLabel}>
+                      {country.label}
                     </option>
                   ))}
                 </select>
