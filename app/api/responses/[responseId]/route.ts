@@ -177,10 +177,14 @@ export async function GET(
         // Map both numeric ID and potential string ID patterns
         questionsMap.set(String(processed.id), processed);
         
-        // For OYS consolidated questionnaires, also map the item-X-Y pattern
+        // Map the item-X-Y pattern for all questionnaires (not just OYS)
+        // This handles responses that use the format "item-0-1", "item-1-2", etc.
+        const stringId = `item-${idx}-${processed.id}`;
+        questionsMap.set(stringId, processed);
+        
+        // Additional mapping for OYS consolidated questionnaires
         if (cuestionario?.codigo?.includes('OYS') && cuestionario.codigo.includes('40')) {
-          const stringId = `item-${idx}-${processed.id}`;
-          questionsMap.set(stringId, processed);
+          // OYS might have additional patterns if needed
         }
       });
 
